@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Explorer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-layer">
+            <div id="hud-top-left">
+                <div class="hud-item health-container">
+                    <div class="health-bar-bg"></div>
+                    <div id="health-bar-fill" class="health-bar-fill"></div>
+                    <span id="health-text" class="hud-text">100 / 100</span>
+                </div>
+                <div class="hud-item engine-container">
+                    <button id="engine-toggle-btn" class="engine-btn" data-mode="thruster">
+                        <span id="engine-mode-label">🔵 THRUSTER</span>
+                        <span class="engine-hotkey">[TAB]</span>
+                    </button>
+                    <div class="boost-charge-track">
+                        <div id="boost-charge-fill" class="boost-charge-fill"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="objectives-panel">
+                <!-- Objectives will be injected here by HUD.js -->
+            </div>
+            <div id="hud-top-right">
+                <div class="hud-item gems-container">
+                    <div class="gem-icon">💎</div>
+                    <span id="gem-count" class="hud-text gem-text">0</span>
+                </div>
+                <div class="hud-item sci-container">
+                    <span id="sci-level-text" class="hud-text sci-text">SCI LVL 0</span>
+                    <div class="sci-progress-track">
+                        <div id="sci-progress-fill" class="sci-progress-fill"></div>
+                    </div>
+                    <span id="sci-progress-text" class="sci-progress-text">0 / 10 SP</span>
+                </div>
+                <div class="hud-item">
+                    <span id="fps-counter" class="hud-text fps-text">-- FPS</span>
+                </div>
+            </div>
+
+            <!-- Dev HUD: toggle with backtick (`) — hidden by default -->
+            <div id="dev-hud-panel" class="hidden">
+                <div class="dev-hud-header">🛠 DEV HUD <span class="dev-hud-hint">[ ` ] to close</span></div>
+                <div class="dev-hud-row">
+                    <span class="dev-label">FPS</span>
+                    <span id="dev-fps" class="dev-value">--</span>
+                </div>
+                <div class="dev-hud-divider"></div>
+                <div class="dev-hud-section-label">STELLAR OBJECTS</div>
+                <div id="dev-nav-log"></div>
+                <div class="dev-hud-divider"></div>
+                <button id="dev-reset-btn" class="dev-reset-btn">🗑 Reset All Progress</button>
+            </div>
+
+            <div id="hud-top-center">
+                <div class="hud-item coord-container">
+                    <span id="coord-text" class="hud-text coord-text">0 : 0</span>
+                </div>
+                <div class="hud-item region-container" style="display: flex; flex-direction: column; align-items: center;">
+                    <span id="region-name" class="hud-text region-text">Neutral Space</span>
+                    <div id="region-discovery-info" style="font-size: 0.6rem; color: #00f0ff; opacity: 0.8; margin-top: 2px;">0 / 0 Stellar Objects Discovered</div>
+                    <div id="region-quests-panel" style="margin-top: 5px; text-align: center; width: 100%;"></div>
+                </div>
+            </div>
+
+            <div id="upgrade-menu" class="hidden modal">
+                <div class="modal-panel">
+                    <h2>Terminal</h2>
+                    <div class="modal-tabs">
+                        <button id="tab-upgrades" class="modal-tab active">Upgrades</button>
+                        <button id="tab-ships" class="modal-tab">Ships</button>
+                        <button id="tab-tech" class="modal-tab">Tech</button>
+                        <button id="tab-codex" class="modal-tab">Codex</button>
+                        <button id="tab-settings" class="modal-tab">Settings</button>
+                    </div>
+                    <div id="content-upgrades" class="tab-content active">
+                        <div id="upgrade-list"></div>
+                    </div>
+                    <div id="content-ships" class="tab-content hidden">
+                        <div id="ship-list" class="upgrade-list"></div>
+                    </div>
+                    <div id="content-tech" class="tab-content hidden">
+                        <div id="tech-list" class="upgrade-list"></div>
+                    </div>
+                    <div id="content-codex" class="tab-content hidden">
+                        <div id="codex-list" class="upgrade-list"></div>
+                    </div>
+                    <div id="content-settings" class="tab-content hidden">
+                        <div class="settings-list" style="padding: 20px; color: #fff; text-align: left;">
+                            <label
+                                style="display: flex; align-items: center; gap: 10px; font-size: 1.1em; cursor: pointer;">
+                                <input type="checkbox" id="setting-dynamic-zoom"
+                                    style="width: 20px; height: 20px; accent-color: #00f0ff;">
+                                Dynamic Camera Zoom
+                            </label>
+                            <div style="font-size: 0.85em; color: #aaa; margin-top: 5px; margin-left: 30px;">
+                                Automatically zooms out the camera when maintaining full boost speed.
+                            </div>
+
+                            <label
+                                style="display: flex; align-items: center; gap: 10px; font-size: 1.1em; cursor: pointer; margin-top: 15px;">
+                                <input type="checkbox" id="setting-nav-hints"
+                                    style="width: 20px; height: 20px; accent-color: #00f0ff;">
+                                Navigation Hints
+                            </label>
+                            <div style="font-size: 0.85em; color: #aaa; margin-top: 5px; margin-left: 30px;">
+                                Shows icons on the edge of the screen pointing towards discovered celestial objects and
+                                nearby regions.
+                            </div>
+
+                            <label
+                                style="display: flex; align-items: center; gap: 10px; font-size: 1.1em; cursor: pointer; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                                <input type="checkbox" id="setting-show-stats"
+                                    style="width: 20px; height: 20px; accent-color: #00f0ff;">
+                                Show Ship Statistics
+                            </label>
+                            <div style="font-size: 0.85em; color: #aaa; margin-top: 5px; margin-left: 30px;">
+                                Displays current engine speeds, hull health, and weapon stats in a persistent panel.
+                            </div>
+
+                            <label
+                                style="display: flex; align-items: center; gap: 10px; font-size: 1.1em; cursor: pointer; margin-top: 15px;">
+                                <input type="checkbox" id="setting-show-nav-log"
+                                    style="width: 20px; height: 20px; accent-color: #00f0ff;">
+                                Show Navigation Log
+                            </label>
+                            <div style="font-size: 0.85em; color: #aaa; margin-top: 5px; margin-left: 30px;">
+                                Displays a list of discovered stellar objects and their coordinates.
+                            </div>
+
+                            <label
+                                style="display: flex; align-items: center; gap: 10px; font-size: 1.1em; cursor: pointer; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                                <input type="checkbox" id="setting-ghost-dialogue"
+                                    style="width: 20px; height: 20px; accent-color: #00f0ff;">
+                                Ghost Companion Dialogue
+                            </label>
+                            <div style="font-size: 0.85em; color: #aaa; margin-top: 5px; margin-left: 30px;">
+                                Controls whether your ghostly companion will speak to you and show scanning updates.
+                            </div>
+
+                            <label
+                                style="display: flex; align-items: center; gap: 10px; font-size: 1.1em; cursor: pointer; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                                <input type="checkbox" id="setting-dev-mode"
+                                    style="width: 20px; height: 20px; accent-color: #ff3c3c;">
+                                <span style="color: #ff3c3c;">Enable Dev Mode</span>
+                            </label>
+                            <div style="font-size: 0.85em; color: #aaa; margin-top: 5px; margin-left: 30px;">
+                                Grants 5000 gems and 1000 science points on game start.
+                            </div>
+
+                            <label
+                                style="display: flex; align-items: center; gap: 10px; font-size: 1.1em; cursor: pointer; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                                <input type="checkbox" id="setting-discover-all"
+                                    style="width: 20px; height: 20px; accent-color: #00f0ff;">
+                                Discover All Entities
+                            </label>
+                            <div style="font-size: 0.85em; color: #aaa; margin-top: 5px; margin-left: 30px;">
+                                Marks all regions and stellar objects as discovered (shows on map & nav hints).
+                            </div>
+                        </div>
+                    </div>
+                    <button id="resume-btn" class="btn primary-btn" style="margin-top: 20px;">Return to Space
+                        [ESC]</button>
+                </div>
+            </div>
+
+            <div id="game-over" class="hidden modal">
+                <div class="modal-panel">
+                    <h2>Ship Destroyed</h2>
+                    <button id="restart-btn" class="btn primary-btn" style="margin-top: 20px;">Respawn</button>
+                </div>
+            </div>
+
+            <!-- Galaxy Map Modal -->
+            <div id="map-modal" class="hidden modal">
+                <div class="modal-panel map-panel" style="max-width: 660px;">
+                    <h2>Galaxy Map <span
+                            style="font-size: 0.5em; opacity: 0.5; font-weight: normal; margin-left: 10px;">[M]</span>
+                    </h2>
+
+                    <div class="modal-tabs" style="justify-content: center; margin-bottom: 15px;">
+                        <button id="map-tab-a" class="modal-tab active">Plan A (Tactical)</button>
+                        <button id="map-tab-b" class="modal-tab">Plan B (Strategic - WIP)</button>
+                        <button id="map-tab-c" class="modal-tab">Plan C (Holo - WIP)</button>
+                    </div>
+
+                    <div id="map-content-wrapper" style="display: flex; gap: 20px; align-items: stretch; margin-bottom: 20px;">
+                        <!-- Sidebar for Plan B -->
+                        <div id="map-sidebar-b" style="display: none; width: 250px; background: rgba(0,0,0,0.4); border: 1px solid rgba(0,240,255,0.2); border-radius: 4px; padding: 10px; overflow-y: auto; max-height: 600px;">
+                            <h3 style="margin-top:0; margin-bottom:15px; color:#00f0ff; text-align:center; font-size: 14px; border-bottom: 1px solid rgba(0,240,255,0.2); padding-bottom: 10px;">Discovery Log</h3>
+                            <div id="map-discovery-list" style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;"></div>
+                        </div>
+
+                        <div id="map-container"
+                            style="flex: 1; background: rgba(0,0,0,0.4); border: 2px solid rgba(0,240,255,0.2); border-radius: 4px; padding: 0; overflow: hidden; position: relative;">
+                            
+                            <!-- For Plan A -->
+                            <canvas id="mapCanvas"
+                                style="display: block; width: 100%; height: auto; max-width: 600px; aspect-ratio: 1 / 1;"></canvas>
+
+                            <!-- For Plan B -->
+                            <svg id="mapSvg" style="display: none; width: 100%; height: auto; max-width: 600px; aspect-ratio: 1 / 1; background: transparent;">
+                                <defs>
+                                    <clipPath id="mapSvgClip">
+                                        <rect width="600" height="600" />
+                                    </clipPath>
+                                </defs>
+                                <svg width="600" height="600" viewBox="0 0 600 600">
+                                    <g id="mapSvgGroup" transform="translate(300, 300) scale(1)"></g>
+                                </svg>
+                            </svg>
+
+                            <!-- For Hover Tooltip (Plan A & B) -->
+                            <div id="map-tooltip" style="position: absolute; background: rgba(0,0,0,0.9); border: 1px solid #00f0ff; color: #fff; padding: 8px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.1s; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.5);"></div>
+                        </div>
+                    </div>
+
+                    <div
+                        style="display: flex; gap: 15px; justify-content: center; margin-bottom: 20px; font-size: 0.9rem; flex-wrap: wrap;">
+                        <div><span
+                                style="color:#0f0; display:inline-block; width:10px; height:10px; background:#0f0; border-radius:50%; margin-right:5px; transform: scale(0.6) translateY(-2px); clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></span>You
+                        </div>
+                        <div><span
+                                style="color:var(--text); display:inline-block; width:8px; height:8px; background:rgba(0,240,255,0.8); border-radius:50%; margin-right:5px;"></span>Object
+                        </div>
+                        <div><span
+                                style="color:var(--text); display:inline-block; width:12px; height:12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); margin-right:5px;"></span>Discovered
+                            Region</div>
+                    </div>
+
+                    <button id="map-close-btn" class="btn primary-btn">Close Map</button>
+                </div>
+            </div>
+
+            <!-- Stats Panel: shows current levels and values -->
+            <div id="stats-panel" class="hud-item">
+                <div class="nav-log-header">📊 Ship Statistics</div>
+                <div id="stats-entries">
+                    <div class="stats-row"><span class="stats-label">Thrusters</span><span id="stat-engine-val"
+                            class="stats-value">--</span></div>
+                    <div class="stats-row"><span class="stats-label">Booster</span><span id="stat-booster-val"
+                            class="stats-value">--</span></div>
+                    <div class="stats-row"><span class="stats-label">Hull HP</span><span id="stat-hull-val"
+                            class="stats-value">--</span></div>
+                    <div class="stats-row"><span class="stats-label">Weapons</span><span id="stat-weapons-val"
+                            class="stats-value">--</span></div>
+                    <div class="stats-row"><span class="stats-label">Magnet</span><span id="stat-magnet-val"
+                            class="stats-value">--</span></div>
+                </div>
+            </div>
+
+            <!-- Navigation Log: always visible bottom-left -->
+            <div id="nav-log-panel" class="hud-item">
+                <div class="nav-log-header">📡 Navigation Log</div>
+                <div id="nav-log-entries">
+                    <div class="nav-log-empty">No objects discovered yet.</div>
+                </div>
+            </div>
+
+            <!-- Communications Log: hidden by default, shown when messages or contacts exist -->
+            <div id="comms-panel" class="hud-item hidden">
+                <div class="nav-log-header">💬 Communications</div>
+                <!-- Contacts list (visible when in range of someone) -->
+                <div id="comms-contacts" style="display: none;"></div>
+                <div id="comms-entries">
+                    <div class="nav-log-empty">No incoming transmissions.</div>
+                </div>
+            </div>
+
+            <!-- Discovery Popup: shown briefly on first arrival at a stellar object -->
+            <div id="discovery-popup"></div>
+
+            <div class="controls-hint">
+                WASD to Move | Mouse to Aim &amp; Shoot | ESC for Upgrades
+            </div>
+
+            <!-- Docking status bar: shown when player is overlapping a stellar object -->
+            <div id="dock-status"></div>
+
+            <!-- Region reward popup: shown one-time when first discovering a region -->
+            <div id="reward-popup"></div>
+
+            <!-- Incoming Hail Alert Badge -->
+            <div id="hail-alert" class="hidden">
+                <div class="hail-alert-icon">📡</div>
+                <div id="hail-alert-text" class="hail-alert-text">INCOMING TRANSMISSION</div>
+            </div>
+
+            <!-- Active Hail Dialog Modal -->
+            <div id="hail-modal" class="hidden modal">
+                <div class="modal-panel hail-panel">
+                    <div class="hail-header">
+                        <span class="hail-sender-icon">📺</span>
+                        <span id="hail-sender-name">Unknown Origin</span>
+                    </div>
+                    <div class="hail-body">
+                        <p id="hail-message-text">...</p>
+                    </div>
+                    <div class="hail-options">
+                        <button id="hail-option-1" class="btn primary-btn hail-option-btn">Option 1</button>
+                        <button id="hail-option-2" class="btn primary-btn hail-option-btn">Option 2</button>
+                        <button id="hail-done-btn" class="btn primary-btn hail-option-btn"
+                            style="display: none;">Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,8 @@
+{
+    "name": "space-explorer",
+    "version": "1.0.0",
+    "description": "2D top-down space explorer game",
+    "scripts": {
+        "start": "npx -y serve ."
+    }
+}
