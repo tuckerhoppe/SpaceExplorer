@@ -8,6 +8,7 @@ export const REGIONS = [
         color: '#ff6a00',
         description: 'A lawless expanse of dense asteroid belts and desperate scavengers.',
         gemReward: 100,
+        bounds: { minX: -14, maxX: -3, minY: -11, maxY: -3 },
         // Bottom-left quadrant: negative X and negative Y coords
         test: (cx, cy) => cx < -3 && cy < -3 && cx > -14 && cy > -11,
         center: { worldX: -8000, worldY: 8000 },
@@ -28,6 +29,7 @@ export const REGIONS = [
         color: '#09ab29ff',
         description: 'Mysterious and dangerous species known as the Blobs inhabit this region.',
         gemReward: 150,
+        bounds: { minX: 4, maxX: 20, minY: -25, maxY: -10 },
         // Bottom-right quadrant: positive X and negative Y coords
         test: (cx, cy) => cx > 4 && cy < -10,
         center: { worldX: 8000, worldY: 14000 },
@@ -48,6 +50,7 @@ export const REGIONS = [
         color: '#ff2244',
         description: 'Imperial warships patrol these contested star lanes. Trespassers are destroyed on sight.',
         gemReward: 150,
+        bounds: { minX: -20, maxX: -5, minY: 10, maxY: 25 },
         // Top-left quadrant: negative X and positive Y coords
         test: (cx, cy) => cx < -5 && cy > 10,
         center: { worldX: -9000, worldY: -14000 },
@@ -65,14 +68,15 @@ export const REGIONS = [
     {
         name: 'Uncharted Space',
         icon: '☄️',
-        color: '#640a6fff',
+        color: '#ff00ee', // Bright Magenta instead of dark purple
         description: 'Mysterious discoveries await in this region.',
         gemReward: 150,
+        bounds: { minX: 4, maxX: 15, minY: 2, maxY: 9 },
         // Top-Right quadrant: positive X and positive Y coords
         test: (cx, cy) => cx >= 4 && cy > 2 && cy < 9,
         center: { worldX: 5000, worldY: -5000 },
         difficulty: 1.0,
-        bgColor: '#10002cff',
+        bgColor: '#1a001a', // Darker background to make magenta pop
         particleType: 'rift',
         caps: {
             asteroids: 60,
@@ -88,6 +92,7 @@ export const REGIONS = [
         color: '#ffdd00',
         description: 'Your home sector. It seems surprisingly quiet... or is it?',
         gemReward: 0,
+        bounds: { minX: -8, maxX: -4, minY: -1, maxY: 4 },
         // 3x3 region: -3.2 to -0.2 in X, 0.2 to 3.2 in Y. Close to Star Empire but not touching 0,0.
         test: (cx, cy) => cx > -8 && cx < -4 && cy > -1 && cy < 4,
         center: { worldX: -6000, worldY: -1500 },
@@ -108,6 +113,7 @@ export const REGIONS = [
         color: '#00ccff',
         description: 'A sector dominated by automated drones and robotic outposts.',
         gemReward: 200,
+        bounds: { minX: -20, maxX: -6, minY: -25, maxY: -10 },
         // (cx, cy) => cx < -6 && cy < -10
         test: (cx, cy) => cx < -6 && cy < -10,
         center: { worldX: -10000, worldY: 15000 },
@@ -128,6 +134,7 @@ export const REGIONS = [
         color: '#ffaa00',
         description: 'An extremely dense field of ancient debris and unstable nebulas. Navigation is treacherous.',
         gemReward: 250,
+        bounds: { minX: -3, maxX: 3, minY: -20, maxY: -10 },
         // (cx, cy) => cx > -2 && cy < -10 && cx < 2 && cy > -20
         test: (cx, cy) => cx > -3 && cy < -10 && cx < 3 && cy > -20,
         center: { worldX: 0, worldY: 15000 },
@@ -148,6 +155,7 @@ export const REGIONS = [
         color: '#a022ff',
         description: 'A region of high electrical activity and shimmering ion clouds. Sensors are often scrambled.',
         gemReward: 150,
+        bounds: { minX: -3, maxX: 4, minY: -10, maxY: -5 },
         // (cx, cy) => cx > -3 && cy > -10 && cx < 4 && cy < -5
         test: (cx, cy) => cx >= -3 && cy >= -10 && cx <= 4 && cy <= -5,
         center: { worldX: 500, worldY: 7500 },
@@ -168,6 +176,7 @@ export const REGIONS = [
         color: '#cc6600',
         description: 'A graveyard of ancient industry. Rust-colored dust and derelict stations float in the void.',
         gemReward: 200,
+        bounds: { minX: 4, maxX: 10, minY: -8, maxY: -3 },
         // (cx, cy) => cx > 4 && cy > -8 && cx < 10 && cy < -3
         test: (cx, cy) => cx > 4 && cy > -8 && cx < 10 && cy < -3,
         center: { worldX: 7000, worldY: 5500 },
@@ -188,6 +197,7 @@ export const REGIONS = [
         color: '#00cc66',
         description: 'A surprisingly lush sector where bioluminescent flora-like organisms drift through space.',
         gemReward: 200,
+        bounds: { minX: 5, maxX: 15, minY: -3, maxY: 2 },
         // (cx, cy) => cx > 5 && cy > -3 && cx < 15 && cy < 2
         test: (cx, cy) => cx > 5 && cy > -3 && cx < 15 && cy < 2,
         center: { worldX: 10000, worldY: -500 },
@@ -208,6 +218,7 @@ export const REGIONS = [
         color: '#4db8ff',
         description: 'The commercial heart of the galaxy. Trade lanes are heavily patrolled by Federation escorts.',
         gemReward: 150,
+        bounds: { minX: 5, maxX: 12, minY: 7, maxY: 14 },
         // (cx, cy) => cx > 5 && cy > 7 && cx < 12 && cy < 14
         test: (cx, cy) => cx > 5 && cy > 7 && cx < 12 && cy < 14,
         center: { worldX: 8500, worldY: -10500 },
@@ -228,6 +239,7 @@ export const REGIONS = [
         color: '#ffffff',
         description: 'An eerily quiet expanse where the remnants of a lost fleet drift. Spooky whispers echo through the void.',
         gemReward: 300,
+        bounds: { minX: -1, maxX: 5, minY: 12, maxY: 17 },
         // (cx, cy) => cx > -1 && cy > 12 && cx < 5 && cy < 17
         test: (cx, cy) => cx > -1 && cy > 12 && cx < 5 && cy < 17,
         center: { worldX: 2000, worldY: -14500 },
@@ -248,6 +260,7 @@ export const REGIONS = [
         color: '#ff2244',
         description: 'A massive industrial zone where the Star Empire constructs its largest warships. Extreme danger.',
         gemReward: 300,
+        bounds: { minX: -5, maxX: -1, minY: 12, maxY: 17 },
         // (cx, cy) => cx > -5 && cy > 12 && cx < -1 && cy < 17
         test: (cx, cy) => cx > -5 && cy > 12 && cx < -1 && cy < 17,
         center: { worldX: -3000, worldY: -14500 },
@@ -268,6 +281,7 @@ export const REGIONS = [
         color: '#aaddff',
         description: 'A frigid, desolate region of space filled with ice-coated debris and pale blue light.',
         gemReward: 200,
+        bounds: { minX: -5, maxX: -1, minY: 8, maxY: 12 },
         // (cx, cy) => cx > -5 && cy > 8 && cx < -1 && cy < 12
         test: (cx, cy) => cx > -5 && cy > 8 && cx < -1 && cy < 12,
         center: { worldX: -3000, worldY: -10000 },
@@ -288,6 +302,7 @@ export const REGIONS = [
         color: '#ff0000',
         description: 'A thick, red-tinted nebula where visibility is low and sensors struggle to penetrate the veil.',
         gemReward: 200,
+        bounds: { minX: -12, maxX: -7, minY: 5, maxY: 10 },
         // (cx, cy) => cx > -12 && cy > 5 && cx < -7 && cy < 10
         test: (cx, cy) => cx > -12 && cy > 5 && cx < -7 && cy < 10,
         center: { worldX: -9500, worldY: -7500 },
@@ -305,14 +320,15 @@ export const REGIONS = [
     {
         name: 'The Obsidian Marches',
         icon: '🖤',
-        color: '#2a2a2a',
+        color: '#aaaaaa', // Lighter Steel Silver instead of almost-black grey
         description: 'A desolate, shadow-drenched corridor between the Badlands and the Crimson Veil.',
         gemReward: 200,
+        bounds: { minX: -13, maxX: -4, minY: -3, maxY: 12 },
         // (cx, cy) => cx >= -13 && cx <= -4 && cy >= -3 && cy <= 12
         test: (cx, cy) => cx >= -13 && cx <= -4 && cy >= -3 && cy <= 12,
         center: { worldX: -8500, worldY: -4500 },
         difficulty: 4.5,
-        bgColor: '#080808',
+        bgColor: '#050505',
         particleType: 'rift',
         caps: {
             asteroids: 80,

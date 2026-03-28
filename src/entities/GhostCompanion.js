@@ -54,8 +54,11 @@ export class GhostCompanion {
         let minDist = Infinity;
 
         for (const obj of game.sectorManager.objects) {
-            if (obj.id === this.lastDockedId) continue; // Skip the last place we docked
             const d = Utils.dist(this.player.x, this.player.y, obj.x, obj.y);
+            // Only skip the last docked object if we are still very close to it.
+            // This prevents the ghost from "forgetting" the station if it's the only thing nearby.
+            if (obj.id === this.lastDockedId && d < 1200) continue;
+
             if (d < minDist) {
                 minDist = d;
                 closestObj = obj;
@@ -102,21 +105,20 @@ export class GhostCompanion {
         }
 
         // 6. Dialogue System
-        if (!game.settings.ghostDialogue) {
+        if (game.settings.ghostDialogue) {
+            if (this.currentMessage) {
+                this.messageTimer--;
+                if (this.messageTimer <= 0) this.currentMessage = null;
+            } else if (this.messages.length > 0) {
+                this.currentMessage = this.messages.shift();
+                this.messageTimer = this.currentMessage.duration;
+            } else if (this._tick - this.lastSayTick > 1200) { // ~20 seconds fluff
+                this.lastSayTick = this._tick;
+                this.sayRandomFluff(game);
+            }
+        } else {
             this.currentMessage = null;
             this.messages = [];
-            return;
-        }
-
-        if (this.currentMessage) {
-            this.messageTimer--;
-            if (this.messageTimer <= 0) this.currentMessage = null;
-        } else if (this.messages.length > 0) {
-            this.currentMessage = this.messages.shift();
-            this.messageTimer = this.currentMessage.duration;
-        } else if (this._tick - this.lastSayTick > 1200) { // ~20 seconds fluff
-            this.lastSayTick = this._tick;
-            this.sayRandomFluff(game);
         }
 
         // Contextual checks

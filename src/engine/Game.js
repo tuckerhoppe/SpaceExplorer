@@ -64,9 +64,12 @@ export class Game {
         // Settings
         this.settings = {
             dynamicZoom: localStorage.getItem('setting_dynamic_zoom') !== 'false',
-            ghostDialogue: localStorage.getItem('setting_ghost_dialogue') !== 'false',
+            ghostDialogue: localStorage.getItem('setting_ghost_dialogue') === 'true', // Default to OFF
             navHints: localStorage.getItem('setting_nav_hints') !== 'false',
-            devMode: localStorage.getItem('setting_dev_mode') === 'true'
+            showStats: localStorage.getItem('setting_show_stats') === 'true',         // Default to OFF
+            showNavLog: localStorage.getItem('setting_show_nav_log') === 'true',      // Default to OFF
+            devMode: localStorage.getItem('setting_dev_mode') === 'true',
+            discoverAll: localStorage.getItem('setting_discover_all') === 'true'     // Default to OFF
         };
         for (let i = 0; i < 300; i++) {
             this.stars.push({
@@ -874,6 +877,11 @@ export class Game {
 
         // Draw nav hints in screen space
         this.drawNavHints();
+
+        // Draw mini-map in screen space
+        if (this.hud && this.hud.miniMap) {
+            this.hud.miniMap.draw();
+        }
     }
 
     drawNavHints() {

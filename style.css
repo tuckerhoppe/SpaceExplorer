@@ -222,7 +222,7 @@ canvas {
     border: 2px solid var(--accent-blue);
     border-radius: 12px;
     padding: 40px;
-    max-width: 600px;
+    max-width: 700px;
     width: 90%;
     box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
     text-align: center;
@@ -232,6 +232,7 @@ canvas {
     background: rgba(10, 15, 30, 0.95);
     border: 1px solid rgba(0, 240, 255, 0.3);
     box-shadow: 0 0 30px rgba(0, 240, 255, 0.1);
+    padding: 10px 15px !important;
 }
 
 #mapCanvas {
@@ -243,10 +244,15 @@ canvas {
     font-family: 'Orbitron', sans-serif;
     color: var(--accent-blue);
     margin-top: 0;
-    margin-bottom: 20px;
-    font-size: 2.5rem;
+    margin-bottom: 10px;
+    font-size: 1.8rem;
     text-transform: uppercase;
     letter-spacing: 2px;
+}
+
+.map-panel h2 {
+    font-size: 1.1rem;
+    margin-bottom: 5px;
 }
 
 .modal-tabs {
@@ -463,7 +469,8 @@ canvas {
 
 #stats-panel {
     position: absolute;
-    bottom: 245px; /* Positioned above nav log */
+    bottom: 315px;
+    /* Shifting up to stay above the objectives and nav log */
     left: 20px;
     flex-direction: column;
     align-items: flex-start;
@@ -502,7 +509,8 @@ canvas {
 /* ─── Navigation Log ─────────────────────────────── */
 #nav-log-panel {
     position: absolute;
-    bottom: 70px;
+    bottom: 140px;
+    /* Shifting up to stay above the objectives panel */
     left: 20px;
     flex-direction: column;
     align-items: flex-start;
@@ -583,7 +591,8 @@ canvas {
 /* ─── Communications Log ─────────────────────────── */
 #comms-panel {
     position: absolute;
-    bottom: 70px;
+    bottom: 280px;
+    /* Shifted up to make room for Mini-Map */
     right: 20px;
     flex-direction: column;
     align-items: flex-start;
@@ -1076,39 +1085,58 @@ canvas {
     gap: 4px;
 }
 
-.engine-btn {
+.engine-toggle-group {
     display: flex;
     align-items: center;
-    gap: 8px;
     background: rgba(5, 10, 25, 0.85);
-    border: 1px solid rgba(0, 240, 255, 0.5);
+    border: 1px solid rgba(0, 240, 255, 0.3);
     border-radius: 6px;
-    padding: 5px 10px;
+    padding: 2px;
     cursor: pointer;
+    position: relative;
+    width: fit-content;
+    transition: all 0.3s ease;
+}
+
+.engine-toggle-group:hover {
+    border-color: rgba(0, 240, 255, 0.6);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+}
+
+.engine-option {
+    padding: 4px 10px;
     font-family: 'Orbitron', sans-serif;
-    font-size: 0.6rem;
-    letter-spacing: 2px;
-    color: rgba(0, 240, 255, 0.9);
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    color: rgba(0, 240, 255, 0.4);
     text-transform: uppercase;
-    transition: border-color 0.3s, color 0.3s, box-shadow 0.3s;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    z-index: 1;
 }
 
-.engine-btn:hover {
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+.engine-option.active {
+    color: #fff;
+    background: rgba(0, 240, 255, 0.25);
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.8);
+    box-shadow: inset 0 0 10px rgba(0, 240, 255, 0.1);
 }
 
-/* Boost mode — button shifts to blue-white */
-.engine-btn[data-mode="boost"] {
-    border-color: rgba(100, 180, 255, 0.8);
-    color: rgba(140, 210, 255, 1);
-    box-shadow: 0 0 8px rgba(100, 180, 255, 0.3);
+/* Special highlight for booster when active */
+#engine-booster.active {
+    background: rgba(100, 180, 255, 0.35);
+    color: #fff;
+    text-shadow: 0 0 8px rgba(100, 180, 255, 0.8);
+    box-shadow: inset 0 0 10px rgba(100, 180, 255, 0.2);
 }
 
 .engine-hotkey {
+    margin-left: 8px;
+    margin-right: 6px;
     font-size: 0.5rem;
     letter-spacing: 1px;
-    color: rgba(255, 255, 255, 0.35);
-    margin-left: 2px;
+    color: rgba(255, 255, 255, 0.25);
+    font-weight: normal;
 }
 
 /* Boost charge track */
@@ -1489,130 +1517,159 @@ canvas {
 /* ─── Objectives Panel ─────────────────────────── */
 #objectives-panel {
     position: absolute;
-    top: 140px;
+    bottom: 20px;
     left: 20px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    pointer-events: none;
+    pointer-events: auto;
+    /* Enable for See More button */
     z-index: 10;
 }
 
 .objective-item {
-    background: rgba(0, 20, 30, 0.75);
-    border-left: 3px solid var(--accent-blue);
-    padding: 12px 16px;
-    border-radius: 0 4px 4px 0;
-    min-width: 240px;
-    max-width: 340px;
+    background: rgba(0, 15, 25, 0.9);
+    border-left: 2px solid var(--accent-blue);
+    padding: 8px 12px;
+    border-radius: 4px;
+    min-width: 200px;
+    max-width: 300px;
     animation: objSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(0, 240, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 240, 255, 0.2);
     border-left-width: 3px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
 }
 
 .objective-title {
     font-family: 'Orbitron', sans-serif;
     color: var(--accent-blue);
     font-size: 0.85rem;
+    /* Slightly bigger */
     text-transform: uppercase;
-    margin-bottom: 6px;
-    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+    letter-spacing: 1px;
     font-weight: bold;
-    text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
 }
 
 .objective-desc {
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 0.8rem;
-    margin-bottom: 8px;
-    line-height: 1.3;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.78rem;
+    /* Slightly bigger */
+    margin-bottom: 6px;
+    line-height: 1.2;
     font-family: 'Inter', sans-serif;
 }
 
 .objective-progress-container {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 3px;
 }
 
 .objective-progress-tag {
     color: var(--accent-blue);
-    font-size: 0.75rem;
+    font-size: 0.72rem;
+    /* Slightly bigger */
     font-weight: bold;
     text-align: right;
     font-family: 'Orbitron', sans-serif;
 }
 
-@keyframes objSlideIn {
-    from { opacity: 0; transform: translateX(-40px); }
-    to { opacity: 1; transform: translateX(0); }
+.see-more-btn {
+    background: rgba(0, 240, 255, 0.1);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    color: var(--accent-blue);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-top: 4px;
+    align-self: flex-start;
+    transition: all 0.2s;
+    text-transform: uppercase;
 }
 
-/* ─── Objectives Panel ─────────────────────────── */
-#objectives-panel {
-    position: absolute;
-    top: 140px;
-    left: 20px;
+.see-more-btn:hover {
+    background: var(--accent-blue);
+    color: #000;
+}
+
+/* Terminal Objective List */
+.terminal-objective-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    pointer-events: none;
-    z-index: 10;
+    transition: all 0.2s;
 }
 
-.objective-item {
-    background: rgba(0, 20, 30, 0.75);
-    border-left: 3px solid var(--accent-blue);
-    padding: 12px 16px;
-    border-radius: 0 4px 4px 0;
-    min-width: 240px;
-    max-width: 340px;
-    animation: objSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(0, 240, 255, 0.15);
-    border-left-width: 3px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+.terminal-objective-card:hover {
+    border-color: rgba(0, 240, 255, 0.3);
+    background: rgba(0, 240, 255, 0.02);
 }
 
-.objective-title {
+.terminal-objective-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.terminal-objective-title {
     font-family: 'Orbitron', sans-serif;
     color: var(--accent-blue);
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-    letter-spacing: 1.5px;
+    font-size: 1rem;
     font-weight: bold;
-    text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
 }
 
-.objective-desc {
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 0.8rem;
-    margin-bottom: 8px;
-    line-height: 1.3;
-    font-family: 'Inter', sans-serif;
+.terminal-objective-status {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
 }
 
-.objective-progress-container {
+.status-active {
+    color: #00f0ff;
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    background: rgba(0, 240, 255, 0.1);
+}
+
+.status-complete {
+    color: #4aff80;
+    border: 1px solid rgba(74, 255, 128, 0.3);
+    background: rgba(74, 255, 128, 0.1);
+}
+
+.terminal-objective-desc {
+    color: #ccc;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.terminal-objective-progress {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.objective-progress-tag {
-    color: var(--accent-blue);
-    font-size: 0.75rem;
-    font-weight: bold;
-    text-align: right;
-    font-family: 'Orbitron', sans-serif;
+.terminal-progress-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #aaa;
 }
 
-@keyframes objSlideIn {
-    from { opacity: 0; transform: translateX(-40px); }
-    to { opacity: 1; transform: translateX(0); }
-}
 
 .penalty-text {
     color: var(--accent-red);
@@ -1622,4 +1679,54 @@ canvas {
     text-transform: uppercase;
     letter-spacing: 1px;
     text-shadow: 0 0 10px rgba(255, 60, 60, 0.4);
+}
+
+/* ─── Mini Map ───────────────────────────────────── */
+#mini-map-container {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 200px;
+    height: 240px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    backdrop-filter: blur(15px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    pointer-events: auto;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(0, 240, 255, 0.05);
+    transition: transform 0.2s ease;
+    z-index: 60;
+}
+
+#mini-map-container:hover {
+    transform: scale(1.02);
+    border-color: rgba(0, 240, 255, 0.6);
+}
+
+.mini-map-header {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.65rem;
+    color: var(--accent-blue);
+    letter-spacing: 2px;
+    width: 100%;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 4px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+.mini-map-header span {
+    font-size: 0.55rem;
+    opacity: 0.5;
+}
+
+#miniMapCanvas {
+    background: radial-gradient(circle, rgba(0, 240, 255, 0.02) 0%, transparent 70%);
+    border-radius: 50%;
 }

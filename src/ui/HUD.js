@@ -1,6 +1,8 @@
 import { UPGRADES, TECH_UPGRADES, SHIPS } from '../config.js';
+import { QUESTS } from '../data/quests.js';
 import { REGIONS, DEFAULT_REGION } from '../data/regions.js';
 import { ScienceMiniGame } from './ScienceMiniGame.js';
+import { MiniMap } from './MiniMap.js';
 
 export class HUD {
     constructor(game) {
@@ -9,7 +11,8 @@ export class HUD {
         this.objectivesPanel = document.getElementById('objectives-panel');
         this._lastObjectivesHtml = '';
         this._lastQuestIds = '';
-        this.mapState = { plan: 'A', offsetX: 0, offsetY: 0, zoom: 1, isDragging: false, lastMouse: {x: 0, y: 0}, hoverObj: null, maxZoom: 3, minZoom: 0.5 };
+        this.mapState = { offsetX: 0, offsetY: 0, zoom: 1, isDragging: false, lastMouse: {x: 0, y: 0}, hoverObj: null, maxZoom: 3, minZoom: 0.5 };
+        this.miniMap = new MiniMap(game);
         this.setupEventListeners();
     }
 
@@ -52,11 +55,13 @@ export class HUD {
         const tabUpgrades = document.getElementById('tab-upgrades');
         const tabShips = document.getElementById('tab-ships');
         const tabTech = document.getElementById('tab-tech');
+        const tabObjectives = document.getElementById('tab-objectives');
         const tabCodex = document.getElementById('tab-codex');
         const tabSettings = document.getElementById('tab-settings');
         const contentUpgrades = document.getElementById('content-upgrades');
         const contentShips = document.getElementById('content-ships');
         const contentTech = document.getElementById('content-tech');
+        const contentObjectives = document.getElementById('content-objectives');
         const contentCodex = document.getElementById('content-codex');
         const contentSettings = document.getElementById('content-settings');
 
@@ -64,7 +69,8 @@ export class HUD {
             tabUpgrades.classList.remove('active');
             tabShips.classList.remove('active');
             tabTech.classList.remove('active');
-            tabCodex.classList.remove('active');
+            if (tabObjectives) tabObjectives.classList.remove('active');
+            if (tabCodex) tabCodex.classList.remove('active');
             tabSettings.classList.remove('active');
             contentUpgrades.classList.add('hidden');
             contentUpgrades.classList.remove('active');
@@ -72,13 +78,19 @@ export class HUD {
             contentShips.classList.remove('active');
             contentTech.classList.add('hidden');
             contentTech.classList.remove('active');
-            contentCodex.classList.add('hidden');
-            contentCodex.classList.remove('active');
+            if (contentObjectives) {
+                contentObjectives.classList.add('hidden');
+                contentObjectives.classList.remove('active');
+            }
+            if (contentCodex) {
+                contentCodex.classList.add('hidden');
+                contentCodex.classList.remove('active');
+            }
             contentSettings.classList.add('hidden');
             contentSettings.classList.remove('active');
         };
 
-        if (tabUpgrades && tabShips && tabTech && tabCodex && tabSettings) {
+        if (tabUpgrades && tabShips && tabTech && tabSettings) {
             tabUpgrades.addEventListener('click', () => {
                 resetTabs();
                 tabUpgrades.classList.add('active');
@@ -97,13 +109,24 @@ export class HUD {
                 if (contentTech) contentTech.classList.remove('hidden');
                 if (contentTech) contentTech.classList.add('active');
             });
-            tabCodex.addEventListener('click', () => {
-                resetTabs();
-                tabCodex.classList.add('active');
-                if (contentCodex) contentCodex.classList.remove('hidden');
-                if (contentCodex) contentCodex.classList.add('active');
-                this.refreshCodex();
-            });
+            if (tabObjectives) {
+                tabObjectives.addEventListener('click', () => {
+                    resetTabs();
+                    tabObjectives.classList.add('active');
+                    if (contentObjectives) contentObjectives.classList.remove('hidden');
+                    if (contentObjectives) contentObjectives.classList.add('active');
+                    this.refreshObjectivesTab();
+                });
+            }
+            if (tabCodex) {
+                tabCodex.addEventListener('click', () => {
+                    resetTabs();
+                    tabCodex.classList.add('active');
+                    if (contentCodex) contentCodex.classList.remove('hidden');
+                    if (contentCodex) contentCodex.classList.add('active');
+                    this.refreshCodex();
+                });
+            }
             tabSettings.addEventListener('click', () => {
                 resetTabs();
                 tabSettings.classList.add('active');
@@ -156,18 +179,6 @@ export class HUD {
         // Map bindings
         this.bindButton('map-close-btn', () => this.toggleMap());
 
-        const tabA = document.getElementById('map-tab-a');
-        const tabB = document.getElementById('map-tab-b');
-        const tabC = document.getElementById('map-tab-c');
-        const resetMapTabs = () => {
-            if(tabA) tabA.classList.remove('active');
-            if(tabB) tabB.classList.remove('active');
-            if(tabC) tabC.classList.remove('active');
-        };
-        if (tabA) tabA.addEventListener('click', () => this._switchMapPlan('A'));
-        if (tabB) tabB.addEventListener('click', () => this._switchMapPlan('B'));
-        if (tabC) tabC.addEventListener('click', () => this._switchMapPlan('C'));
-
         const mapContainer = document.getElementById('map-container');
         if (mapContainer) {
             mapContainer.addEventListener('mousedown', (e) => {
@@ -194,7 +205,7 @@ export class HUD {
                 this.renderMap();
             });
             mapContainer.addEventListener('mousemove', (e) => {
-                if (this.mapState.plan === 'B' || this.mapState.isDragging) return;
+                if (this.mapState.isDragging) return;
                 const canvas = document.getElementById('mapCanvas');
                 if (!canvas) return;
                 const rect = canvas.getBoundingClientRect();
@@ -230,7 +241,7 @@ export class HUD {
         const ghostDialogueCheckbox = document.getElementById('setting-ghost-dialogue');
         if (ghostDialogueCheckbox) {
             const savedSetting = localStorage.getItem('setting_ghost_dialogue');
-            const isEnabled = savedSetting !== 'false';
+            const isEnabled = savedSetting === 'true'; // Default to OFF
             ghostDialogueCheckbox.checked = isEnabled;
 
             ghostDialogueCheckbox.addEventListener('change', (e) => {
@@ -278,7 +289,7 @@ export class HUD {
         const showStatsCheckbox = document.getElementById('setting-show-stats');
         if (showStatsCheckbox) {
             const savedShowStats = localStorage.getItem('setting_show_stats');
-            const isEnabled = savedShowStats !== 'false';
+            const isEnabled = savedShowStats === 'true'; // Default to OFF
             showStatsCheckbox.checked = isEnabled;
             
             const statsPanel = document.getElementById('stats-panel');
@@ -297,7 +308,7 @@ export class HUD {
         const showNavLogCheckbox = document.getElementById('setting-show-nav-log');
         if (showNavLogCheckbox) {
             const savedShowNavLog = localStorage.getItem('setting_show_nav_log');
-            const isEnabled = savedShowNavLog !== 'false';
+            const isEnabled = savedShowNavLog === 'true'; // Default to OFF
             showNavLogCheckbox.checked = isEnabled;
             
             const navLogPanel = document.getElementById('nav-log-panel');
@@ -315,8 +326,13 @@ export class HUD {
 
         const discoverAllCheckbox = document.getElementById('setting-discover-all');
         if (discoverAllCheckbox) {
+            const isEnabled = localStorage.getItem('setting_discover_all') === 'true';
+            discoverAllCheckbox.checked = isEnabled;
+
             discoverAllCheckbox.addEventListener('change', (e) => {
-                if (e.target.checked) {
+                const isChecked = e.target.checked;
+                localStorage.setItem('setting_discover_all', isChecked ? 'true' : 'false');
+                if (isChecked) {
                     this.game.discoverAll();
                 }
             });
@@ -710,84 +726,7 @@ export class HUD {
         }
     }
 
-    _switchMapPlan(plan) {
-        this.mapState.plan = plan;
-        this._svgBuilt = false;
-        
-        const tabA = document.getElementById('map-tab-a');
-        const tabB = document.getElementById('map-tab-b');
-        const tabC = document.getElementById('map-tab-c');
-        if (tabA) tabA.classList.toggle('active', plan === 'A');
-        if (tabB) tabB.classList.toggle('active', plan === 'B');
-        if (tabC) tabC.classList.toggle('active', plan === 'C');
 
-        const mapPanel = document.querySelector('.map-panel');
-        const sidebar = document.getElementById('map-sidebar-b');
-        const canvas = document.getElementById('mapCanvas');
-        const svg = document.getElementById('mapSvg');
-
-        if (plan === 'B') {
-            mapPanel.style.maxWidth = '900px';
-            sidebar.style.display = 'block';
-            canvas.style.display = 'none';
-            svg.style.display = 'block';
-            this._buildDiscoveryList();
-        } else {
-            mapPanel.style.maxWidth = '660px';
-            sidebar.style.display = 'none';
-            svg.style.display = 'none';
-            canvas.style.display = 'block';
-        }
-
-        this.renderMap();
-    }
-
-    _buildDiscoveryList() {
-        const list = document.getElementById('map-discovery-list');
-        if (!list || !this.game.sectorManager) return;
-
-        const objects = this.game.sectorManager.objects
-            .filter(obj => this.game.sectorManager.discoveredIds.has(obj.id))
-            .sort((a, b) => a.name.localeCompare(b.name));
-
-        const TYPE_ICONS = { planet: '🪐', nebula: '🌌', star: '⭐', artifact: '💠', station: '🛸' };
-
-        list.innerHTML = objects.length === 0 
-            ? '<div style="color:#aaa;">No discoveries yet.</div>' 
-            : '';
-
-        objects.forEach(obj => {
-            const el = document.createElement('div');
-            el.style.cssText = `
-                padding: 6px; 
-                background: rgba(0, 240, 255, 0.05); 
-                border: 1px solid rgba(0, 240, 255, 0.1); 
-                border-radius: 4px; 
-                cursor: pointer; 
-                display: flex; 
-                gap: 8px; 
-                align-items: center;
-                transition: background 0.2s;
-            `;
-            el.onmouseenter = () => el.style.background = 'rgba(0, 240, 255, 0.2)';
-            el.onmouseleave = () => el.style.background = 'rgba(0, 240, 255, 0.05)';
-            
-            el.innerHTML = `
-                <span style="font-size: 14px;">${TYPE_ICONS[obj.type] || '✦'}</span>
-                <span style="flex:1;">${obj.name}</span>
-            `;
-            
-            el.onclick = () => {
-                const GRID_SIZE = 10;
-                this.mapState.offsetX = -(obj.coordX * GRID_SIZE);
-                this.mapState.offsetY = -(-obj.coordY * GRID_SIZE);
-                this.mapState.zoom = 2; // zoom in on clicked object
-                this.renderMap();
-            };
-            
-            list.appendChild(el);
-        });
-    }
 
     _handleMapHover(canvasX, canvasY, clientX, clientY) {
         if (!this.game.sectorManager) return;
@@ -797,18 +736,21 @@ export class HUD {
         const midX = 300; 
         const midY = 300;
         
+        // Convert screen-space mouse to map-space logic coords
         const logicX = (canvasX - midX) / this.mapState.zoom - this.mapState.offsetX;
         const logicY = (canvasY - midY) / this.mapState.zoom - this.mapState.offsetY;
 
         let foundObj = null;
         for (const obj of this.game.sectorManager.objects) {
+            // Only show discovered objects
             if (!this.game.sectorManager.discoveredIds.has(obj.id)) continue;
             
             const px = (obj.coordX * GRID_SIZE);
             const py = (-obj.coordY * GRID_SIZE);
             
+            // Check distance in map units
             const dist = Math.hypot(logicX - px, logicY - py);
-            if (dist < 10) { 
+            if (dist < 10 / this.mapState.zoom) { 
                 foundObj = obj;
                 break;
             }
@@ -831,180 +773,11 @@ export class HUD {
             tooltip.style.opacity = '0';
         }
         
+        // Re-render to show hover highlight if any
         this.renderMap();
     }
 
-    _renderMapSVG() {
-        const svgGroup = document.getElementById('mapSvgGroup');
-        const sm = this.game.sectorManager;
-        const rm = this.game.regionManager;
-        if (!svgGroup || !sm || !rm) return;
-
-        const MAP_RADIUS = 25;
-        const GRID_SIZE = 10;
-        
-        const z = this.mapState.zoom;
-        const tx = 300 + this.mapState.offsetX * z;
-        const ty = 300 + this.mapState.offsetY * z;
-        svgGroup.setAttribute('transform', `translate(${tx}, ${ty}) scale(${z})`);
-        
-        if (!this._svgBuilt) {
-            let html = '';
-            
-            // 1. Regions
-            for (let y = -MAP_RADIUS; y <= MAP_RADIUS; y++) {
-                for (let x = -MAP_RADIUS; x <= MAP_RADIUS; x++) {
-                    let foundRegion = DEFAULT_REGION;
-                    for (const reg of REGIONS) {
-                        if (reg.test(x, -y)) {
-                            foundRegion = reg;
-                            break;
-                        }
-                    }
-                    if (foundRegion !== DEFAULT_REGION && rm.discoveredRegions.has(foundRegion.name)) {
-                        html += `<rect x="${x*GRID_SIZE}" y="${y*GRID_SIZE}" width="${GRID_SIZE}" height="${GRID_SIZE}" fill="${foundRegion.color}44" stroke="${foundRegion.color}22" stroke-width="0.5" />`;
-                    }
-                }
-            }
-
-            // 2. Objects
-            for (const obj of sm.objects) {
-                if (sm.discoveredIds.has(obj.id)) {
-                    const px = obj.coordX * GRID_SIZE;
-                    const py = -obj.coordY * GRID_SIZE;
-                    html += `<circle cx="${px}" cy="${py}" r="4" fill="${obj.color}" stroke="rgba(255,255,255,0.8)" stroke-width="0.5" />`;
-                    html += `<text x="${px}" y="${py - 6}" fill="#fff" font-size="6" font-family="Inter, sans-serif" text-anchor="middle" pointer-events="none">${obj.name}</text>`;
-                }
-            }
-            
-            svgGroup.innerHTML = html;
-            this._svgBuilt = true;
-        }
-
-        let playerGroup = document.getElementById('svgPlayerPos');
-        if (!playerGroup) {
-            playerGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            playerGroup.id = 'svgPlayerPos';
-            svgGroup.appendChild(playerGroup);
-        }
-        const pX = (this.game.player.x / 1000) * GRID_SIZE;
-        const pY = (this.game.player.y / 1000) * GRID_SIZE;
-        playerGroup.innerHTML = `<polygon points="${pX},${pY-6} ${pX+4},${pY+4} ${pX-4},${pY+4}" fill="#0f0" />
-            <text x="${pX}" y="${pY-8}" fill="#0f0" font-size="6" font-family="Inter, sans-serif" text-anchor="middle">YOU</text>`;
-    }
-
-    _renderMapC(ctx, midX, midY, sm, rm) {
-        const MAP_RADIUS = 25;
-        const GRID_SIZE = 10;
-        
-        ctx.save();
-        
-        // Background scanlines 
-        ctx.fillStyle = 'rgba(0, 50, 50, 0.2)';
-        for (let i = 0; i < 600; i += 4) {
-            ctx.fillRect(0, i, 600, 2);
-        }
-
-        ctx.translate(midX, midY);
-        ctx.scale(this.mapState.zoom, this.mapState.zoom);
-        ctx.translate(this.mapState.offsetX, this.mapState.offsetY);
-
-        const holoColor = '#00ffcc';
-
-        // Draw grid
-        ctx.strokeStyle = 'rgba(0, 255, 204, 0.1)';
-        ctx.lineWidth = 1 / this.mapState.zoom;
-        ctx.beginPath();
-        for (let i = -MAP_RADIUS; i <= MAP_RADIUS; i++) {
-            ctx.moveTo(i * GRID_SIZE, -MAP_RADIUS * GRID_SIZE);
-            ctx.lineTo(i * GRID_SIZE, MAP_RADIUS * GRID_SIZE);
-            ctx.moveTo(-MAP_RADIUS * GRID_SIZE, i * GRID_SIZE);
-            ctx.lineTo(MAP_RADIUS * GRID_SIZE, i * GRID_SIZE);
-        }
-        ctx.stroke();
-
-        // Regions and Fog of War
-        for (let y = -MAP_RADIUS; y <= MAP_RADIUS; y++) {
-            for (let x = -MAP_RADIUS; x <= MAP_RADIUS; x++) {
-                let foundRegion = DEFAULT_REGION;
-                for (const reg of REGIONS) {
-                    if (reg.test(x, -y)) {foundRegion = reg; break;}
-                }
-                
-                const isDiscovered = rm.discoveredRegions.has(foundRegion.name);
-                if (isDiscovered) {
-                    ctx.fillStyle = foundRegion.color + '33';
-                    ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
-                    
-                    ctx.strokeStyle = foundRegion.color + '88';
-                    ctx.strokeRect(x * GRID_SIZE + 0.5, y * GRID_SIZE + 0.5, GRID_SIZE - 1, GRID_SIZE - 1);
-                } else {
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                    ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
-                }
-            }
-        }
-
-        // Draw Discoveries with heavy glow
-        ctx.shadowBlur = 10;
-        for (const obj of sm.objects) {
-            if (sm.discoveredIds.has(obj.id)) {
-                const px = obj.coordX * GRID_SIZE;
-                const py = -obj.coordY * GRID_SIZE;
-                
-                ctx.shadowColor = obj.color;
-                ctx.fillStyle = obj.color;
-                
-                ctx.beginPath();
-                ctx.arc(px, py, 2, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 0.5;
-                ctx.beginPath();
-                ctx.moveTo(px - 5, py); ctx.lineTo(px + 5, py);
-                ctx.moveTo(px, py - 5); ctx.lineTo(px, py + 5);
-                ctx.stroke();
-                
-                ctx.shadowBlur = 0;
-                ctx.fillStyle = '#fff';
-                ctx.font = '5px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText(obj.name.toUpperCase(), px, py - 7);
-                ctx.shadowBlur = 10; // restore for next iteration
-            }
-        }
-
-        // Draw Player Ship (Triangle)
-        const pX = (this.game.player.x / 1000) * GRID_SIZE;
-        const pY = (this.game.player.y / 1000) * GRID_SIZE;
-        ctx.shadowColor = holoColor;
-        ctx.shadowBlur = 15;
-        ctx.fillStyle = holoColor;
-        ctx.beginPath();
-        ctx.moveTo(pX, pY - 6);
-        ctx.lineTo(pX + 4, pY + 4);
-        ctx.lineTo(pX - 4, pY + 4);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        
-        // Draw radar ping ring around player
-        const time = Date.now() / 1000;
-        const ringSize = (time % 2) * 15;
-        ctx.strokeStyle = `rgba(0, 255, 204, ${1 - (ringSize/15)})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(pX, pY, ringSize, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.restore();
-    }
-
     renderMap() {
-        if (this.mapState.plan === 'B') {
-            this._renderMapSVG();
-            return;
-        }
 
         const canvas = document.getElementById('mapCanvas');
         if (!canvas) return;
@@ -1022,11 +795,6 @@ export class HUD {
         const midY = canvas.height / 2;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        if (this.mapState.plan === 'C') {
-            this._renderMapC(ctx, midX, midY, sm, rm);
-            return;
-        }
 
         // Plan A implementation
         ctx.save();
@@ -1237,11 +1005,14 @@ export class HUD {
 
     _refreshEngineModeUI() {
         const player = this.game.player;
-        const label = document.getElementById('engine-mode-label');
-        const bar = document.getElementById('boost-charge-fill');
-        const btn = document.getElementById('engine-toggle-btn');
-        if (label) label.textContent = player.engineMode === 'boost' ? '⚡ BOOST' : '🔵 THRUSTER';
-        if (btn) btn.dataset.mode = player.engineMode;
+        const thrusterOpt = document.getElementById('engine-thruster');
+        const boosterOpt = document.getElementById('engine-booster');
+
+        if (thrusterOpt && boosterOpt) {
+            const isBoost = player.engineMode === 'boost';
+            thrusterOpt.classList.toggle('active', !isBoost);
+            boosterOpt.classList.toggle('active', isBoost);
+        }
     }
 
     /** Pause the game loop without opening the upgrade menu. */
@@ -1675,23 +1446,35 @@ export class HUD {
         if (!this.objectivesPanel) return;
 
         const activeQuests = this.game.questManager.activeQuests;
-        const currentIds = activeQuests.map(q => q.id).join(',');
         const currentRegionName = this.game.regionManager?.currentRegion?.name || '';
-        const refreshKey = currentIds + '|' + currentRegionName;
+        
+        // Find the prioritized quest to show in the HUD
+        // Priority: 1. Current region's quest, 2. Most recently accepted incomplete quest
+        let displayQuest = activeQuests.find(q => q.category === 'region' && q.regionId === currentRegionName);
+        if (!displayQuest && activeQuests.length > 0) {
+            displayQuest = activeQuests[activeQuests.length - 1]; // Assuming the last one is the most recent
+        }
 
-        // 1. If set of quest IDs changed (new quest or quest completed) or region changed, do a full refresh
+        const refreshKey = (displayQuest ? displayQuest.id : 'none') + '|' + currentRegionName + '|' + activeQuests.length;
+
+        // 1. If the displayed quest changed or region changed, do a full refresh
         if (this._lastQuestIds !== refreshKey) {
             this._lastQuestIds = refreshKey;
 
-            const sideQuests = activeQuests.filter(q => q.category !== 'region' || q.regionId !== currentRegionName);
-            const regionQuests = activeQuests.filter(q => q.category === 'region' && q.regionId === currentRegionName);
+            if (!displayQuest) {
+                this.objectivesPanel.innerHTML = '';
+                const regionPanel = document.getElementById('region-quests-panel');
+                if (regionPanel) regionPanel.innerHTML = '';
+                return;
+            }
 
-            this.objectivesPanel.innerHTML = sideQuests.map(quest => `
-                <div class="objective-item" id="obj-${quest.id}">
-                    <div class="objective-title">${quest.title}</div>
-                    <div class="objective-desc">${quest.description}</div>
+            // Render single objective in HUD
+            this.objectivesPanel.innerHTML = `
+                <div class="objective-item" id="obj-${displayQuest.id}">
+                    <div class="objective-title">${displayQuest.title}</div>
+                    <div class="objective-desc">${displayQuest.description}</div>
                     <div class="objective-progress-container">
-                        ${quest.objectives.map(obj => {
+                        ${displayQuest.objectives.map(obj => {
                             let progressText = `${obj.current} / ${obj.count}`;
                             if (obj.type === 'reach') {
                                 progressText = `${obj.current}/${obj.count} Discovered`;
@@ -1705,46 +1488,134 @@ export class HUD {
                             `;
                         }).join('')}
                     </div>
+                    <button class="see-more-btn" id="see-more-objectives">See More</button>
                 </div>
-            `).join('');
+            `;
 
-            const regionPanel = document.getElementById('region-quests-panel');
-            if (regionPanel) {
-                regionPanel.innerHTML = regionQuests.map(quest => `
-                    <div class="region-objective-item" id="obj-${quest.id}" style="margin-top: 5px; padding: 5px; background: rgba(0,240,255,0.05); border: 1px solid rgba(0,240,255,0.2); border-radius: 4px;">
-                        <div class="objective-title" style="color: #00f0ff; font-weight: bold; font-size: 0.9em; margin-bottom: 4px;">${quest.title}</div>
-                        <div class="objective-progress-container" style="justify-content: center; gap: 4px; display: flex; flex-wrap: wrap;">
-                            ${quest.objectives.map(obj => `
-                                <div class="objective-progress-tag" style="font-size: 0.8em; padding: 2px 4px;">
-                                    ${obj.current} / ${obj.count}
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `).join('');
+            const seeMoreBtn = document.getElementById('see-more-objectives');
+            if (seeMoreBtn) {
+                seeMoreBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    this.game.toggleUpgrades(); // Opens terminal
+                    const tabObjectives = document.getElementById('tab-objectives');
+                    if (tabObjectives) tabObjectives.click(); // Switch to objectives tab
+                };
             }
+
+            // Clear the old region panel as we are unifying objectives in the top bar
+            const regionPanel = document.getElementById('region-quests-panel');
+            if (regionPanel) regionPanel.innerHTML = '';
+            
             return;
         }
 
-        // 2. Same IDs, just update internal progress content if changed
-        activeQuests.forEach(quest => {
-            const isRegionMatch = quest.category === 'region' && quest.regionId === currentRegionName;
-
-            const rootPanel = isRegionMatch ? document.getElementById('region-quests-panel') : this.objectivesPanel;
-            if (!rootPanel) return;
-
-            const container = rootPanel.querySelector(`#obj-${quest.id} .objective-progress-container`);
+        // 2. Same quest, just update internal progress content if changed
+        if (displayQuest) {
+            const container = this.objectivesPanel.querySelector(`#obj-${displayQuest.id} .objective-progress-container`);
             if (container) {
-                const html = quest.objectives.map(obj => `
-                    <div class="objective-progress-tag" ${!isRegionMatch ? 'style="font-size: 0.8em; padding: 2px 4px;"' : ''}>
-                        ${obj.current} / ${obj.count}
-                    </div>
-                `).join('');
+                const html = displayQuest.objectives.map(obj => {
+                    let progressText = `${obj.current} / ${obj.count}`;
+                    if (obj.type === 'reach') {
+                        progressText = `${obj.current}/${obj.count} Discovered`;
+                    } else if (obj.type === 'collect') {
+                        progressText = `${obj.current}/${obj.count} Gems`;
+                    }
+                    return `
+                        <div class="objective-progress-tag">
+                            ${progressText}
+                        </div>
+                    `;
+                }).join('');
 
                 if (container.innerHTML !== html) {
                     container.innerHTML = html;
                 }
             }
-        });
+        }
+    }
+
+    showQuestComplete(quest) {
+        const popup = document.getElementById('discovery-popup');
+        if (!popup) return;
+
+        // Reuse discovery-popup structure for consistency
+        const icon = quest.id.startsWith('tut_') ? '🏁' : quest.id.startsWith('story_') ? '👻' : '🏆';
+        
+        let rewardsHtml = '';
+        if (quest.rewards) {
+            if (quest.rewards.gems) rewardsHtml += `<div>+${quest.rewards.gems} 💎</div>`;
+            if (quest.rewards.sci) rewardsHtml += `<div>+${quest.rewards.sci} 🔬</div>`;
+        }
+
+        popup.innerHTML = `
+            <div class="discovery-icon">${icon}</div>
+            <div class="discovery-type">OBJECTIVE COMPLETE</div>
+            <div class="discovery-name">${quest.title}</div>
+            <div class="discovery-desc">${quest.completionMessage || 'Mission parameters fulfilled.'}</div>
+            <div class="discovery-reward">${rewardsHtml}</div>
+        `;
+
+        popup.classList.remove('popup-pinned');
+        popup.classList.add('active');
+
+        // Manual removal after 5 seconds if not already fading
+        setTimeout(() => {
+            popup.classList.remove('active');
+        }, 5000);
+    }
+
+    refreshObjectivesTab() {
+        const list = document.getElementById('objectives-list');
+        if (!list) return;
+
+        const activeQuests = this.game.questManager.activeQuests;
+        const completedIds = Array.from(this.game.questManager.completedQuestIds);
+        
+        // 1. Active Quests
+        const activeHtml = activeQuests.map(quest => {
+            return `
+                <div class="terminal-objective-card">
+                    <div class="terminal-objective-header">
+                        <div class="terminal-objective-title">${quest.title}</div>
+                        <div class="terminal-objective-status status-active">Active</div>
+                    </div>
+                    <div class="terminal-objective-desc">${quest.description}</div>
+                    <div class="terminal-objective-progress">
+                        ${quest.objectives.map(obj => `
+                            <div class="terminal-progress-item">
+                                <span>${obj.id.replace(/_/g, ' ')}</span>
+                                <span>${obj.current} / ${obj.count}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // 2. Completed Quests
+        const completedHtml = completedIds.map(id => {
+            const template = QUESTS[id];
+            if (!template) return '';
+            return `
+                <div class="terminal-objective-card" style="opacity: 0.7;">
+                    <div class="terminal-objective-header">
+                        <div class="terminal-objective-title">${template.title}</div>
+                        <div class="terminal-objective-status status-complete">Completed</div>
+                    </div>
+                    <div class="terminal-objective-desc">${template.description}</div>
+                </div>
+            `;
+        }).join('');
+
+        if (activeHtml === '' && completedHtml === '') {
+            list.innerHTML = '<div style="text-align:center; padding: 40px; color: #666;">No objectives recorded yet.</div>';
+        } else {
+            list.innerHTML = `
+                <h3 style="color:#00f0ff; font-family:'Orbitron'; font-size: 0.8rem; margin: 0 0 15px 5px; opacity: 0.8;">ACTIVE OBJECTIVES</h3>
+                ${activeHtml || '<div style="padding:10px; color:#555; font-style:italic;">No active objectives.</div>'}
+                <h3 style="color:#4aff80; font-family:'Orbitron'; font-size: 0.8rem; margin: 30px 0 15px 5px; opacity: 0.8;">MISSION HISTORY</h3>
+                ${completedHtml}
+            `;
+        }
     }
 }

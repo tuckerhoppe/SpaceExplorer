@@ -10,8 +10,7 @@ export const QUESTS = {
         hail: {
             text: "Thanks for coming with me to this new Nebula, I really appreciate it",
             options: [
-                { text: "Of course, I’m excited to finally see one for myself!", reply: "Oh man, you’re going to love it! Why don’t we do a quick systems check. Press W to go forward and a or d to turn" },
-                { text: "Of course, I’m glad to finally get flying!", reply: "Yeah there’s nothing better than your first flight outside of the system! Lets make sure everything is working: Press W to go forward and a or d to turn" }
+                { text: "Of course, I’m excited to finally see one for myself!", reply: "Oh man, you’re going to love it! Why don’t we do a quick systems check. Press W to go forward and a or d to turn" }
             ]
         },
         nextQuest: 'tut_combat'
@@ -26,8 +25,7 @@ export const QUESTS = {
         hail: {
             text: "Your engines are working great! There are some asteroids near by here, perfect for a weapons check. Aim with where you want to shoot your mouse, and click to fire!",
             options: [
-                { text: "Asteroids?", reply: "Sorry, I keep forgetting its your first time out of the system! Yeah asteroids are pretty common in most regions of space. If you hit into them they’ll damage your ship, but when you destroy them, you get gems!" },
-                { text: "Lets do it!", reply: "You got it, remember running into asteroids, can hurt your ship. And feel free to pick up those gems, you’ll need to upgrade your ship eventually!" }
+                { text: "Lets do it!", reply: "You got it! Remember: running into asteroids can hurt your ship. When you destroy them, they drop gems which you'll need for upgrades eventually!" }
             ]
         },
         nextQuest: 'tut_hostile'
@@ -42,8 +40,7 @@ export const QUESTS = {
         hail: {
             text: "Woah Incoming! Red blips on the scanner. That's a Star Empire scout. It's fast and it bites. Evade its phasers with your keyboard and fire at it with your mouse!",
             options: [
-                { text: "Star Empire?", reply: "Yeah, you remember right? They’re the most powerful military empire in the entire quadrant! We better be careful. Get him before he can call for backup!" },
-                { text: "Scout?.", reply: "Its possible he just got lost, but I’d rather be safe than sorry. Take him out!”" }
+                { text: "The Star Empire?!", reply: "They’re the most powerful military force in the quadrant! We have to be careful. Take him out before he calls for backup!" }
             ]
         },
         nextQuest: 'tut_science'
@@ -56,10 +53,9 @@ export const QUESTS = {
             { id: 'perform_science', type: 'science', target: 'nebula_tutorial', count: 30, current: 0 }
         ],
         hail: {
-            text: "Nice shot! Star Empire scum! It looks like he was the only one phew! I marked the nebula in your Navigation Computer, there should be an icon pointing to it. Lets get there and I can show you how to scan it!",
+            text: "Nice shot! It looks like he was the only one phew! I marked the nebula in your Nav Computer. Let's head there and I'll show you how to scan it for data!",
             options: [
-                { text: "Scan it?", reply: "Yeah, when you are docked(flying on top of) a stellar object like a nebula or star, you will automatically start scanning it and gathering scientific data about it. A sensor skill check will appear to speed up the process" },
-                { text: "Why a nebula?", reply: "Nebulas contain a lot of exotic material that could be useful to scan! When you’re right on top of it your sensors will automatically start picking up data, but doing successful skill checks speed up the process.!" }
+                { text: "How do I scan it?", reply: "Just fly right on top of a stellar object to begin scanning automatically. A sensor skill check will appear—hit the targets to speed up the process and gather Science Points!" }
             ]
         },
         nextQuest: 'tut_boost'
@@ -89,8 +85,7 @@ export const QUESTS = {
         hail: {
             text: "Nice job! OK I guess we should get that data back home. I haven’t heard from planetary command recently, I hope everything is alright…",
             options: [
-                { text: "What might be going wrong??", reply: "I’m sure its nothing…probably just a solar flare or interference. Follow the icon I put in your Nav Systems" },
-                { text: "I’m sure its fine", reply: "You’re probably right, not much ever happens in our quiet corner of the quadrant. Follow the icon I put in your nav computer, and we’ll be home in no time" }
+                { text: "I'm sure it's fine. Let's go.", reply: "You’re probably right, not much ever happens in our quiet corner of the quadrant. Follow the icon I put in your nav computer, and we’ll be home in no time." }
             ]
         },
         nextQuest: 'tut_final'
@@ -103,8 +98,7 @@ export const QUESTS = {
         hail: {
             text: "OH…Oh no! They’re mounting a full invasion!! We have to help!",
             options: [
-                { text: "Its too dangerous!!", reply: "We have to try! Its what papanwa would have one!" },
-                { text: "For our home!.", reply: "Stick close to me, take evasive maneuvers, and fire every last shot you have" }
+                { text: "For our home!", reply: "Stick close to me, take evasive maneuvers, and fire every last shot you have! We have to protect the planet!" }
             ]
         },
     },
@@ -116,23 +110,21 @@ export const QUESTS = {
             { id: 'reach_station', type: 'reach', targetType: 'station', count: 1, current: 0 }
         ],
         hail: {
-            text: "Wakey wakey!! Wow you were out for a while, I wasn't sure if you'd wake up...What a piece of Junk you're flying!!",
+            text: "Wakey wakey!! Wow, you were out for a while. I wasn't sure if you'd wake up after that explosion... What a piece of junk you're flying now!! Hehehe!",
             options: [
                 {
-                    text: "Who are you?",
-                    reply: "Aren't you the curious type? Lets just say I'm your NEW best friend. I was floating around and saw your ship get attacked by all of those enemy ships, I don't think theres any way your OLD best friend is still around after that ambush hehehe",
+                    text: "Who are you? What happened to me?",
+                    reply: "Lets just say I'm your NEW best friend. I was floating around and saw your ship get obliterated. Your old 'best friend'? Yeah, he's space-dust now. Hehehe!",
                     next: [
-                        { text: "You keep his name out of your damn mouth!", reply: "OOOOHH, feisty, I like that in my best friends. But if we're going to be best friends, you cannot be flying around in a HUNK OF JUNK like this. Theres a station not too far from here, lets go there and maybe we can get you fixed up before you explode and die in the endless vaccum of space" },
-                        { text: "We are NOT best friends..", reply: "Hehehe, only time will tell. I like that. I'm the only one who knows where you can repair your ship, so you better be nice to me hehehe" }
+                        { 
+                            text: "How am I even alive right now?", 
+                            reply: "That's my little secret! I can pull a consciousness back from the brink of the void. Every time you 'die', I grab your essence and shove it into a fresh clone ship. It’s messy, and it costs a few gems, but hey, immortality isn’t free! Hehehe!",
+                            next: [
+                                { text: "We need to go back and help!", reply: "Noble, but stupid! You wouldn't last five seconds in a HUNK OF JUNK like this. There's a station nearby—let's get you fixed up before you explode for real. Hehehe!" }
+                            ]
+                        }
                     ]
-                },
-                {
-                    text: "My head hurts...What happened?", reply: "Well I was just floating around, minding my business, when I saw you and your friend playing space rangers hehe. Very cute, of you two to think you could become space rangers hehehe. Then I saw you heading home and BANG! A huge imperial invasion! Ouch! You're friend didn't make it...Just one space ranger now hehehe!",
-                    next: [
-                        { text: "What? No he can't be gone", reply: "Aww, thats touching that you think he can't be gone. But if his ship didn't blow up, the Star Empire is probably torturing him as we speak, and he'll be dead soon! I'm your only friend now hehehe" },
-                        { text: "We have to go back! We can save him!", reply: "How noble! But if you went back there now, you wouldn't last 5 seconds hehehe. As much as I like fireworks, I'm feeling generous...So I'll help you get you're ship repaired hehehe...After all what are friends for?" }
-                    ]
-                },
+                }
             ]
         }
     },

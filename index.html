@@ -21,10 +21,11 @@
                     <span id="health-text" class="hud-text">100 / 100</span>
                 </div>
                 <div class="hud-item engine-container">
-                    <button id="engine-toggle-btn" class="engine-btn" data-mode="thruster">
-                        <span id="engine-mode-label">🔵 THRUSTER</span>
+                    <div id="engine-toggle-btn" class="engine-toggle-group">
+                        <div class="engine-option active" id="engine-thruster">THRUSTER</div>
+                        <div class="engine-option" id="engine-booster">BOOSTER</div>
                         <span class="engine-hotkey">[TAB]</span>
-                    </button>
+                    </div>
                     <div class="boost-charge-track">
                         <div id="boost-charge-fill" class="boost-charge-fill"></div>
                     </div>
@@ -82,7 +83,8 @@
                         <button id="tab-upgrades" class="modal-tab active">Upgrades</button>
                         <button id="tab-ships" class="modal-tab">Ships</button>
                         <button id="tab-tech" class="modal-tab">Tech</button>
-                        <button id="tab-codex" class="modal-tab">Codex</button>
+                        <button id="tab-objectives" class="modal-tab">Objectives</button>
+                        <!-- <button id="tab-codex" class="modal-tab">Codex</button> -->
                         <button id="tab-settings" class="modal-tab">Settings</button>
                     </div>
                     <div id="content-upgrades" class="tab-content active">
@@ -94,9 +96,12 @@
                     <div id="content-tech" class="tab-content hidden">
                         <div id="tech-list" class="upgrade-list"></div>
                     </div>
-                    <div id="content-codex" class="tab-content hidden">
-                        <div id="codex-list" class="upgrade-list"></div>
+                    <div id="content-objectives" class="tab-content hidden">
+                        <div id="objectives-list" class="upgrade-list" style="max-height: 60vh;"></div>
                     </div>
+                    <!-- <div id="content-codex" class="tab-content hidden">
+                        <div id="codex-list" class="upgrade-list"></div>
+                    </div> -->
                     <div id="content-settings" class="tab-content hidden">
                         <div class="settings-list" style="padding: 20px; color: #fff; text-align: left;">
                             <label
@@ -185,50 +190,26 @@
 
             <!-- Galaxy Map Modal -->
             <div id="map-modal" class="hidden modal">
-                <div class="modal-panel map-panel" style="max-width: 660px;">
+                <div class="modal-panel map-panel" style="max-width: 860px;">
                     <h2>Galaxy Map <span
                             style="font-size: 0.5em; opacity: 0.5; font-weight: normal; margin-left: 10px;">[M]</span>
                     </h2>
 
-                    <div class="modal-tabs" style="justify-content: center; margin-bottom: 15px;">
-                        <button id="map-tab-a" class="modal-tab active">Plan A (Tactical)</button>
-                        <button id="map-tab-b" class="modal-tab">Plan B (Strategic - WIP)</button>
-                        <button id="map-tab-c" class="modal-tab">Plan C (Holo - WIP)</button>
-                    </div>
-
-                    <div id="map-content-wrapper" style="display: flex; gap: 20px; align-items: stretch; margin-bottom: 20px;">
-                        <!-- Sidebar for Plan B -->
-                        <div id="map-sidebar-b" style="display: none; width: 250px; background: rgba(0,0,0,0.4); border: 1px solid rgba(0,240,255,0.2); border-radius: 4px; padding: 10px; overflow-y: auto; max-height: 600px;">
-                            <h3 style="margin-top:0; margin-bottom:15px; color:#00f0ff; text-align:center; font-size: 14px; border-bottom: 1px solid rgba(0,240,255,0.2); padding-bottom: 10px;">Discovery Log</h3>
-                            <div id="map-discovery-list" style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;"></div>
-                        </div>
-
+                    <div id="map-content-wrapper" style="display: flex; gap: 20px; align-items: stretch; margin-bottom: 5px;">
                         <div id="map-container"
                             style="flex: 1; background: rgba(0,0,0,0.4); border: 2px solid rgba(0,240,255,0.2); border-radius: 4px; padding: 0; overflow: hidden; position: relative;">
                             
-                            <!-- For Plan A -->
+                            <!-- Tactical Map (Plan A) -->
                             <canvas id="mapCanvas"
-                                style="display: block; width: 100%; height: auto; max-width: 600px; aspect-ratio: 1 / 1;"></canvas>
+                                style="display: block; width: auto; max-width: 100%; height: auto; max-height: 80vh; aspect-ratio: 1 / 1; margin: 0 auto;"></canvas>
 
-                            <!-- For Plan B -->
-                            <svg id="mapSvg" style="display: none; width: 100%; height: auto; max-width: 600px; aspect-ratio: 1 / 1; background: transparent;">
-                                <defs>
-                                    <clipPath id="mapSvgClip">
-                                        <rect width="600" height="600" />
-                                    </clipPath>
-                                </defs>
-                                <svg width="600" height="600" viewBox="0 0 600 600">
-                                    <g id="mapSvgGroup" transform="translate(300, 300) scale(1)"></g>
-                                </svg>
-                            </svg>
-
-                            <!-- For Hover Tooltip (Plan A & B) -->
+                            <!-- For Hover Tooltip -->
                             <div id="map-tooltip" style="position: absolute; background: rgba(0,0,0,0.9); border: 1px solid #00f0ff; color: #fff; padding: 8px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.1s; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.5);"></div>
                         </div>
                     </div>
 
                     <div
-                        style="display: flex; gap: 15px; justify-content: center; margin-bottom: 20px; font-size: 0.9rem; flex-wrap: wrap;">
+                        style="display: flex; gap: 15px; justify-content: center; margin-bottom: 10px; font-size: 0.8rem; flex-wrap: wrap;">
                         <div><span
                                 style="color:#0f0; display:inline-block; width:10px; height:10px; background:#0f0; border-radius:50%; margin-right:5px; transform: scale(0.6) translateY(-2px); clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></span>You
                         </div>
@@ -267,6 +248,12 @@
                 <div id="nav-log-entries">
                     <div class="nav-log-empty">No objects discovered yet.</div>
                 </div>
+            </div>
+
+            <!-- Mini Map -->
+            <div id="mini-map-container">
+                <div class="mini-map-header">SCANNER <span>[ DISCOVERY ]</span></div>
+                <canvas id="miniMapCanvas"></canvas>
             </div>
 
             <!-- Communications Log: hidden by default, shown when messages or contacts exist -->

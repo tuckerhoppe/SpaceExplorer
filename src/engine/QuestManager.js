@@ -8,6 +8,10 @@ export class QuestManager {
         this.load();
     }
 
+    isQuestCompletedOrActive(questId) {
+        return this.completedQuestIds.has(questId) || this.activeQuests.some(q => q.id === questId);
+    }
+
     acceptQuest(questId) {
         if (this.completedQuestIds.has(questId)) return;
         if (this.activeQuests.find(q => q.id === questId)) return;
@@ -121,6 +125,7 @@ export class QuestManager {
                 text: quest.completionMessage || `Objective ${quest.title} completed!`,
                 entity: "system"
             });
+            this.game.hud.showQuestComplete(quest);
             this.game.hud.update(this.game.player);
         }
 
