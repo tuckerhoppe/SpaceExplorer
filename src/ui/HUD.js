@@ -1553,15 +1553,22 @@ export class HUD {
             <div class="discovery-name">${quest.title}</div>
             <div class="discovery-desc">${quest.completionMessage || 'Mission parameters fulfilled.'}</div>
             <div class="discovery-reward">${rewardsHtml}</div>
+            <button class="popup-close-btn">Excellent!</button>
         `;
 
-        popup.classList.remove('popup-pinned');
-        popup.classList.add('active');
+        // Clear any old timer so it doesn't vanish while user is reading
+        clearTimeout(this._popupTimer);
+        
+        popup.classList.add('active', 'popup-pinned');
+        this._pauseForPopup();
 
-        // Manual removal after 5 seconds if not already fading
-        setTimeout(() => {
-            popup.classList.remove('active');
-        }, 5000);
+        const closeBtn = popup.querySelector('.popup-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                popup.classList.remove('active', 'popup-pinned');
+                this._resumeFromPopup();
+            });
+        }
     }
 
     refreshObjectivesTab() {
