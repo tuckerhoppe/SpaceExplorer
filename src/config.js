@@ -18,6 +18,10 @@ export const SHIPS = [
         desc: 'A reliable, mass-produced chassis. No base stat bonuses.',
         cost: 0,
         sciLevel: 0,
+        recommendedLevel: 2,
+        shipRadius: 18,     // world-space radius (px)
+        shipZoom: 1.00,     // base camera zoom at rest
+        shipCargo: 50,      // base cargo capacity
         stats: { engine: 0, booster: 0, hull: 0, weapons: 0, magnet: 0 },
         drawShape: (ctx, radius) => {
             ctx.beginPath();
@@ -41,7 +45,11 @@ export const SHIPS = [
         desc: 'Advanced thrusters and reinforced plating provide a solid baseline.',
         cost: 500,
         sciLevel: 3,
-        stats: { engine: 1, booster: 1, hull: 1, weapons: 2, magnet: 1 },
+        recommendedLevel: 4,
+        shipRadius: 22,
+        shipZoom: 0.96,
+        shipCargo: 150,
+        stats: { engine: 1, booster: 1, hull: 2, weapons: 2, magnet: 1 },
         drawShape: (ctx, radius) => {
             // A bulky, wider ship with swept back wings
             ctx.beginPath();
@@ -71,7 +79,11 @@ export const SHIPS = [
         desc: 'State-of-the-art exploration vessel with top-tier modular bays.',
         cost: 2000,
         sciLevel: 6,
-        stats: { engine: 2, booster: 2, hull: 2, weapons: 4, magnet: 2 },
+        recommendedLevel: 6,
+        shipRadius: 27,
+        shipZoom: 0.91,
+        shipCargo: 400,
+        stats: { engine: 2, booster: 2, hull: 5, weapons: 4, magnet: 2 },
         drawShape: (ctx, radius) => {
             // Sleek central fuselage
             ctx.beginPath();
@@ -111,82 +123,18 @@ export const SHIPS = [
             ctx.fill();
         }
     },
-    {
-        id: 'ship_federation',
-        name: 'Federation Enterprise',
-        desc: 'Legendary exploration vessel. Features a saucer section and twin warp nacelles.',
-        cost: 5000,
-        sciLevel: 10,
-        stats: { engine: 3, booster: 3, hull: 3, weapons: 6, magnet: 3 },
-        drawShape: (ctx, radius) => {
-            // Pylons
-            ctx.beginPath();
-            ctx.moveTo(-radius * 0.3, 0);
-            ctx.lineTo(-radius * 0.8, -radius * 0.7);
-            ctx.lineTo(-radius * 0.6, -radius * 0.7);
-            ctx.lineTo(-radius * 0.1, 0);
-            ctx.closePath();
-            ctx.fill(); ctx.stroke();
 
-            ctx.beginPath();
-            ctx.moveTo(-radius * 0.3, 0);
-            ctx.lineTo(-radius * 0.8, radius * 0.7);
-            ctx.lineTo(-radius * 0.6, radius * 0.7);
-            ctx.lineTo(-radius * 0.1, 0);
-            ctx.closePath();
-            ctx.fill(); ctx.stroke();
-
-            // Nacelles
-            ctx.beginPath();
-            ctx.moveTo(-radius * 1.2, -radius * 0.8);
-            ctx.lineTo(-radius * 0.3, -radius * 0.8);
-            ctx.lineTo(-radius * 0.3, -radius * 0.55);
-            ctx.lineTo(-radius * 1.2, -radius * 0.55);
-            ctx.closePath();
-            ctx.fill(); ctx.stroke();
-
-            ctx.beginPath();
-            ctx.moveTo(-radius * 1.2, radius * 0.8);
-            ctx.lineTo(-radius * 0.3, radius * 0.8);
-            ctx.lineTo(-radius * 0.3, radius * 0.55);
-            ctx.lineTo(-radius * 1.2, radius * 0.55);
-            ctx.closePath();
-            ctx.fill(); ctx.stroke();
-
-            // Engineering body
-            ctx.beginPath();
-            ctx.ellipse(-radius * 0.3, 0, radius * 0.6, radius * 0.3, 0, 0, Math.PI * 2);
-            ctx.fill(); ctx.stroke();
-
-            // Saucer
-            ctx.beginPath();
-            ctx.ellipse(radius * 0.6, 0, radius * 0.7, radius * 0.6, 0, 0, Math.PI * 2);
-            ctx.fill(); ctx.stroke();
-
-            // Bussard collectors (red front part of nacelles)
-            ctx.fillStyle = '#ff3c3c';
-            ctx.beginPath();
-            ctx.arc(-radius * 0.3, -radius * 0.675, radius * 0.125, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(-radius * 0.3, radius * 0.675, radius * 0.125, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Bridge (Center of saucer)
-            ctx.fillStyle = '#00ffd0';
-            ctx.beginPath();
-            ctx.arc(radius * 0.6, 0, radius * 0.15, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    },
     {
         id: 'ship_millennium',
         name: 'Millennium Starship',
         desc: 'Fastest hunk of junk in the galaxy. Features an off-center cockpit and dual mandibles.',
         cost: 3500,
         sciLevel: 8,
-        stats: { engine: 3, booster: 4, hull: 2, weapons: 4, magnet: 2 },
+        recommendedLevel: 8,
+        shipRadius: 33,
+        shipZoom: 0.85,
+        shipCargo: 750,
+        stats: { engine: 3, booster: 4, hull: 8, weapons: 4, magnet: 2 },
         drawShape: (ctx, radius) => {
             // Main Saucer
             ctx.beginPath();
@@ -239,7 +187,11 @@ export const SHIPS = [
         desc: 'A heavy, cloaking-capable interceptor with a distinct avian silhouette and powerful disruptors.',
         cost: 4000,
         sciLevel: 9,
-        stats: { engine: 3, booster: 3, hull: 4, weapons: 5, magnet: 2 },
+        recommendedLevel: 10,
+        shipRadius: 40,
+        shipZoom: 0.79,
+        shipCargo: 1200,
+        stats: { engine: 3, booster: 3, hull: 12, weapons: 5, magnet: 2 },
         drawShape: (ctx, radius) => {
             // Colors
             const dGreen = '#2d4a27';
@@ -313,6 +265,79 @@ export const SHIPS = [
             ctx.fillStyle = '#ff6600'; 
             ctx.beginPath();
             ctx.arc(radius * 1.55, 0, radius * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    },
+    {
+        id: 'ship_federation',
+        name: 'Federation Enterprise',
+        desc: 'Legendary exploration vessel. Features a saucer section and twin warp nacelles.',
+        cost: 5000,
+        sciLevel: 10,
+        recommendedLevel: 12,
+        shipRadius: 48,
+        shipZoom: 0.72,
+        shipCargo: 2500,
+        stats: { engine: 3, booster: 3, hull: 15, weapons: 6, magnet: 3 },
+        drawShape: (ctx, radius) => {
+            // Pylons
+            ctx.beginPath();
+            ctx.moveTo(-radius * 0.3, 0);
+            ctx.lineTo(-radius * 0.8, -radius * 0.7);
+            ctx.lineTo(-radius * 0.6, -radius * 0.7);
+            ctx.lineTo(-radius * 0.1, 0);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(-radius * 0.3, 0);
+            ctx.lineTo(-radius * 0.8, radius * 0.7);
+            ctx.lineTo(-radius * 0.6, radius * 0.7);
+            ctx.lineTo(-radius * 0.1, 0);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+
+            // Nacelles
+            ctx.beginPath();
+            ctx.moveTo(-radius * 1.2, -radius * 0.8);
+            ctx.lineTo(-radius * 0.3, -radius * 0.8);
+            ctx.lineTo(-radius * 0.3, -radius * 0.55);
+            ctx.lineTo(-radius * 1.2, -radius * 0.55);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(-radius * 1.2, radius * 0.8);
+            ctx.lineTo(-radius * 0.3, radius * 0.8);
+            ctx.lineTo(-radius * 0.3, radius * 0.55);
+            ctx.lineTo(-radius * 1.2, radius * 0.55);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+
+            // Engineering body
+            ctx.beginPath();
+            ctx.ellipse(-radius * 0.3, 0, radius * 0.6, radius * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+
+            // Saucer
+            ctx.beginPath();
+            ctx.ellipse(radius * 0.6, 0, radius * 0.7, radius * 0.6, 0, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+
+            // Bussard collectors (red front part of nacelles)
+            ctx.fillStyle = '#ff3c3c';
+            ctx.beginPath();
+            ctx.arc(-radius * 0.3, -radius * 0.675, radius * 0.125, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(-radius * 0.3, radius * 0.675, radius * 0.125, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Bridge (Center of saucer)
+            ctx.fillStyle = '#00ffd0';
+            ctx.beginPath();
+            ctx.arc(radius * 0.6, 0, radius * 0.15, 0, Math.PI * 2);
             ctx.fill();
         }
     }

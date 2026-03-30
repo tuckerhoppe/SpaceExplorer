@@ -35,9 +35,21 @@
                 <!-- Objectives will be injected here by HUD.js -->
             </div>
             <div id="hud-top-right">
-                <div class="hud-item gems-container">
+                <div class="hud-item cargo-container">
+                    <div class="cargo-header">
+                        <span class="cargo-label">CARGO HOLD</span>
+                        <span id="cargo-text" class="cargo-text">0 / 50</span>
+                    </div>
+                    <div class="cargo-bar-track">
+                        <div id="cargo-bar-fill" class="cargo-bar-fill"></div>
+                    </div>
+                </div>
+                <div class="hud-item vault-container">
                     <div class="gem-icon">💎</div>
-                    <span id="gem-count" class="hud-text gem-text">0</span>
+                    <div class="vault-info">
+                        <span class="vault-label">VAULT</span>
+                        <span id="gem-count" class="hud-text gem-text">0</span>
+                    </div>
                 </div>
                 <div class="hud-item sci-container">
                     <span id="sci-level-text" class="hud-text sci-text">SCI LVL 0</span>
@@ -53,16 +65,8 @@
 
             <!-- Dev HUD: toggle with backtick (`) — hidden by default -->
             <div id="dev-hud-panel" class="hidden">
-                <div class="dev-hud-header">🛠 DEV HUD <span class="dev-hud-hint">[ ` ] to close</span></div>
-                <div class="dev-hud-row">
-                    <span class="dev-label">FPS</span>
-                    <span id="dev-fps" class="dev-value">--</span>
-                </div>
-                <div class="dev-hud-divider"></div>
-                <div class="dev-hud-section-label">STELLAR OBJECTS</div>
-                <div id="dev-nav-log"></div>
-                <div class="dev-hud-divider"></div>
-                <button id="dev-reset-btn" class="dev-reset-btn">🗑 Reset All Progress</button>
+                <div class="dev-hud-header">🛠 DEV TOOLS <span class="dev-hud-hint">[ ` ] to close</span></div>
+                <button id="dev-reset-btn" class="dev-reset-btn" style="margin-top: 10px; width: 100%;">🗑 Reset All Progress</button>
             </div>
 
             <div id="hud-top-center">
@@ -71,6 +75,10 @@
                 </div>
                 <div class="hud-item region-container" style="display: flex; flex-direction: column; align-items: center;">
                     <span id="region-name" class="hud-text region-text">Neutral Space</span>
+                    <div id="region-diff-badge" class="region-diff-badge">
+                        <span class="diff-level">✓ LVL 1</span>
+                        <span class="diff-warn"></span>
+                    </div>
                     <div id="region-discovery-info" style="font-size: 0.6rem; color: #00f0ff; opacity: 0.8; margin-top: 2px;">0 / 0 Stellar Objects Discovered</div>
                     <div id="region-quests-panel" style="margin-top: 5px; text-align: center; width: 100%;"></div>
                 </div>
@@ -302,6 +310,15 @@
                             style="display: none;">Done</button>
                     </div>
                 </div>
+            </div>
+            <!-- Intro Terminal Overlay (Typed Tutorial) -->
+            <div id="intro-terminal" class="hidden">
+                <div class="terminal-content">
+                    <div id="terminal-text" class="terminal-text"></div>
+                    <div id="terminal-cursor" class="terminal-cursor">_</div>
+                </div>
+                <div id="terminal-skip" class="terminal-skip hidden">Press any key to fast-forward</div>
+                <button id="terminal-start-btn" class="btn primary-btn hidden" style="margin-top: 40px; pointer-events: auto;">START EXPLORATION</button>
             </div>
         </div>
     </div>

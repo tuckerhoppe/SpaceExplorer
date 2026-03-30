@@ -69,10 +69,10 @@ export class RegionManager {
                     game.player.gems += reward;
                     game.player.totalGemsCollected += reward;
                 }
-                // +10 SP for discovering a new region
-                if (game?.player) game.player.addScience(10);
+                // +50 SP for discovering a new region (primary science source)
+                if (game?.player) game.player.addScience(50);
                 // Show discovery popup with rewards (replaces separate showRegionReward call)
-                if (game?.hud) game.hud.showRegionDiscovery(newRegion, reward, 10);
+                if (game?.hud) game.hud.showRegionDiscovery(newRegion, reward, 50);
             } else if (newRegion !== DEFAULT_REGION && game?.hud) {
                 // Repeat entry — auto-dismiss popup, no rewards
                 game.hud.showRegionDiscovery(newRegion);

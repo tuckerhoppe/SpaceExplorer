@@ -35,7 +35,6 @@ export class GhostCompanion {
 
     update(game) {
         if (this.player.health <= 0) return;
-        if (!game.questManager.completedQuestIds.has('tut_final')) return;
         this._tick++;
 
         // 1. Keep up with player velocity (pre-move to reduce lag)
@@ -168,7 +167,6 @@ export class GhostCompanion {
 
     draw(ctx, game) {
         if (this.player.health <= 0) return;
-        if (game && !game.questManager.completedQuestIds.has('tut_final')) return;
 
         // Draw Trail
         ctx.save();

@@ -10,6 +10,7 @@ import { Gem } from '../entities/Gem.js';
 import { Particle } from '../entities/Particle.js';
 import { HUD } from '../ui/HUD.js';
 import { SectorManager } from './SectorManager.js';
+import { SHIPS } from '../config.js';
 import { RegionManager } from './RegionManager.js';
 import { QuestManager } from './QuestManager.js';
 import { REGIONS, DEFAULT_REGION } from '../data/regions.js';
@@ -17,6 +18,8 @@ import { AmbientParticle } from '../entities/AmbientParticle.js';
 import { HAIL_MESSAGES, SPECIFIC_HAILS } from '../data/messages.js';
 import { NPC_ROSTER, getGenericShipContact } from '../data/npcs.js';
 import { GhostCompanion } from '../entities/GhostCompanion.js';
+import { IntroTerminal } from '../ui/IntroTerminal.js';
+
 import { Dreadnought } from '../entities/Dreadnought.js';
 import { TutorialShip } from '../entities/TutorialShip.js';
 import { MegaLandmark } from '../entities/MegaLandmark.js';
@@ -99,12 +102,17 @@ export class Game {
             this.applyDevMode();
         }
 
-        // --- TUTORIAL SPANW POSITION ---
-        // Spawn at grid (0, -3) until Frontier Station is discovered
-        if (!this.sectorManager.discoveredIds.has('station_frontier')) {
-            this.player.x = 0;
-            this.player.y = 3000;
+        // --- SPAWN POSITION ---
+        // respawn there. Otherwise fall back to tutorial/default logic.
+        const spawnX = this.player.lastStationX;
+        const spawnY = this.player.lastStationY;
+        const isSafeToSpawnAtStation = (spawnX !== null) && this.sectorManager.isSafeForSpawn(spawnX, spawnY);
+
+        if (isSafeToSpawnAtStation) {
+            this.player.x = spawnX;
+            this.player.y = spawnY;
         } else {
+            // Default Start: Frontier Station (0, 0)
             this.player.x = 0;
             this.player.y = 0;
         }
@@ -138,7 +146,16 @@ export class Game {
 
         this._queueLoop();
 
+        // New Tutorial Terminal
+        if (this.player.totalGemsCollected === 0 && !this.introShown) {
+            this.introShown = true;
+            this.intro = new IntroTerminal();
+            this.intro.start();
+        }
+
         // Auto-start Tutorial if no quests ever done
+        /* 
+        Tutorial and Story flow disabled for now
         if (this.questManager.activeQuests.length === 0 && this.questManager.completedQuestIds.size === 0) {
             this.questManager.acceptQuest('tut_flight');
         }
@@ -151,6 +168,7 @@ export class Game {
             this.player.health = this.player.maxHealth / 2;
             this.questManager.acceptQuest('story_find_station');
         }
+        */
     }
 
     discoverAll() {
@@ -175,6 +193,7 @@ export class Game {
         let changed = false;
         if (this.player.gems < MIN_GEMS) {
             this.player.gems = MIN_GEMS;
+            this.player.gemVault = Math.max(this.player.gemVault || 0, MIN_GEMS);
             if (this.player.totalGemsCollected < MIN_GEMS) {
                 this.player.totalGemsCollected = MIN_GEMS;
             }
@@ -205,11 +224,43 @@ export class Game {
         this.camera.h = this.canvas.height;
     }
 
+    /**
+     * Map a region's difficulty float to an integer level 1-12,
+     * then pick a size (1-3) weighted toward large in high levels.
+     * Also ensures a sprinkle of small asteroids for scale contrast.
+     */
     spawnAsteroid(cx, cy, range) {
         const angle = Utils.rand(0, Math.PI * 2);
         const dist = Utils.rand(1000, range);
-        const size = Utils.randInt(1, 3);
-        this.asteroids.push(new Asteroid(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, size));
+
+        const diff = this.regionManager ? this.regionManager.currentRegion.difficulty : 1.0;
+        // Map difficulty to level 1-12  (difficulty 1.0 → level 1, 10.0 → level 10, capped at 12)
+        const regionLevel = Math.max(1, Math.min(12, Math.round(diff)));
+
+        // Size weighting: 20% chance of small (size 1) for scale reference,
+        // remaining 80% weighted toward the top of the tier.
+        let size;
+        const roll = Math.random();
+        if (roll < 0.2) {
+            // Small "reference" asteroid — always size 1
+            size = 1;
+        } else if (regionLevel <= 2) {
+            // Low levels: mostly small with some medium
+            size = Math.random() < 0.7 ? 1 : 2;
+        } else if (regionLevel <= 5) {
+            // Mid levels: mix of medium and large
+            size = Math.random() < 0.5 ? 2 : 3;
+        } else {
+            // High levels: mostly large
+            size = Math.random() < 0.25 ? 2 : 3;
+        }
+
+        this.asteroids.push(new Asteroid(
+            cx + Math.cos(angle) * dist,
+            cy + Math.sin(angle) * dist,
+            size,
+            regionLevel
+        ));
     }
 
     spawnEnemy(cx, cy, minDist = 1200, maxDist = 3000, color = undefined) {
@@ -307,15 +358,18 @@ export class Game {
             this.questManager.notify('boost', { active: true });
         }
 
-        let targetZoom = 1.0;
-        const ENABLE_DYNAMIC_ZOOM = this.settings.dynamicZoom; // Respect toggle
+        // Base zoom driven by ship size — larger ships pull the camera back
+        const baseZoom = SHIPS[this.player.shipIndex]?.shipZoom ?? 1.0;
+        let targetZoom = baseZoom;
+        const ENABLE_DYNAMIC_ZOOM = this.settings.dynamicZoom;
 
         if (ENABLE_DYNAMIC_ZOOM && this.player.engineMode === 'boost') {
             // 60 frames = 1 second. Zoom out starts after 3 seconds (180 frames) at full boost
             if (this.player.boostTime > 180) {
                 // Ramp up the zoom out gradually over the next 120 frames (2 seconds)
                 const extraTime = Math.min(1.0, (this.player.boostTime - 180) / 120);
-                targetZoom = 1.0 - (extraTime * 0.35);
+                // Subtract from the base so bigger ships still boost-zoom proportionally
+                targetZoom = baseZoom - (extraTime * 0.35);
             }
         }
         this.camera.zoom += (targetZoom - this.camera.zoom) * 0.015;
@@ -478,20 +532,29 @@ export class Game {
 
                     if (ast.health <= 0 && !ast.destroyed) {
                         ast.destroyed = true;
-                        this.spawnExplosion(ast.x, ast.y, ast.size * 8, '#aaa');
+                        this.spawnExplosion(ast.x, ast.y, Math.floor(ast.radius * 0.75), '#aaa');
+                        // Split: children inherit parent region level, smaller size
                         if (ast.size > 1) {
                             for (let i = 0; i < ast.size; i++) {
-                                this.asteroids.push(new Asteroid(ast.x, ast.y, ast.size - 1));
+                                this.asteroids.push(new Asteroid(ast.x, ast.y, ast.size - 1, ast.regionLevel || 1));
                             }
                         }
 
-                        const gemDrops = ast.size * Utils.randInt(1, 4);
+                        // Gem drops: scale num gems by regionLevel to match difficulty (health) scaling
+                        const baseGems = ast.size * Utils.randInt(1, 4);
+                        const levelMult = Math.pow(1.2, (ast.regionLevel || 1) - 1);
+                        const gemDrops = Math.floor(baseGems * levelMult);
+                        
+                        const isInfected = this.regionManager?.currentRegion?.name === 'Blob Space';
                         for (let i = 0; i < gemDrops; i++) {
-                            this.gems.push(new Gem(ast.x, ast.y, 1));
+                            this.gems.push(new Gem(ast.x, ast.y, ast.gemValue || 1, isInfected, ast.gemColor || null));
                         }
 
                         // Notify quest manager
-                        this.questManager.notify('destroy', { type: 'asteroid' });
+                        this.questManager.notify('destroy', { 
+                            type: 'asteroid',
+                            region: this.regionManager?.currentRegion?.name 
+                        });
 
                         this.asteroids.splice(a, 1);
                     }
@@ -505,7 +568,8 @@ export class Game {
             gem.update();
 
             let d = Utils.dist(this.player.x, this.player.y, gem.x, gem.y);
-            if (d < this.player.magnetRadius) {
+            // Magnet is disabled when cargo hold is full
+            if (!this.player.cargoFull && d < this.player.magnetRadius) {
                 let a = Utils.ang(gem.x, gem.y, this.player.x, this.player.y);
                 let speed = (this.player.magnetRadius - d) * 0.15;
                 gem.vx += Math.cos(a) * speed;
@@ -513,9 +577,18 @@ export class Game {
 
                 if (d < this.player.radius + 15) {
                     const collectedValue = gem.value * (gem.isInfected ? 2 : 1);
-                    this.player.gems += collectedValue;
-                    this.player.totalGemsCollected += collectedValue;
-                    this.questManager.notify('collect', { target: 'gems', amount: collectedValue });
+
+                    // Space left in cargo
+                    const spaceLeft = this.player.cargoCapacity - this.player.cargoGems;
+                    const actualValue = Math.min(collectedValue, spaceLeft);
+
+                    this.player.cargoGems += actualValue;
+                    this.player.totalGemsCollected += actualValue;
+                    this.questManager.notify('collect', { 
+                        target: 'gems', 
+                        amount: actualValue,
+                        region: this.regionManager?.currentRegion?.name
+                    });
                     this.player.save();
 
                     if (gem.isInfected) {
@@ -589,6 +662,7 @@ export class Game {
                             const isInfected = currentRegion.name === 'Blob Space' || parasite.type === 'blob';
                             for (let i = 0; i < drops; i++) this.gems.push(new Gem(parasite.x, parasite.y, 1, isInfected));
                             obj.parasite = null;
+                            this.sectorManager.markCleared(obj.id);
 
                             // Trigger Liberation Hail! (Only for planets and stations)
                             if (obj.type === 'planet' || obj.type === 'station') {
@@ -642,7 +716,10 @@ export class Game {
                             this.gems.push(new Gem(enemy.x, enemy.y, 1, isInfected));
                         }
                         this.enemies.splice(e, 1);
-                        this.questManager.notify('destroy', { type: 'enemy' });
+                        this.questManager.notify('destroy', { 
+                            type: 'fighter', 
+                            region: this.regionManager?.currentRegion?.name
+                        });
                     }
                     break;
                 }
@@ -687,6 +764,10 @@ export class Game {
                         this.spawnExplosion(bs.x, bs.y, 35, '#ff4400');
                         const drops = Utils.randInt(15, 25);
                         for (let i = 0; i < drops; i++) this.gems.push(new Gem(bs.x, bs.y, 1, isInfected));
+                        this.questManager.notify('destroy', { 
+                            type: 'battleship',
+                            region: this.regionManager?.currentRegion?.name
+                        });
                         this.battleships.splice(e, 1);
                     }
                     break;
@@ -717,7 +798,10 @@ export class Game {
                         const drops = Utils.randInt(40, 70);
                         for (let i = 0; i < drops; i++) this.gems.push(new Gem(dn.x, dn.y, 1, isInfected));
                         this.dreadnoughts.splice(e, 1);
-                        this.questManager.notify('destroy', { type: 'dreadnought' });
+                        this.questManager.notify('destroy', { 
+                            type: 'dreadnought',
+                            region: this.regionManager?.currentRegion?.name
+                        });
                     }
                     break;
                 }
@@ -1018,8 +1102,10 @@ export class Game {
             this.questManager.completeQuest('tut_final');
         }
 
-        const lostGems = Math.floor(this.player.gems / 2);
-        this.player.gems -= lostGems;
+        // Only penalise CARGO gems — vault is always safe
+        const lostGems = Math.floor(this.player.cargoGems / 2);
+        this.player.cargoGems -= lostGems;
+        // (player.gems / gemVault are untouched)
 
         this.spawnExplosion(this.player.x, this.player.y, 100, '#00f0ff');
         this.spawnExplosion(this.player.x, this.player.y, 100, '#ff3c3c');
