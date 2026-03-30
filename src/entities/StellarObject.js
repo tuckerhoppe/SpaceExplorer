@@ -260,12 +260,13 @@ export class StellarObject {
 
     _drawStation(ctx) {
         const t = this._tick * 0.005; // slow rotation angle
+        const s = this.radius / 250; // visual scale factor (base was 250)
 
         ctx.save();
         ctx.rotate(t); // rotate whole station slowly
 
-        const armLen = 55;
-        const armW = 8;
+        const armLen = 55 * s;
+        const armW = 8 * s;
         const hubs = 4;
 
         // Solar panel arms
@@ -281,9 +282,11 @@ export class StellarObject {
             // Wing panel
             ctx.fillStyle = '#1a3a5c';
             ctx.strokeStyle = this.color + 'aa';
-            ctx.lineWidth = 1;
-            ctx.fillRect(-18, armLen - 18, 36, 14);
-            ctx.strokeRect(-18, armLen - 18, 36, 14);
+            ctx.lineWidth = 1 * s;
+            const wingW = 36 * s;
+            const wingH = 14 * s;
+            ctx.fillRect(-wingW / 2, armLen - wingH - (4 * s), wingW, wingH);
+            ctx.strokeRect(-wingW / 2, armLen - wingH - (4 * s), wingW, wingH);
 
             // Nav light at tip
             const pulse = 0.5 + 0.5 * Math.sin(this._tick * 0.05 + i);
@@ -291,32 +294,32 @@ export class StellarObject {
                 ? `rgba(255, 50, 50, ${pulse})`
                 : `rgba(50, 200, 255, ${pulse})`;
             ctx.beginPath();
-            ctx.arc(0, armLen + 4, 4, 0, Math.PI * 2);
+            ctx.arc(0, armLen + (4 * s), 4 * s, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
         }
 
         // Central hub ring
         ctx.strokeStyle = this.color;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3 * s;
         ctx.beginPath();
-        ctx.arc(0, 0, 20, 0, Math.PI * 2);
+        ctx.arc(0, 0, 20 * s, 0, Math.PI * 2);
         ctx.stroke();
 
         // Hub body
         ctx.fillStyle = '#1a2a3a';
         ctx.beginPath();
-        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.arc(0, 0, 18 * s, 0, Math.PI * 2);
         ctx.fill();
 
         // Bright glowing core
-        const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 14);
+        const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 14 * s);
         coreGrad.addColorStop(0, '#ffffff');
         coreGrad.addColorStop(0.4, this.color);
         coreGrad.addColorStop(1, 'transparent');
         ctx.fillStyle = coreGrad;
         ctx.beginPath();
-        ctx.arc(0, 0, 14, 0, Math.PI * 2);
+        ctx.arc(0, 0, 14 * s, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();

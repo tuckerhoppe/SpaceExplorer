@@ -47,7 +47,7 @@ export class QuestManager {
 
             for (const obj of quest.objectives) {
                 if (obj.type === type && obj.current < obj.count) {
-                    if (this._checkConditions(obj, data)) {
+                    if (this._checkConditions(obj, data, quest)) {
                         // For 'boost' or 'input', we might want to count differently
                         if (type === 'boost') {
                             obj.current += 1; // 1 frame of boost
@@ -77,7 +77,7 @@ export class QuestManager {
         }
     }
 
-    _checkConditions(obj, data) {
+    _checkConditions(obj, data, quest) {
         if (obj.type === 'input') {
             return data.key === obj.key || (obj.key === 'a' && data.key === 'd'); // Group turn keys
         }
@@ -86,6 +86,9 @@ export class QuestManager {
         }
         if (obj.type === 'science') {
             if (obj.target && data.target !== obj.target) return false;
+            // Also check region if the quest has one
+            const requiredRegion = obj.region || quest?.regionId;
+            if (requiredRegion && data.region !== requiredRegion) return false;
             return data.success === true;
         }
         if (obj.type === 'reach') {
@@ -94,8 +97,14 @@ export class QuestManager {
             if (obj.region && data.region !== obj.region) return false;
             return true;
         }
+
+        // Generic target check
         if (obj.target && data.target !== obj.target && data.type !== obj.target) return false;
-        if (obj.region && data.region !== obj.region) return false;
+
+        // Regional enforcement: check if objective OR parent quest specifies a region
+        const questRegion = obj.region || quest?.regionId;
+        if (questRegion && data.region !== questRegion) return false;
+
         return true;
     }
 

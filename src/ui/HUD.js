@@ -3,6 +3,7 @@ import { QUESTS } from '../data/quests.js';
 import { REGIONS, DEFAULT_REGION } from '../data/regions.js';
 import { ScienceMiniGame } from './ScienceMiniGame.js';
 import { MiniMap } from './MiniMap.js';
+import { SPECIFIC_HAILS } from '../data/messages.js';
 
 export class HUD {
     constructor(game) {
@@ -351,31 +352,7 @@ export class HUD {
 
     toggleDevHud() {
         const panel = document.getElementById('dev-hud-panel');
-        const isHidden = panel.classList.toggle('hidden');
-        if (!isHidden) {
-            // Populate dev nav log every time it opens
-            this.buildDevNavLog();
-        }
-    }
-
-    buildDevNavLog() {
-        const container = document.getElementById('dev-nav-log');
-        const sm = this.game.sectorManager;
-        if (!sm || !container) return;
-
-        const TYPE_ICONS = { planet: '🪐', nebula: '🌌', star: '⭐', artifact: '💠' };
-        container.innerHTML = '';
-        sm.objects.forEach(obj => {
-            const isDiscovered = sm.discoveredIds.has(obj.id);
-            const row = document.createElement('div');
-            row.className = `dev-obj-row ${isDiscovered ? 'dev-obj-discovered' : 'dev-obj-undiscovered'}`;
-            row.innerHTML = `
-                <span class="dev-obj-icon">${TYPE_ICONS[obj.type] || '✦'}</span>
-                <span class="dev-obj-name">${obj.name}</span>
-                <span class="dev-obj-coord">${obj.coordX}:${obj.coordY}</span>
-            `;
-            container.appendChild(row);
-        });
+        if (panel) panel.classList.toggle('hidden');
     }
 
     setupUpgrades() {
@@ -412,6 +389,7 @@ export class HUD {
                 const sciOk = this.game.player.scienceLevel >= (def.sciLevel || 0);
                 if (sciOk && this.game.player.gems >= cost) {
                     this.game.player.gems -= cost;
+                    this.game.player.gemVault = Math.max(0, (this.game.player.gemVault || 0) - cost);
                     this.game.player.stats[id]++;
                     if (id === 'hull') {
                         this.game.player.health += 20;
@@ -512,7 +490,9 @@ export class HUD {
 
                 if (sciOk && this.game.player.gems >= ship.cost) {
                     this.game.player.gems -= ship.cost;
+                    this.game.player.gemVault = Math.max(0, (this.game.player.gemVault || 0) - ship.cost);
                     this.game.player.shipIndex = index;
+                    this.game.player.updateShipRadius(); // resize ship + camera will lerp to new zoom
 
                     // Restore health proportional to new max health if it jumped (or just heal to full on buy)
                     this.game.player.health = this.game.player.maxHealth;
@@ -597,6 +577,7 @@ export class HUD {
                 const sciOk = this.game.player.scienceLevel >= (def.sciLevel || 0);
                 if (sciOk && this.game.player.gems >= def.cost) {
                     this.game.player.gems -= def.cost;
+                    this.game.player.gemVault = Math.max(0, (this.game.player.gemVault || 0) - def.cost);
                     this.game.player.tech[id] = true;
                     this.refreshTechUpgrades();
                     this.update(this.game.player);
@@ -935,10 +916,32 @@ export class HUD {
     }
 
     update(player) {
+        // Vault (spending pool) displayed as the main gem total
         document.getElementById('gem-count').textContent = player.gems;
         document.getElementById('health-text').textContent = `${Math.ceil(player.health)} / ${player.maxHealth}`;
         const healthPercent = Math.max(0, (player.health / player.maxHealth) * 100);
         document.getElementById('health-bar-fill').style.width = `${healthPercent}%`;
+
+        // Cargo hold bar
+        const cargoFill = document.getElementById('cargo-bar-fill');
+        const cargoText = document.getElementById('cargo-text');
+        if (cargoFill && cargoText) {
+            const pct = player.cargoFraction;
+            cargoFill.style.width = `${pct * 100}%`;
+            cargoText.textContent = `${player.cargoGems} / ${player.cargoCapacity}`;
+            if (pct >= 1.0) {
+                cargoFill.style.background = '#ff3c3c'; // red — full
+                cargoFill.classList.add('cargo-full');
+                cargoFill.classList.remove('cargo-caution');
+            } else if (pct >= 0.75) {
+                cargoFill.style.background = '#ff9500'; // orange — caution
+                cargoFill.classList.add('cargo-caution');
+                cargoFill.classList.remove('cargo-full');
+            } else {
+                cargoFill.style.background = ''; // CSS default teal
+                cargoFill.classList.remove('cargo-caution', 'cargo-full');
+            }
+        }
 
         // Scale game coordinates down
         const coordX = Math.round(player.x / 1000);
@@ -949,11 +952,46 @@ export class HUD {
         const region = this.game.regionManager?.currentRegion;
         if (region) {
             const el = document.getElementById('region-name');
+            const diffBadge = document.getElementById('region-diff-badge');
+
             if (el) {
                 el.textContent = region.name;
                 el.style.color = region.color || 'rgba(0,240,255,0.7)';
             }
-            
+
+            // Difficulty badge
+            if (diffBadge) {
+                const regionLevel = Math.max(1, Math.min(12, Math.round(region.difficulty)));
+                const ship = SHIPS[this.game.player.shipIndex];
+                const shipMax = ship?.recommendedLevel || 2;
+
+                let badgeColor, badgeText, warningText;
+                if (regionLevel > shipMax + 1) {
+                    // Danger zone — well past recommended
+                    badgeColor = '#ff3c3c';
+                    badgeText = `⚠ LVL ${regionLevel}`;
+                    warningText = 'DANGER ZONE';
+                } else if (regionLevel === shipMax + 1) {
+                    // One above recommended — caution
+                    badgeColor = '#ff9500';
+                    badgeText = `⚡ LVL ${regionLevel}`;
+                    warningText = 'CHALLENGING';
+                } else if (regionLevel <= shipMax) {
+                    // At or below recommended — green
+                    badgeColor = '#00cc66';
+                    badgeText = `✓ LVL ${regionLevel}`;
+                    warningText = '';
+                }
+
+                diffBadge.style.color = badgeColor;
+                diffBadge.querySelector('.diff-level').textContent = badgeText;
+                const warnEl = diffBadge.querySelector('.diff-warn');
+                if (warnEl) {
+                    warnEl.textContent = warningText;
+                    warnEl.style.color = badgeColor;
+                }
+            }
+
             const discoveryEl = document.getElementById('region-discovery-info');
             if (discoveryEl) {
                 const progress = this.game.sectorManager.getRegionDiscoveryProgress(region.name);
@@ -1052,30 +1090,27 @@ export class HUD {
         const TYPE_LABELS = { planet: 'Planet Discovered!', nebula: 'Nebula Charted!', star: 'Star Located!', station: 'Station Found!', artifact: 'Artifact Discovered!' };
         const TYPE_ICONS = { planet: '🪐', nebula: '🌌', star: '⭐', station: '🛸', artifact: '💠' };
 
-        const hasSci = (obj.maxScience || 0) > 0;
-        const sciLine = hasSci
-            ? `<div class="discovery-reward sci-reward">+5 🔬 SP &nbsp;<span class="sci-reward-sub">(max ${obj.maxScience} from this source)</span></div>`
-            : '';
-
         const popup = document.getElementById('discovery-popup');
-        popup.innerHTML = `
-            <div class="discovery-icon">${TYPE_ICONS[obj.type] || '✦'}</div>
-            <div class="discovery-type">${TYPE_LABELS[obj.type] || 'Object Found!'}</div>
-            <div class="discovery-name">${obj.name}</div>
-            <div class="discovery-desc">${obj.description}</div>
-            <div class="discovery-reward">+${obj.gemReward} 💎</div>
-            ${sciLine}
-            <button class="popup-close-btn">OK — Got It</button>
-        `;
-        
+
         if (obj.type === 'region_survey') {
+            const sciLine = obj.sciReward ? `<div class="discovery-reward sci-reward">+${obj.sciReward} 🔬 SP Bonus</div>` : '';
             popup.innerHTML = `
                 <div class="discovery-icon">🏆</div>
-                <div class="discovery-type" style="color:#50dc78;">Region Specialized!</div>
+                <div class="discovery-type" style="color:#50dc78;">Region Surveyed!</div>
                 <div class="discovery-name">${obj.name} 100%</div>
                 <div class="discovery-desc">${obj.description}</div>
                 <div class="discovery-reward">+${obj.gemReward} 💎 Bonus</div>
+                ${sciLine}
                 <button class="popup-close-btn">Accept Bonus</button>
+            `;
+        } else {
+            popup.innerHTML = `
+                <div class="discovery-icon">${TYPE_ICONS[obj.type] || '✦'}</div>
+                <div class="discovery-type">${TYPE_LABELS[obj.type] || 'Object Found!'}</div>
+                <div class="discovery-name">${obj.name}</div>
+                <div class="discovery-desc">${obj.description}</div>
+                <div class="discovery-reward">+25 🔬 SP</div>
+                <button class="popup-close-btn">OK — Got It</button>
             `;
         }
 
@@ -1181,10 +1216,20 @@ export class HUD {
                 <span class="dock-effect" style="color:#ff3c3c; border-left-color: rgba(255, 60, 60, 0.3);">${actionText}</span>
             `;
         } else {
+            // For stations: show DEPOSIT GEMS if there's cargo, otherwise show normal effect
+            let effectLabel = EFFECT_LABEL[obj.dockEffect] || '';
+            if (obj.type === 'station') {
+                const player = this.game.player;
+                if (player && player.cargoGems > 0) {
+                    effectLabel = `💰 DEPOSITING ${player.cargoGems} GEMS`;
+                } else {
+                    effectLabel = '✅ CARGO EMPTY — VAULT SAFE';
+                }
+            }
             bar.innerHTML = `
                 <span class="dock-icon">${TYPE_ICONS[obj.type] || '⚓'}</span>
                 <span class="dock-name">DOCKED — ${obj.name.toUpperCase()}</span>
-                <span class="dock-effect">${EFFECT_LABEL[obj.dockEffect] || ''}</span>
+                <span class="dock-effect">${effectLabel}</span>
             `;
         }
         bar.classList.add('active');
@@ -1264,7 +1309,12 @@ export class HUD {
                 this.showFloatingReward(`+${gained} 🔬 ${result.toUpperCase()}!`, result === 'great' ? '#ffffff' : '#50dc78');
 
                 // Notify QuestManager of science success
-                this.game.questManager.notify('science', { success: true, amount: gained, target: obj.id });
+                this.game.questManager.notify('science', { 
+                    success: true, 
+                    amount: gained, 
+                    target: obj.id,
+                    region: this.game.regionManager?.currentRegion?.name
+                });
             } else {
                 this.showFloatingReward('DATA FULL', '#aaa');
                 this.scienceMiniGame.stop();
@@ -1327,7 +1377,13 @@ export class HUD {
     triggerHail(senderName, hailData) {
         if (this.pendingHail) return; // Ignore if one is already ringing
 
-        this.pendingHail = { sender: senderName, data: hailData };
+        // Lookup string keys if provided
+        let resolvedData = hailData;
+        if (typeof hailData === 'string' && SPECIFIC_HAILS[hailData]) {
+            resolvedData = SPECIFIC_HAILS[hailData];
+        }
+
+        this.pendingHail = { sender: senderName, data: resolvedData };
         document.getElementById('hail-alert-text').textContent = `INCOMING HAIL: ${senderName.toUpperCase()}`;
         document.getElementById('hail-alert').classList.remove('hidden');
 

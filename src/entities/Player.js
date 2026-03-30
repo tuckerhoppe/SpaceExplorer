@@ -9,7 +9,7 @@ export class Player {
         this.x = 0; this.y = 0;
         this.vx = 0; this.vy = 0;
         this.angle = 0;
-        this.radius = 18;
+        this.radius = 18; // will be overwritten by updateShipRadius() after _loadProgress
 
         this.stats = { engine: 1, hull: 1, weapons: 1, magnet: 1, booster: 1 };
         this.tech = { biometric_filtering: false, heat_shield: false };
@@ -18,6 +18,7 @@ export class Player {
         // ── Persistence ───────────────────────────────────────────
         this._baseHealth = 30; // Base health (hull upgrades add to this)
         this._loadProgress();
+        this.updateShipRadius(); // sync radius to loaded shipIndex
         this.health = this.maxHealth;
 
         // ── Engine mode ───────────────────────────────────────────
@@ -38,10 +39,14 @@ export class Player {
     _loadProgress() {
         try {
             const data = JSON.parse(localStorage.getItem('space_explorer_progress') || '{}');
-            this.gems = data.gems || 0;
+            this.gems = data.gems || 0;                       // vault / spending pool
+            this.cargoGems = data.cargoGems || 0;            // on-hand, undeposited
+            this.gemVault = data.gemVault || data.gems || 0; // alias kept in sync with gems
             this.totalGemsCollected = data.totalGemsCollected || 0;
             this.sciencePoints = data.sciencePoints || 0;
             this.shipIndex = data.shipIndex || 0;
+            this.lastStationX = data.lastStationX !== undefined ? data.lastStationX : null;
+            this.lastStationY = data.lastStationY !== undefined ? data.lastStationY : null;
             if (data.stats) {
                 this.stats = { ...this.stats, ...data.stats };
             }
@@ -51,9 +56,14 @@ export class Player {
         } catch (e) {
             console.error("Failed to load player progress", e);
             this.gems = 0;
+            this.cargoGems = 0;
+            this.gemVault = 0;
+            this.cargoCapacity = 50;
             this.totalGemsCollected = 0;
             this.sciencePoints = 0;
             this.shipIndex = 0;
+            this.lastStationX = null;
+            this.lastStationY = null;
         }
     }
 
@@ -61,16 +71,43 @@ export class Player {
         try {
             const data = {
                 gems: this.gems,
+                cargoGems: this.cargoGems,
+                gemVault: this.gemVault,
                 totalGemsCollected: this.totalGemsCollected,
                 sciencePoints: this.sciencePoints,
                 stats: this.stats,
                 tech: this.tech,
-                shipIndex: this.shipIndex
+                shipIndex: this.shipIndex,
+                lastStationX: this.lastStationX,
+                lastStationY: this.lastStationY
             };
             localStorage.setItem('space_explorer_progress', JSON.stringify(data));
         } catch (e) {
             console.error("Failed to save player progress", e);
         }
+    }
+
+    /** Sync player radius (and magnet scale) to the current ship config. Call after ship purchase. */
+    updateShipRadius() {
+        const ship = SHIPS[this.shipIndex];
+        if (ship?.shipRadius) {
+            this.radius = ship.shipRadius;
+        }
+    }
+
+    /** True when cargo hold is at or above capacity. */
+    get cargoFull() {
+        return this.cargoGems >= this.cargoCapacity;
+    }
+
+    /** Maximum gems the current ship can hold. */
+    get cargoCapacity() {
+        return SHIPS[this.shipIndex]?.shipCargo || 50;
+    }
+
+    /** 0–1 fraction of cargo used. */
+    get cargoFraction() {
+        return Math.min(this.cargoGems / this.cargoCapacity, 1);
     }
 
     /** Current science level. Formula: level N needs N²×10 cumulative SP. */
@@ -155,7 +192,7 @@ export class Player {
     get fireRate() { return Math.max(80, 250 - ((this.stats.weapons + this.shipBaseStats.weapons) * 30)); }
     get damage() { return 10 + ((this.stats.weapons + this.shipBaseStats.weapons) * 5); }
     get shotsPerSecond() { return (60 / this.fireRate).toFixed(1); }
-    get magnetRadius() { return 150 + ((this.stats.magnet + this.shipBaseStats.magnet) * 50); }
+    get magnetRadius() { return 80 + ((this.stats.magnet + this.shipBaseStats.magnet) * 45); }
 
     toggleEngine() {
         if (this.engineMode === 'thruster') {

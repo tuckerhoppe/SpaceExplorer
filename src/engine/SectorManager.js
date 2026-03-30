@@ -6,9 +6,18 @@ import { REGIONS, DEFAULT_REGION } from '../data/regions.js';
 
 const STORAGE_KEY = 'space_explorer_discovered';
 const HAILED_STORAGE_KEY = 'space_explorer_hailed';
+const CLEARED_STORAGE_KEY = 'space_explorer_cleared';
 
 export class SectorManager {
     constructor() {
+        // Restore cleared set (parasites/oppressors already defeated)
+        try {
+            const savedCleared = JSON.parse(localStorage.getItem(CLEARED_STORAGE_KEY) || '[]');
+            this.clearedIds = new Set(savedCleared);
+        } catch {
+            this.clearedIds = new Set();
+        }
+
         this.objects = STELLAR_OBJECTS.map(data => {
             const cx = data.worldX / 1000;
             const cy = -data.worldY / 1000;
@@ -21,7 +30,9 @@ export class SectorManager {
                     break;
                 }
             }
-            return new StellarObject(data, difficulty, regionName);
+            // If this object was previously cleared, don't pass the parasite data
+            const cleanData = this.clearedIds.has(data.id) ? { ...data, parasite: null } : data;
+            return new StellarObject(cleanData, difficulty, regionName);
         });
         this.dockedAt = null;
 
@@ -59,6 +70,24 @@ export class SectorManager {
         localStorage.setItem(HAILED_STORAGE_KEY, JSON.stringify([...this.hailedIds]));
     }
 
+    markCleared(id) {
+        this.clearedIds.add(id);
+        localStorage.setItem(CLEARED_STORAGE_KEY, JSON.stringify([...this.clearedIds]));
+    }
+
+    /** Safety check: is it safe to respawn the player at these coordinates?
+     * Returns true if no stellar object at (x,y) has an active parasite. */
+    isSafeForSpawn(x, y) {
+        for (const obj of this.objects) {
+            // Check if coordinates match the object center
+            if (obj.x === x && obj.y === y) {
+                // Return false if there's still a parasite there
+                return !obj.parasite;
+            }
+        }
+        return true;
+    }
+
     getRegionDiscoveryProgress(regionName) {
         const regionObjects = this.objects.filter(obj => obj.regionName === regionName);
         const total = regionObjects.length;
@@ -78,12 +107,8 @@ export class SectorManager {
                 this.discoveredIds.add(obj.id);
                 this._saveDiscovered();
 
-                // Award gems
-                player.gems += obj.gemReward;
-                player.totalGemsCollected += obj.gemReward;
-
-                // Award discovery science (5 SP, no per-object cap)
-                player.addScience(5);
+                // Award discovery science (25 SP per stellar object — primary science source)
+                player.addScience(25);
 
                 // Notify HUD
                 game.hud.showDiscoveryPopup(obj);
@@ -103,15 +128,19 @@ export class SectorManager {
 
     awardSurveyBonus(regionName, player, game) {
         const bonusGems = 500;
+        const bonusSci = 50; // Significant science for fully surveying a region
         player.gems += bonusGems;
+        player.gemVault = (player.gemVault || 0) + bonusGems;
         player.totalGemsCollected += bonusGems;
-        
+        player.addScience(bonusSci);
+
         if (game.hud) {
             game.hud.showDiscoveryPopup({
                 name: regionName,
                 type: 'region_survey',
                 description: `You have fully discovered the ${regionName}! The Galactic Council awards you a completion bonus.`,
-                gemReward: bonusGems
+                gemReward: bonusGems,
+                sciReward: bonusSci
             });
         }
     }
@@ -142,6 +171,29 @@ export class SectorManager {
 
         if (this.dockedAt && !this.dockedAt.parasite) {
             const f = game._dockFrame;
+
+            // === STATION: Deposit cargo gems into vault ===
+            if (this.dockedAt.type === 'station') {
+                // Record last docked station position for respawn
+                player.lastStationX = this.dockedAt.x;
+                player.lastStationY = this.dockedAt.y;
+
+                // Deposit all cargo on first frame of docking (and whenever new cargo arrives)
+                if (player.cargoGems > 0 && !this._depositedThisDock) {
+                    const deposited = player.cargoGems;
+                    player.gems += deposited;
+                    player.gemVault += deposited;
+                    player.cargoGems = 0;
+                    player.save();
+                    if (game.hud) game.hud.showFloatingReward(`+${deposited} 💎 DEPOSITED`, '#ffe066');
+                    this._depositedThisDock = true;
+                }
+                // Reset flag so re-docking after collecting more cargo works
+                if (player.cargoGems === 0) {
+                    this._depositedThisDock = false;
+                }
+            }
+
             if (this.dockedAt.dockEffect === 'heal') {
                 // Heal 1 HP every 30 frames (~2 HP/sec)
                 if (f % 30 === 0 && player.health < player.maxHealth) {
@@ -152,6 +204,7 @@ export class SectorManager {
                 // +1 gem every 90 frames (~0.67 gems/sec)
                 if (f % 90 === 0) {
                     player.gems += 1;
+                    player.gemVault += 1;
                     player.totalGemsCollected += 1;
                     if (game.hud) game.hud.showFloatingReward('+1 💎', '#00ffd0');
                 }
@@ -176,7 +229,12 @@ export class SectorManager {
                 // Only show and notify if science was actually awarded (not already at cap)
                 if (gained > 0 && game.hud) {
                     game.hud.showFloatingReward(`+${gained} 🔬`, '#50dc78');
-                    game.questManager.notify('science', { success: true, amount: gained, target: this.dockedAt.id });
+                    game.questManager.notify('science', { 
+                        success: true, 
+                        amount: gained, 
+                        target: this.dockedAt.id,
+                        region: this.dockedAt.regionName
+                    });
                 }
             }
         }

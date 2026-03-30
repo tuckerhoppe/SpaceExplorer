@@ -12,7 +12,7 @@ export const REGIONS = [
         // Bottom-left quadrant: negative X and negative Y coords
         test: (cx, cy) => cx < -3 && cy < -3 && cx > -14 && cy > -11,
         center: { worldX: -8000, worldY: 8000 },
-        difficulty: 1.5,
+        difficulty: 2,
         bgColor: '#150a00',
         particleType: 'dust',
         caps: {
@@ -33,7 +33,7 @@ export const REGIONS = [
         // Bottom-right quadrant: positive X and negative Y coords
         test: (cx, cy) => cx > 4 && cy < -10,
         center: { worldX: 8000, worldY: 14000 },
-        difficulty: 3.0,
+        difficulty: 5,
         bgColor: '#001505',
         particleType: 'spore',
         caps: {
@@ -54,7 +54,7 @@ export const REGIONS = [
         // Top-left quadrant: negative X and positive Y coords
         test: (cx, cy) => cx < -5 && cy > 10,
         center: { worldX: -9000, worldY: -14000 },
-        difficulty: 10.0,
+        difficulty: 12,
         bgColor: 'rgba(28, 0, 0, 1)',
         particleType: 'ember',
         caps: {
@@ -75,7 +75,7 @@ export const REGIONS = [
         // Top-Right quadrant: positive X and positive Y coords
         test: (cx, cy) => cx >= 4 && cy > 2 && cy < 9,
         center: { worldX: 5000, worldY: -5000 },
-        difficulty: 1.0,
+        difficulty: 1,
         bgColor: '#1a001a', // Darker background to make magenta pop
         particleType: 'rift',
         caps: {
@@ -96,7 +96,7 @@ export const REGIONS = [
         // 3x3 region: -3.2 to -0.2 in X, 0.2 to 3.2 in Y. Close to Star Empire but not touching 0,0.
         test: (cx, cy) => cx > -8 && cx < -4 && cy > -1 && cy < 4,
         center: { worldX: -6000, worldY: -1500 },
-        difficulty: 1.0,
+        difficulty: 1,
         bgColor: '#050a15',
         particleType: 'dust',
         caps: {
@@ -117,7 +117,7 @@ export const REGIONS = [
         // (cx, cy) => cx < -6 && cy < -10
         test: (cx, cy) => cx < -6 && cy < -10,
         center: { worldX: -10000, worldY: 15000 },
-        difficulty: 5.0,
+        difficulty: 9,
         bgColor: '#000810',
         particleType: 'ember',
         caps: {
@@ -138,7 +138,7 @@ export const REGIONS = [
         // (cx, cy) => cx > -2 && cy < -10 && cx < 2 && cy > -20
         test: (cx, cy) => cx > -3 && cy < -10 && cx < 3 && cy > -20,
         center: { worldX: 0, worldY: 15000 },
-        difficulty: 4.0,
+        difficulty: 7,
         bgColor: '#0a0500',
         particleType: 'dust',
         caps: {
@@ -159,7 +159,7 @@ export const REGIONS = [
         // (cx, cy) => cx > -3 && cy > -10 && cx < 4 && cy < -5
         test: (cx, cy) => cx >= -3 && cy >= -10 && cx <= 4 && cy <= -5,
         center: { worldX: 500, worldY: 7500 },
-        difficulty: 2.5,
+        difficulty: 4,
         bgColor: '#050015',
         particleType: 'ember',
         caps: {
@@ -180,7 +180,7 @@ export const REGIONS = [
         // (cx, cy) => cx > 4 && cy > -8 && cx < 10 && cy < -3
         test: (cx, cy) => cx > 4 && cy > -8 && cx < 10 && cy < -3,
         center: { worldX: 7000, worldY: 5500 },
-        difficulty: 3.5,
+        difficulty: 6,
         bgColor: '#100800',
         particleType: 'dust',
         caps: {
@@ -201,7 +201,7 @@ export const REGIONS = [
         // (cx, cy) => cx > 5 && cy > -3 && cx < 15 && cy < 2
         test: (cx, cy) => cx > 5 && cy > -3 && cx < 15 && cy < 2,
         center: { worldX: 10000, worldY: -500 },
-        difficulty: 1.5,
+        difficulty: 2,
         bgColor: '#000a05',
         particleType: 'spore',
         caps: {
@@ -222,7 +222,7 @@ export const REGIONS = [
         // (cx, cy) => cx > 5 && cy > 7 && cx < 12 && cy < 14
         test: (cx, cy) => cx > 5 && cy > 7 && cx < 12 && cy < 14,
         center: { worldX: 8500, worldY: -10500 },
-        difficulty: 2.0,
+        difficulty: 3,
         bgColor: '#00081a',
         particleType: 'dust',
         caps: {
@@ -243,7 +243,7 @@ export const REGIONS = [
         // (cx, cy) => cx > -1 && cy > 12 && cx < 5 && cy < 17
         test: (cx, cy) => cx > -1 && cy > 12 && cx < 5 && cy < 17,
         center: { worldX: 2000, worldY: -14500 },
-        difficulty: 6.0,
+        difficulty: 11,
         bgColor: '#101010', // Dark gray for spectral pop
         particleType: 'spectral',
         caps: {
@@ -264,7 +264,7 @@ export const REGIONS = [
         // (cx, cy) => cx > -5 && cy > 12 && cx < -1 && cy < 17
         test: (cx, cy) => cx > -5 && cy > 12 && cx < -1 && cy < 17,
         center: { worldX: -3000, worldY: -14500 },
-        difficulty: 10.0,
+        difficulty: 12,
         bgColor: '#100000',
         particleType: 'ember',
         caps: {
@@ -285,7 +285,7 @@ export const REGIONS = [
         // (cx, cy) => cx > -5 && cy > 8 && cx < -1 && cy < 12
         test: (cx, cy) => cx > -5 && cy > 8 && cx < -1 && cy < 12,
         center: { worldX: -3000, worldY: -10000 },
-        difficulty: 4.0,
+        difficulty: 7,
         bgColor: '#000a15',
         particleType: 'dust',
         caps: {
@@ -306,7 +306,7 @@ export const REGIONS = [
         // (cx, cy) => cx > -12 && cy > 5 && cx < -7 && cy < 10
         test: (cx, cy) => cx > -12 && cy > 5 && cx < -7 && cy < 10,
         center: { worldX: -9500, worldY: -7500 },
-        difficulty: 5.5,
+        difficulty: 10,
         bgColor: '#150000',
         particleType: 'ember',
         caps: {
@@ -327,7 +327,7 @@ export const REGIONS = [
         // (cx, cy) => cx >= -13 && cx <= -4 && cy >= -3 && cy <= 12
         test: (cx, cy) => cx >= -13 && cx <= -4 && cy >= -3 && cy <= 12,
         center: { worldX: -8500, worldY: -4500 },
-        difficulty: 4.5,
+        difficulty: 8,
         bgColor: '#050505',
         particleType: 'rift',
         caps: {
@@ -345,7 +345,7 @@ export const DEFAULT_REGION = {
     icon: '🌌',
     color: '#00f0ff',
     description: 'Open frontier space. No allegiances, no guarantees.',
-    difficulty: 1.0,
+    difficulty: 1,
     center: { worldX: 0, worldY: 0 },
     test: () => true, // Fallback predicate
     bgColor: '#03040b',
