@@ -105,6 +105,13 @@ export const REGIONS = [
             battleships: 12, // High density for ambush
             neutrals: 0,
             dreadnoughts: 4,
+        },
+        clearedQuestId: 'region_home_defense',
+        clearedCaps: {
+            fighters: 5,     // Significantly reduced after quest
+            battleships: 1,   // Only occasional heavy patrol
+            dreadnoughts: 0,  // No more invasion-level threats
+            neutrals: 4       // Friendly traders return
         }
     },
     {

@@ -4,11 +4,16 @@ export const UPGRADES = [
     { id: 'hull', name: 'Reinforced Hull', desc: 'Increases maximum health.', baseCost: 150, sciLevel: 0 },
     { id: 'weapons', name: 'Laser Systems', desc: 'Increases firing rate and damage.', baseCost: 200, sciLevel: 1 },
     { id: 'magnet', name: 'Collection Magnet', desc: 'Increases gem pickup radius.', baseCost: 100, sciLevel: 0 },
+    { id: 'cargo', name: 'Expanded Cargo Bay', desc: 'Increases cargo capacity for collecting more gems.', baseCost: 125, sciLevel: 0 },
+    { id: 'healing', name: 'Station Nanobots', desc: 'Increases the rate at which your ship is repaired at space stations.', baseCost: 300, sciLevel: 0 },
 ];
 
 export const TECH_UPGRADES = [
     { id: 'biometric_filtering', name: 'Biometric Filtering', desc: 'Infected gems now grant 1 Science Point instead of dealing damage.', cost: 1000, sciLevel: 5 },
     { id: 'heat_shield', name: 'Heat Shield', desc: 'Prevents damage from asteroid collisions while boosting.', cost: 1500, sciLevel: 7 },
+    { id: 'auto_heal', name: 'Auto-Heal Nanites', desc: 'Slowly repairs your ship while exploring (1 HP every 3 seconds).', cost: 2500, sciLevel: 7 },
+    { id: 'proton_torpedo', name: 'Proton Torpedoes', desc: 'Heavy secondary weapon fired with RIGHT-CLICK. Fires towards cursor with 600 DMG and 3s reload.', cost: 3500, sciLevel: 8 },
+    { id: 'gravity_laser', name: 'Gravity Beam Emitter', desc: 'Continuous void beam fired with SPACE. Deals massive DPS, especially to asteroids.', cost: 5000, sciLevel: 10 },
 ];
 
 export const SHIPS = [

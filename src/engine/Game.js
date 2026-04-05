@@ -48,6 +48,7 @@ export class Game {
         this.dreadnoughts = [];
         this.megaLandmarks = MEGA_LANDMARKS.map(lm => new MegaLandmark(lm));
         this._ambushSpawned = false;
+        this.waypoint = null;
 
         this.isPaused = false;
         this.gameOver = false;
@@ -68,12 +69,22 @@ export class Game {
         this.settings = {
             dynamicZoom: localStorage.getItem('setting_dynamic_zoom') !== 'false',
             ghostDialogue: localStorage.getItem('setting_ghost_dialogue') === 'true', // Default to OFF
-            navHints: localStorage.getItem('setting_nav_hints') !== 'false',
+            navHints: localStorage.getItem('setting_nav_hints') === 'true', // Defaults to false
             showStats: localStorage.getItem('setting_show_stats') === 'true',         // Default to OFF
             showNavLog: localStorage.getItem('setting_show_nav_log') === 'true',      // Default to OFF
             devMode: localStorage.getItem('setting_dev_mode') === 'true',
             discoverAll: localStorage.getItem('setting_discover_all') === 'true'     // Default to OFF
         };
+
+        // Load waypoint
+        const savedWaypoint = localStorage.getItem('space_explorer_waypoint');
+        if (savedWaypoint) {
+            try {
+                this.waypoint = JSON.parse(savedWaypoint);
+            } catch (e) {
+                console.error('Failed to parse waypoint:', e);
+            }
+        }
         for (let i = 0; i < 300; i++) {
             this.stars.push({
                 x: Utils.rand(0, 2000),
@@ -207,6 +218,16 @@ export class Game {
         if (changed) {
             this.player.save();
             this.hud.update(this.player);
+        }
+    }
+
+    setWaypoint(x, y) {
+        if (x === null || y === null) {
+            this.waypoint = null;
+            localStorage.removeItem('space_explorer_waypoint');
+        } else {
+            this.waypoint = { x, y };
+            localStorage.setItem('space_explorer_waypoint', JSON.stringify(this.waypoint));
         }
     }
 
@@ -381,7 +402,14 @@ export class Game {
         // Notify QuestManager of current region
         this.questManager.notify('region', { region: this.regionManager.currentRegion.name });
 
-        const caps = currentRegion.caps || { asteroids: 10, fighters: 3, battleships: 0 };
+        let caps = { ...(currentRegion.caps || { asteroids: 10, fighters: 3, battleships: 0 }) };
+
+        // Dynamic Cap Overrides based on quest completion
+        if (currentRegion.clearedQuestId && this.questManager.isQuestCompleted(currentRegion.clearedQuestId)) {
+            if (currentRegion.clearedCaps) {
+                caps = { ...caps, ...currentRegion.clearedCaps };
+            }
+        }
 
         // Background color transition
         if (currentRegion.bgColor) {
@@ -528,35 +556,15 @@ export class Game {
                 if (Utils.dist(proj.x, proj.y, ast.x, ast.y) < ast.radius + 4) {
                     ast.health -= proj.damage;
                     this.projectiles.splice(p, 1);
-                    this.spawnExplosion(proj.x, proj.y, 3, '#ff3c3c');
+                    if (proj.isTorpedo) {
+                        this.spawnExplosion(proj.x, proj.y, 60, '#00eaff');
+                        this.spawnExplosion(proj.x, proj.y, 40, '#ffffff');
+                    } else {
+                        this.spawnExplosion(proj.x, proj.y, 3, '#ff3c3c');
+                    }
 
-                    if (ast.health <= 0 && !ast.destroyed) {
-                        ast.destroyed = true;
-                        this.spawnExplosion(ast.x, ast.y, Math.floor(ast.radius * 0.75), '#aaa');
-                        // Split: children inherit parent region level, smaller size
-                        if (ast.size > 1) {
-                            for (let i = 0; i < ast.size; i++) {
-                                this.asteroids.push(new Asteroid(ast.x, ast.y, ast.size - 1, ast.regionLevel || 1));
-                            }
-                        }
-
-                        // Gem drops: scale num gems by regionLevel to match difficulty (health) scaling
-                        const baseGems = ast.size * Utils.randInt(1, 4);
-                        const levelMult = Math.pow(1.2, (ast.regionLevel || 1) - 1);
-                        const gemDrops = Math.floor(baseGems * levelMult);
-                        
-                        const isInfected = this.regionManager?.currentRegion?.name === 'Blob Space';
-                        for (let i = 0; i < gemDrops; i++) {
-                            this.gems.push(new Gem(ast.x, ast.y, ast.gemValue || 1, isInfected, ast.gemColor || null));
-                        }
-
-                        // Notify quest manager
-                        this.questManager.notify('destroy', { 
-                            type: 'asteroid',
-                            region: this.regionManager?.currentRegion?.name 
-                        });
-
-                        this.asteroids.splice(a, 1);
+                    if (ast.health <= 0) {
+                        this._onAsteroidDestroyed(ast, a);
                     }
                     break;
                 }
@@ -584,8 +592,8 @@ export class Game {
 
                     this.player.cargoGems += actualValue;
                     this.player.totalGemsCollected += actualValue;
-                    this.questManager.notify('collect', { 
-                        target: 'gems', 
+                    this.questManager.notify('collect', {
+                        target: 'gems',
                         amount: actualValue,
                         region: this.regionManager?.currentRegion?.name
                     });
@@ -654,34 +662,15 @@ export class Game {
                     if (Utils.dist(proj.x, proj.y, parasite.x, parasite.y) < parasite.radius + 4) {
                         parasite.health -= proj.damage;
                         this.projectiles.splice(p, 1);
-                        this.spawnExplosion(proj.x, proj.y, 5, parasite.color);
+                        if (proj.isTorpedo) {
+                            this.spawnExplosion(proj.x, proj.y, 70, '#00eaff');
+                            this.spawnExplosion(proj.x, proj.y, 40, '#ffffff');
+                        } else {
+                            this.spawnExplosion(proj.x, proj.y, 5, parasite.color);
+                        }
 
                         if (parasite.health <= 0) {
-                            this.spawnExplosion(parasite.x, parasite.y, 40, parasite.color);
-                            const drops = Utils.randInt(20, 35);
-                            const isInfected = currentRegion.name === 'Blob Space' || parasite.type === 'blob';
-                            for (let i = 0; i < drops; i++) this.gems.push(new Gem(parasite.x, parasite.y, 1, isInfected));
-                            obj.parasite = null;
-                            this.sectorManager.markCleared(obj.id);
-
-                            // Trigger Liberation Hail! (Only for planets and stations)
-                            if (obj.type === 'planet' || obj.type === 'station') {
-                                setTimeout(() => {
-                                    if (this.hud && typeof this.hud.triggerHail === 'function') {
-                                        if (!this.sectorManager.hailedIds.has(obj.id)) {
-                                            this.sectorManager.markHailed(obj.id);
-                                            let msgData;
-                                            if (SPECIFIC_HAILS[obj.id]) {
-                                                msgData = SPECIFIC_HAILS[obj.id];
-                                            } else {
-                                                const msgs = HAIL_MESSAGES.liberation;
-                                                msgData = msgs[Math.floor(Math.random() * msgs.length)];
-                                            }
-                                            this.hud.triggerHail(obj.name.toUpperCase(), msgData);
-                                        }
-                                    }
-                                }, 1500); // 1.5s delay after explosion
-                            }
+                            this._onParasiteDestroyed(obj, parasite);
                         }
                         break;
                     }
@@ -706,20 +695,15 @@ export class Game {
                 if (Utils.dist(proj.x, proj.y, enemy.x, enemy.y) < enemy.radius + 4) {
                     enemy.health -= proj.damage;
                     this.projectiles.splice(p, 1);
-                    this.spawnExplosion(proj.x, proj.y, 3, '#ff9500');
+                    if (proj.isTorpedo) {
+                        this.spawnExplosion(proj.x, proj.y, 60, '#00eaff');
+                        this.spawnExplosion(proj.x, proj.y, 30, '#ffffff');
+                    } else {
+                        this.spawnExplosion(proj.x, proj.y, 3, '#ff9500');
+                    }
 
                     if (enemy.health <= 0) {
-                        this.spawnExplosion(enemy.x, enemy.y, 20, '#ff6a00');
-                        const isInfected = enemy.color === '#09ab29ff';
-                        const drops = Utils.randInt(3, 8);
-                        for (let i = 0; i < drops; i++) {
-                            this.gems.push(new Gem(enemy.x, enemy.y, 1, isInfected));
-                        }
-                        this.enemies.splice(e, 1);
-                        this.questManager.notify('destroy', { 
-                            type: 'fighter', 
-                            region: this.regionManager?.currentRegion?.name
-                        });
+                        this._onHostileDestroyed(enemy, e, this.enemies, 'fighter');
                     }
                     break;
                 }
@@ -757,18 +741,15 @@ export class Game {
                 if (Utils.dist(proj.x, proj.y, bs.x, bs.y) < bs.radius + 4) {
                     bs.health -= proj.damage;
                     this.projectiles.splice(p, 1);
-                    this.spawnExplosion(proj.x, proj.y, 4, '#ff4400');
+                    if (proj.isTorpedo) {
+                        this.spawnExplosion(proj.x, proj.y, 80, '#00eaff');
+                        this.spawnExplosion(proj.x, proj.y, 50, '#ffffff');
+                    } else {
+                        this.spawnExplosion(proj.x, proj.y, 4, '#ff4400');
+                    }
 
                     if (bs.health <= 0) {
-                        const isInfected = bs.color === '#09ab29ff';
-                        this.spawnExplosion(bs.x, bs.y, 35, '#ff4400');
-                        const drops = Utils.randInt(15, 25);
-                        for (let i = 0; i < drops; i++) this.gems.push(new Gem(bs.x, bs.y, 1, isInfected));
-                        this.questManager.notify('destroy', { 
-                            type: 'battleship',
-                            region: this.regionManager?.currentRegion?.name
-                        });
-                        this.battleships.splice(e, 1);
+                        this._onHostileDestroyed(bs, e, this.battleships, 'battleship');
                     }
                     break;
                 }
@@ -790,18 +771,15 @@ export class Game {
                 if (Utils.dist(proj.x, proj.y, dn.x, dn.y) < dn.radius + 4) {
                     dn.health -= proj.damage;
                     this.projectiles.splice(p, 1);
-                    this.spawnExplosion(proj.x, proj.y, 6, '#ff00ff');
+                    if (proj.isTorpedo) {
+                        this.spawnExplosion(proj.x, proj.y, 100, '#00eaff');
+                        this.spawnExplosion(proj.x, proj.y, 60, '#ffffff');
+                    } else {
+                        this.spawnExplosion(proj.x, proj.y, 6, '#ff00ff');
+                    }
 
                     if (dn.health <= 0) {
-                        const isInfected = dn.color === '#09ab29ff';
-                        this.spawnExplosion(dn.x, dn.y, 60, '#ff00ff');
-                        const drops = Utils.randInt(40, 70);
-                        for (let i = 0; i < drops; i++) this.gems.push(new Gem(dn.x, dn.y, 1, isInfected));
-                        this.dreadnoughts.splice(e, 1);
-                        this.questManager.notify('destroy', { 
-                            type: 'dreadnought',
-                            region: this.regionManager?.currentRegion?.name
-                        });
+                        this._onHostileDestroyed(dn, e, this.dreadnoughts, 'dreadnought');
                     }
                     break;
                 }
@@ -824,13 +802,15 @@ export class Game {
                     ns.health -= proj.damage;
                     ns.wasAttacked = true; // turns hostile!
                     this.projectiles.splice(p, 1);
-                    this.spawnExplosion(proj.x, proj.y, 3, '#55ffcc');
+                    if (proj.isTorpedo) {
+                        this.spawnExplosion(proj.x, proj.y, 60, '#00eaff');
+                        this.spawnExplosion(proj.x, proj.y, 30, '#ffffff');
+                    } else {
+                        this.spawnExplosion(proj.x, proj.y, 3, '#55ffcc');
+                    }
 
                     if (ns.health <= 0) {
-                        this.spawnExplosion(ns.x, ns.y, 15, '#55ffcc');
-                        const drops = Utils.randInt(5, 12);
-                        for (let i = 0; i < drops; i++) this.gems.push(new Gem(ns.x, ns.y, 1));
-                        this.neutralShips.splice(e, 1);
+                        this._onHostileDestroyed(ns, e, this.neutralShips, 'neutral');
                     }
                     break;
                 }
@@ -865,6 +845,203 @@ export class Game {
         if (this._hudFrame % 300 === 0) {
             this.player.save();
         }
+
+        // Gravity Beam Logic
+        if (this.player.isFiringGravityLaser) {
+            this.updateGravityBeam();
+        }
+    }
+
+    updateGravityBeam() {
+        const beamLength = 600;
+        const x1 = this.player.x;
+        const y1 = this.player.y;
+        const x2 = x1 + Math.cos(this.player.angle) * beamLength;
+        const y2 = y1 + Math.sin(this.player.angle) * beamLength;
+
+        // Damage Asteroids
+        for (let i = this.asteroids.length - 1; i >= 0; i--) {
+            const ast = this.asteroids[i];
+            const d = Utils.distToSegment(ast.x, ast.y, x1, y1, x2, y2);
+            if (d < ast.radius + 10) {
+                ast.health -= 150; // TITANIC asteroid damage
+                if (Math.random() < 0.3) this.spawnExplosion(ast.x, ast.y, 2, '#8a2be2');
+                if (ast.health <= 0) {
+                    this._onAsteroidDestroyed(ast, i);
+                }
+            }
+        }
+
+        // Damage Hostiles
+        const processGroup = (group, type) => {
+            for (let i = group.length - 1; i >= 0; i--) {
+                const target = group[i];
+                const d = Utils.distToSegment(target.x, target.y, x1, y1, x2, y2);
+                if (d < (target.radius || 20) + 10) {
+                    target.health -= 60; // Extreme constant damage
+                    if (target.wasAttacked !== undefined) target.wasAttacked = true;
+                    if (Math.random() < 0.2) this.spawnExplosion(target.x, target.y, 1, '#8a2be2');
+                    
+                    if (target.health <= 0) {
+                        this._onHostileDestroyed(target, i, group, type);
+                    }
+                }
+            }
+        };
+
+        processGroup(this.enemies, 'fighter');
+        processGroup(this.battleships, 'battleship');
+        processGroup(this.dreadnoughts, 'dreadnought');
+        processGroup(this.neutralShips, 'neutral');
+
+        // Void Particles
+        if (Math.random() < 0.5) {
+            const t = Math.random();
+            const px = x1 + (x2 - x1) * t + Utils.rand(-10, 10);
+            const py = y1 + (y2 - y1) * t + Utils.rand(-10, 10);
+            this.particles.push(Particle.get(px, py, Utils.rand(-1, 1), Utils.rand(-1, 1), '#4b0082', Utils.randInt(10, 20)));
+        }
+    }
+
+    drawGravityBeam() {
+        if (!this.player.isFiringGravityLaser) return;
+
+        const beamLength = 600;
+        const x1 = this.player.x;
+        const y1 = this.player.y;
+        const x2 = x1 + Math.cos(this.player.angle) * beamLength;
+        const y2 = y1 + Math.sin(this.player.angle) * beamLength;
+
+        this.ctx.save();
+        
+        // Multi-layered glow
+        this.ctx.lineCap = 'round';
+        
+        // Outer glow
+        this.ctx.globalAlpha = 0.3;
+        this.ctx.strokeStyle = '#8a2be2';
+        this.ctx.lineWidth = 25 + Math.sin(Date.now() * 0.02) * 5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x1, y1);
+        this.ctx.lineTo(x2, y2);
+        this.ctx.stroke();
+
+        // Inner beam
+        this.ctx.globalAlpha = 0.7;
+        this.ctx.strokeStyle = '#4b0082';
+        this.ctx.lineWidth = 12;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x1, y1);
+        this.ctx.lineTo(x2, y2);
+        this.ctx.stroke();
+
+        // Core
+        this.ctx.globalAlpha = 1.0;
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 4;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x1, y1);
+        this.ctx.lineTo(x2, y2);
+        this.ctx.stroke();
+
+        this.ctx.restore();
+    }
+
+    _onAsteroidDestroyed(ast, index) {
+        if (ast.destroyed) return;
+        ast.destroyed = true;
+        this.spawnExplosion(ast.x, ast.y, Math.floor(ast.radius * 0.75), '#aaa');
+
+        // Split: children inherit parent region level, smaller size
+        if (ast.size > 1) {
+            for (let i = 0; i < ast.size; i++) {
+                this.asteroids.push(new Asteroid(ast.x, ast.y, ast.size - 1, ast.regionLevel || 1));
+            }
+        }
+
+        // Gem drops: scale num gems by regionLevel to match difficulty (health) scaling
+        const baseGems = ast.size * Utils.randInt(1, 4);
+        const levelMult = Math.pow(1.2, (ast.regionLevel || 1) - 1);
+        const gemDrops = Math.floor(baseGems * levelMult);
+
+        const isInfected = this.regionManager?.currentRegion?.name === 'Blob Space';
+        for (let i = 0; i < gemDrops; i++) {
+            this.gems.push(new Gem(ast.x, ast.y, ast.gemValue || 1, isInfected, ast.gemColor || null));
+        }
+
+        // Notify quest manager
+        this.questManager.notify('destroy', {
+            type: 'asteroid',
+            region: this.regionManager?.currentRegion?.name
+        });
+
+        this.asteroids.splice(index, 1);
+    }
+
+    _onHostileDestroyed(target, index, group, type) {
+        const explosionColors = {
+            fighter: '#ff6a00',
+            battleship: '#ff4400',
+            dreadnought: '#ff00ff',
+            neutral: '#55ffcc'
+        };
+        const explosionSizes = {
+            fighter: 20,
+            battleship: 35,
+            dreadnought: 60,
+            neutral: 15
+        };
+
+        this.spawnExplosion(target.x, target.y, explosionSizes[type] || 20, explosionColors[type] || '#ff6a00');
+        
+        const isInfected = target.color === '#09ab29ff';
+        let drops = 0;
+        if (type === 'fighter') drops = Utils.randInt(3, 8);
+        else if (type === 'battleship') drops = Utils.randInt(15, 25);
+        else if (type === 'dreadnought') drops = Utils.randInt(40, 70);
+        else if (type === 'neutral') drops = Utils.randInt(5, 12);
+
+        for (let i = 0; i < drops; i++) {
+            this.gems.push(new Gem(target.x, target.y, 1, isInfected));
+        }
+
+        group.splice(index, 1);
+
+        this.questManager.notify('destroy', {
+            type: type,
+            region: this.regionManager?.currentRegion?.name
+        });
+    }
+
+    _onParasiteDestroyed(obj, parasite) {
+        this.spawnExplosion(parasite.x, parasite.y, 40, parasite.color);
+        const drops = Utils.randInt(20, 35);
+        const currentRegion = this.regionManager?.currentRegion;
+        const isInfected = (currentRegion?.name === 'Blob Space') || parasite.type === 'blob';
+        for (let i = 0; i < drops; i++) {
+            this.gems.push(new Gem(parasite.x, parasite.y, 1, isInfected));
+        }
+        obj.parasite = null;
+        this.sectorManager.markCleared(obj.id);
+
+        // Trigger Liberation Hail! (Only for planets and stations)
+        if (obj.type === 'planet' || obj.type === 'station') {
+            setTimeout(() => {
+                if (this.hud && typeof this.hud.triggerHail === 'function') {
+                    if (!this.sectorManager.hailedIds.has(obj.id)) {
+                        this.sectorManager.markHailed(obj.id);
+                        let msgData;
+                        if (SPECIFIC_HAILS[obj.id]) {
+                            msgData = SPECIFIC_HAILS[obj.id];
+                        } else {
+                            const msgs = HAIL_MESSAGES.liberation;
+                            msgData = msgs[Math.floor(Math.random() * msgs.length)];
+                        }
+                        this.hud.triggerHail(obj.name.toUpperCase(), msgData);
+                    }
+                }
+            }, 1500); // 1.5s delay after explosion
+        }
     }
 
     checkContacts() {
@@ -872,9 +1049,9 @@ export class Game {
 
         let currentContacts = [];
 
-        // Check stellar objects for contacts
+        // Check stellar objects for contacts (Planets only; Stations are handled by the Station HUD)
         for (const obj of this.sectorManager.objects) {
-            if (obj.type === 'planet' || obj.type === 'station') {
+            if (obj.type === 'planet') {
                 if (Utils.dist(this.player.x, this.player.y, obj.x, obj.y) < 1200) {
                     for (const key in NPC_ROSTER) {
                         if (NPC_ROSTER[key].locationId === obj.id) {
@@ -947,6 +1124,9 @@ export class Game {
         this.neutralShips.forEach(n => n.draw(this.ctx, this.camera));
         this.projectiles.forEach(p => p.draw(this.ctx, this.camera));
         this.enemyProjectiles.forEach(p => p.draw(this.ctx, this.camera));
+        
+        this.drawGravityBeam();
+        
         this.player.draw(this.ctx);
         if (this.tutorialShip) this.tutorialShip.draw(this.ctx);
         this.ghost.draw(this.ctx, this);
@@ -970,11 +1150,10 @@ export class Game {
 
     drawNavHints() {
         if (!this.player || this.player.health <= 0) return;
-        if (!this.settings || !this.settings.navHints) return;
 
         const hw = this.canvas.width / 2;
         const hh = this.canvas.height / 2;
-        const radius = Math.min(hw, hh) - 40; // inset slightly from edge
+        const radius = Math.min(hw, hh) * 0.62; // move hints closer to player for better visibility
 
         const drawHint = (tx, ty, name, icon, color, isRegion = false) => {
             // Only draw if target is significantly off-screen
@@ -1048,49 +1227,51 @@ export class Game {
         };
 
         // 1. Hints for discovered stellar objects in CURRENT region
-        const currentRegion = this.regionManager.currentRegion;
-        for (const obj of this.sectorManager.objects) {
-            let isVisible = this.sectorManager.discoveredIds.has(obj.id);
-            let forceShow = false;
+        if (this.settings && this.settings.navHints) {
+            const currentRegion = this.regionManager.currentRegion;
+            for (const obj of this.sectorManager.objects) {
+                let isVisible = this.sectorManager.discoveredIds.has(obj.id);
+                let forceShow = false;
 
-            // Special Case: Show Home Planet if Return Home quest is active
-            if (obj.id === 'planet_home' && this.questManager.activeQuests.some(q => q.id === 'tut_home')) {
-                isVisible = true;
-                forceShow = true;
-            }
-            // Special Case: Show Training Nebula if tut_science quest is active
-            if (obj.id === 'nebula_tutorial' && this.questManager.activeQuests.some(q => q.id === 'tut_science')) {
-                isVisible = true;
-                forceShow = true;
-            }
-
-            if (isVisible) {
-                const objGridX = obj.x / 1000;
-                const objGridY = -obj.y / 1000;
-
-                let objBelongsHere = false;
-
-                if (currentRegion === DEFAULT_REGION) {
-                    objBelongsHere = !REGIONS.some(reg => reg.test(objGridX, objGridY));
-                } else {
-                    objBelongsHere = currentRegion.test(objGridX, objGridY);
+                // Special Case: Show Home Planet if Return Home quest is active
+                if (obj.id === 'planet_home' && this.questManager.activeQuests.some(q => q.id === 'tut_home')) {
+                    isVisible = true;
+                    forceShow = true;
+                }
+                // Special Case: Show Training Nebula if tut_science quest is active
+                if (obj.id === 'nebula_tutorial' && this.questManager.activeQuests.some(q => q.id === 'tut_science')) {
+                    isVisible = true;
+                    forceShow = true;
                 }
 
-                // Show hint if it belongs here OR if it's a forced tutorial objective
-                if (objBelongsHere || forceShow) {
-                    const TYPE_ICONS = { planet: '🪐', nebula: '🌌', star: '⭐', station: '🛸', artifact: '💠' };
-                    drawHint(obj.x, obj.y, obj.name, TYPE_ICONS[obj.type], obj.color);
+                if (isVisible) {
+                    const objGridX = obj.x / 1000;
+                    const objGridY = -obj.y / 1000;
+
+                    let objBelongsHere = false;
+
+                    if (currentRegion === DEFAULT_REGION) {
+                        objBelongsHere = !REGIONS.some(reg => reg.test(objGridX, objGridY));
+                    } else {
+                        objBelongsHere = currentRegion.test(objGridX, objGridY);
+                    }
+
+                    // Show hint if it belongs here OR if it's a forced tutorial objective
+                    if (objBelongsHere || forceShow) {
+                        const TYPE_ICONS = { planet: '🪐', nebula: '🌌', star: '⭐', station: '🛸', artifact: '💠' };
+                        drawHint(obj.x, obj.y, obj.name, TYPE_ICONS[obj.type], obj.color);
+                    }
                 }
             }
         }
 
-        // 2. Hints for OTHER regions
-        const allRegions = [...REGIONS, DEFAULT_REGION];
-        for (const region of allRegions) {
-            // Only draw hints for regions we are NOT currently in, and only if they have a center defined and are discovered
-            if (region !== currentRegion && region.center && this.regionManager.discoveredRegions.has(region.name)) {
-                drawHint(region.center.worldX, region.center.worldY, region.name, region.icon, region.color, true);
-            }
+        // 2. Region hints have been moved to the MiniMap to declutter the HUD.
+
+        // 3. Hint for active Waypoint
+        if (this.waypoint) {
+            const wx = (this.waypoint.x / 1000).toFixed(1);
+            const wy = (this.waypoint.y / 1000).toFixed(1);
+            drawHint(this.waypoint.x, this.waypoint.y, `NAV WAYPOINT (${wx} : ${wy})`, '🎯', '#00ffcc');
         }
     }
 

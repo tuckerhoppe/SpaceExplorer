@@ -73,20 +73,25 @@
                 <div class="hud-item coord-container">
                     <span id="coord-text" class="hud-text coord-text">0 : 0</span>
                 </div>
-                <div class="hud-item region-container" style="display: flex; flex-direction: column; align-items: center;">
+                <div class="hud-item region-container">
                     <span id="region-name" class="hud-text region-text">Neutral Space</span>
                     <div id="region-diff-badge" class="region-diff-badge">
                         <span class="diff-level">✓ LVL 1</span>
                         <span class="diff-warn"></span>
                     </div>
-                    <div id="region-discovery-info" style="font-size: 0.6rem; color: #00f0ff; opacity: 0.8; margin-top: 2px;">0 / 0 Stellar Objects Discovered</div>
-                    <div id="region-quests-panel" style="margin-top: 5px; text-align: center; width: 100%;"></div>
+                    <div id="region-discovery-info" style="font-size: 0.6rem; color: #00f0ff; opacity: 0.8; margin-top: 0;">0 / 0 Stellar Objects Discovered</div>
+                    <div id="region-quests-panel" style="margin-top: 2px; text-align: center; width: 100%;"></div>
                 </div>
+                <!-- Spacer for Grid Centering -->
+                <div style="pointer-events: none;"></div>
             </div>
 
             <div id="upgrade-menu" class="hidden modal">
                 <div class="modal-panel">
                     <h2>Terminal</h2>
+                    <div id="upgrade-vault-display" style="position: absolute; top: 20px; right: 20px; color: var(--gem-color); font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 1rem; display: flex; align-items: center; gap: 8px; background: rgba(0, 255, 208, 0.1); padding: 5px 12px; border: 1px solid rgba(0, 255, 208, 0.3); border-radius: 20px;">
+                        <span id="upgrade-gem-count">0</span> 💎
+                    </div>
                     <div class="modal-tabs">
                         <button id="tab-upgrades" class="modal-tab active">Upgrades</button>
                         <button id="tab-ships" class="modal-tab">Ships</button>
@@ -227,6 +232,9 @@
                         <div><span
                                 style="color:var(--text); display:inline-block; width:12px; height:12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); margin-right:5px;"></span>Discovered
                             Region</div>
+                        <div style="color: #00ffcc; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 15px; margin-left: 5px;">
+                            <span style="opacity: 0.8;">[ Right-Click ]</span> Set Waypoint
+                        </div>
                     </div>
 
                     <button id="map-close-btn" class="btn primary-btn">Close Map</button>
@@ -247,6 +255,10 @@
                             class="stats-value">--</span></div>
                     <div class="stats-row"><span class="stats-label">Magnet</span><span id="stat-magnet-val"
                             class="stats-value">--</span></div>
+                    <div class="stats-row"><span class="stats-label">Cargo Bay</span><span id="stat-cargo-val"
+                            class="stats-value">--</span></div>
+                    <div class="stats-row"><span class="stats-label">Station Repair</span><span id="stat-healing-val"
+                            class="stats-value">--</span></div>
                 </div>
             </div>
 
@@ -262,6 +274,20 @@
             <div id="mini-map-container">
                 <div class="mini-map-header">SCANNER <span>[ DISCOVERY ]</span></div>
                 <canvas id="miniMapCanvas"></canvas>
+            </div>
+
+            <!-- Station Panel: shown when docked at a station -->
+            <div id="station-panel" class="hud-item hidden">
+                <div class="nav-log-header">🛰️ Station Terminal</div>
+                <div class="station-info">
+                    <div id="station-panel-name">Unknown Station</div>
+                    <button id="station-spawn-btn" class="btn station-btn">Set as Spawn Point</button>
+                </div>
+                <div class="station-divider"></div>
+                <div class="crew-header">Crew Members</div>
+                <div id="station-crew-list">
+                    <!-- Crew items added by HUD.js -->
+                </div>
             </div>
 
             <!-- Communications Log: hidden by default, shown when messages or contacts exist -->

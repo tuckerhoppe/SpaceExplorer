@@ -1,6 +1,6 @@
 export const Input = {
     keys: {},
-    mouse: { x: 0, y: 0, worldX: 0, worldY: 0, left: false },
+    mouse: { x: 0, y: 0, worldX: 0, worldY: 0, left: false, right: false },
     init(canvas, camera) {
         if (window.__inputInitialized) return;
         window.__inputInitialized = true;
@@ -12,8 +12,15 @@ export const Input = {
             this.mouse.x = e.clientX - r.left;
             this.mouse.y = e.clientY - r.top;
         });
-        window.addEventListener('mousedown', e => { if (e.button === 0) this.mouse.left = true; });
-        window.addEventListener('mouseup', e => { if (e.button === 0) this.mouse.left = false; });
+        window.addEventListener('mousedown', e => { 
+            if (e.button === 0) this.mouse.left = true; 
+            if (e.button === 2) this.mouse.right = true;
+        });
+        window.addEventListener('mouseup', e => { 
+            if (e.button === 0) this.mouse.left = false; 
+            if (e.button === 2) this.mouse.right = false;
+        });
+        window.addEventListener('contextmenu', e => e.preventDefault());
     },
     update(camera) {
         this.mouse.worldX = (this.mouse.x / camera.zoom) + camera.x;

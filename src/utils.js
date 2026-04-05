@@ -54,5 +54,15 @@ export const Utils = {
         const rb = step(ab, bb);
 
         return '#' + ((1 << 24) + (rr << 16) + (rg << 8) + rb).toString(16).slice(1);
+    },
+
+    distToSegment: (px, py, x1, y1, x2, y2) => {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const l2 = dx * dx + dy * dy;
+        if (l2 === 0) return Utils.dist(px, py, x1, y1);
+        let t = ((px - x1) * dx + (py - y1) * dy) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return Utils.dist(px, py, x1 + t * dx, y1 + t * dy);
     }
 };

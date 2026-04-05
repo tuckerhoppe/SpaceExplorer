@@ -15,6 +15,10 @@ export class RegionManager {
         } catch {
             this.discoveredRegions = new Set(['Home Region']);
         }
+
+        // Session-level flags (not persisted)
+        this._hasHailedHome = false;
+        this._lastExitTimes = new Map();
     }
 
     discoverAll() {
@@ -46,36 +50,47 @@ export class RegionManager {
         this.currentRegion = newRegion;
 
         if (newRegion !== this._prevRegion) {
+            // Track when we left the old region
+            if (this._prevRegion) {
+                this._lastExitTimes.set(this._prevRegion.name, Date.now());
+            }
+
             this._prevRegion = newRegion;
+            
             if (game?.questManager) {
                 game.questManager.notify('reach', { region: newRegion.name });
             }
 
             // Home Region Ambush Trigger
-            if (newRegion.name === 'Home Region' && game?.hud && game?.questManager) {
-                if (!game.questManager.completedQuestIds.has('region_home_defense') && 
-                    !game.questManager.activeQuests.find(q => q.id === 'region_home_defense')) {
+            if (newRegion.name === 'Home Region' && game?.hud && game?.questManager && !this._hasHailedHome) {
+                if (!game.questManager.isQuestCompletedOrActive('region_home_defense')) {
+                    this._hasHailedHome = true;
                     game.hud.triggerHail('COMMODORE REED', 'home_region_ambush');
                 }
             }
 
-            // First-time discovery: award gems + science and show combined popup
-            if (newRegion !== DEFAULT_REGION && !this.discoveredRegions.has(newRegion.name)) {
-                this.discoveredRegions.add(newRegion.name);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify([...this.discoveredRegions]));
+            // --- VISUAL POPUP COOLDOWN LOGIC ---
+            const now = Date.now();
+            const lastExit = this._lastExitTimes.get(newRegion.name) || 0;
+            const isReturningQuickly = (now - lastExit) < 30000; // 30 second returning-too-soon window
 
-                const reward = newRegion.gemReward || 0;
-                if (reward > 0 && game?.player) {
-                    game.player.gems += reward;
-                    game.player.totalGemsCollected += reward;
+            if (newRegion !== DEFAULT_REGION && !isReturningQuickly) {
+                if (!this.discoveredRegions.has(newRegion.name)) {
+                    // First-time discovery: award gems + science and show combined popup
+                    this.discoveredRegions.add(newRegion.name);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify([...this.discoveredRegions]));
+
+                    const reward = newRegion.gemReward || 0;
+                    if (reward > 0 && game?.player) {
+                        game.player.gems += reward;
+                        game.player.totalGemsCollected += reward;
+                    }
+                    if (game?.player) game.player.addScience(50);
+                    if (game?.hud) game.hud.showRegionDiscovery(newRegion, reward, 50);
+                } else if (game?.hud) {
+                    // Repeat entry — show informational popup only
+                    game.hud.showRegionDiscovery(newRegion);
                 }
-                // +50 SP for discovering a new region (primary science source)
-                if (game?.player) game.player.addScience(50);
-                // Show discovery popup with rewards (replaces separate showRegionReward call)
-                if (game?.hud) game.hud.showRegionDiscovery(newRegion, reward, 50);
-            } else if (newRegion !== DEFAULT_REGION && game?.hud) {
-                // Repeat entry — auto-dismiss popup, no rewards
-                game.hud.showRegionDiscovery(newRegion);
             }
         }
     }

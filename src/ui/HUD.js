@@ -4,6 +4,7 @@ import { REGIONS, DEFAULT_REGION } from '../data/regions.js';
 import { ScienceMiniGame } from './ScienceMiniGame.js';
 import { MiniMap } from './MiniMap.js';
 import { SPECIFIC_HAILS } from '../data/messages.js';
+import { NPC_ROSTER } from '../data/npcs.js';
 
 export class HUD {
     constructor(game) {
@@ -14,6 +15,16 @@ export class HUD {
         this._lastQuestIds = '';
         this.mapState = { offsetX: 0, offsetY: 0, zoom: 1, isDragging: false, lastMouse: {x: 0, y: 0}, hoverObj: null, maxZoom: 3, minZoom: 0.5 };
         this.miniMap = new MiniMap(game);
+        
+        // --- Station Panel Elements ---
+        this.stationPanel = document.getElementById('station-panel');
+        this.stationNameEl = document.getElementById('station-panel-name');
+        this.stationSpawnBtn = document.getElementById('station-spawn-btn');
+        this.stationCrewListEl = document.getElementById('station-crew-list');
+        
+        this._lastStationId = null;
+        this._lastStationSpawn = null;
+
         this.setupEventListeners();
     }
 
@@ -220,6 +231,15 @@ export class HUD {
                 this.mapState.hoverObj = null;
                 this.renderMap();
             });
+            mapContainer.addEventListener('contextmenu', (e) => {
+                e.preventDefault(); // Prevent default browser context menu
+                const canvas = document.getElementById('mapCanvas');
+                if (!canvas) return;
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = (e.clientX - rect.left) * (600 / rect.width);
+                const mouseY = (e.clientY - rect.top) * (600 / rect.height);
+                this._handleMapClick(mouseX, mouseY);
+            });
         }
 
         // Settings
@@ -275,7 +295,7 @@ export class HUD {
         if (navHintsCheckbox) {
             // Initialize checkbox based on local storage
             const savedNavHints = localStorage.getItem('setting_nav_hints');
-            const isNavHintsEnabled = savedNavHints !== 'false'; // Defaults to true
+            const isNavHintsEnabled = savedNavHints === 'true'; // Defaults to false
             navHintsCheckbox.checked = isNavHintsEnabled;
 
             navHintsCheckbox.addEventListener('change', (e) => {
@@ -407,6 +427,10 @@ export class HUD {
     refreshUpgrades() {
         const list = document.getElementById('upgrade-list');
         const sciLevel = this.game.player.scienceLevel;
+        
+        const gemDisplay = document.getElementById('upgrade-gem-count');
+        if (gemDisplay) gemDisplay.textContent = this.game.player.gems;
+
         UPGRADES.forEach((u, index) => {
             const level = this.game.player.stats[u.id];
             const cost = u.baseCost * level;
@@ -758,6 +782,22 @@ export class HUD {
         this.renderMap();
     }
 
+    _handleMapClick(canvasX, canvasY) {
+        const midX = 300;
+        const midY = 300;
+        const GRID_SIZE = 10;
+
+        // Convert canvas coords back to world coords
+        const logicX = (canvasX - midX) / this.mapState.zoom - this.mapState.offsetX;
+        const logicY = (canvasY - midY) / this.mapState.zoom - this.mapState.offsetY;
+
+        const worldX = (logicX / GRID_SIZE) * 1000;
+        const worldY = (logicY / GRID_SIZE) * 1000;
+
+        this.game.setWaypoint(worldX, worldY);
+        this.renderMap();
+    }
+
     renderMap() {
 
         const canvas = document.getElementById('mapCanvas');
@@ -895,6 +935,35 @@ export class HUD {
             }
         }
 
+        // Draw active waypoint if any
+        if (this.game.waypoint) {
+            const wx = (this.game.waypoint.x / 1000) * GRID_SIZE;
+            const wy = (this.game.waypoint.y / 1000) * GRID_SIZE;
+
+            ctx.save();
+            ctx.translate(wx, wy);
+            
+            // Draw a pulsing waypoint marker
+            const pulse = (Math.sin(Date.now() / 200) * 0.5 + 0.5);
+            ctx.strokeStyle = '#00ffcc';
+            ctx.lineWidth = 2 / this.mapState.zoom;
+            ctx.beginPath();
+            ctx.arc(0, 0, (8 + pulse * 4) / this.mapState.zoom, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#00ffcc';
+            ctx.font = `${14 / this.mapState.zoom}px Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText('🎯', 0, -15 / this.mapState.zoom);
+
+            // Display Coordinates
+            const wx_coord = (this.game.waypoint.x / 1000).toFixed(1);
+            const wy_coord = (this.game.waypoint.y / 1000).toFixed(1);
+            ctx.font = `${10 / this.mapState.zoom}px Inter, sans-serif`;
+            ctx.fillText(`${wx_coord} : ${wy_coord}`, 0, 15 / this.mapState.zoom);
+            ctx.restore();
+        }
+
         // Draw Player Position
         const pGridX = this.game.player.x / 1000;
         const pGridY = this.game.player.y / 1000;
@@ -1030,7 +1099,9 @@ export class HUD {
             { id: 'booster', label: 'Booster', val: `Lvl ${player.stats.booster} (${player.boostMaxSpeed.toFixed(1)} m/s)` },
             { id: 'hull', label: 'Hull HP', val: `Lvl ${player.stats.hull} (${player.maxHealth} HP)` },
             { id: 'weapons', label: 'Weapons', val: `Lvl ${player.stats.weapons} (${player.damage} DMG | ${player.shotsPerSecond}s)` },
-            { id: 'magnet', label: 'Magnet', val: `Lvl ${player.stats.magnet} (${player.magnetRadius}m)` }
+            { id: 'magnet', label: 'Magnet', val: `Lvl ${player.stats.magnet} (${player.magnetRadius}m)` },
+            { id: 'cargo', label: 'Cargo Bay', val: `Lvl ${player.stats.cargo} (${player.cargoCapacity} units)` },
+            { id: 'healing', label: 'Station Repair', val: `Lvl ${player.stats.healing} (${player.healingRate} HP/tick)` }
         ];
 
         document.getElementById('stat-engine-val').textContent = sets[0].val;
@@ -1038,6 +1109,10 @@ export class HUD {
         document.getElementById('stat-hull-val').textContent = sets[2].val;
         document.getElementById('stat-weapons-val').textContent = sets[3].val;
         document.getElementById('stat-magnet-val').textContent = sets[4].val;
+        const cargoStat = document.getElementById('stat-cargo-val');
+        if (cargoStat) cargoStat.textContent = sets[5].val;
+        const healingStat = document.getElementById('stat-healing-val');
+        if (healingStat) healingStat.textContent = sets[6].val;
         this._updateObjectives();
     }
 
@@ -1200,6 +1275,7 @@ export class HUD {
         if (!bar) return;
         if (!obj) {
             bar.classList.remove('active');
+            this.updateStationPanel(null); // Reset cache and hide station panel
             return;
         }
         const EFFECT_LABEL = { heal: '⚕ HULL REPAIR', gems: '💎 +GEMS' };
@@ -1233,6 +1309,96 @@ export class HUD {
             `;
         }
         bar.classList.add('active');
+        
+        // Update new Station Panel
+        this.updateStationPanel(obj);
+    }
+
+    /** Update the dedicated Station HUD panel for a docked station */
+    updateStationPanel(obj) {
+        if (!this.stationPanel) return;
+
+        if (!obj || obj.type !== 'station') {
+            this.stationPanel.classList.add('hidden');
+            this._lastStationId = null;
+            this._lastStationSpawn = null;
+            return;
+        }
+
+        const player = this.game.player;
+        // Strict number comparison for world coordinates
+        const isSpawn = Number(player.lastStationX) === Number(obj.x) && 
+                       Number(player.lastStationY) === Number(obj.y);
+        
+        // ONLY update if it's a DIFFERENT station, or if spawn point was changed
+        if (this._lastStationId === obj.id && this._lastStationSpawn === isSpawn) {
+            return;
+        }
+
+        this._lastStationId = obj.id;
+        this._lastStationSpawn = isSpawn;
+
+        this.stationPanel.classList.remove('hidden');
+        if (this.stationNameEl) this.stationNameEl.textContent = obj.name;
+
+        // 1. Update Spawn Button
+        if (this.stationSpawnBtn) {
+            // Block setting spawn if there's a parasite (mimics SectorManager docking rules)
+            if (obj.parasite) {
+                this.stationSpawnBtn.textContent = 'Station Blocked';
+                this.stationSpawnBtn.classList.remove('spawn-active');
+                this.stationSpawnBtn.disabled = true;
+                this.stationSpawnBtn.onclick = null;
+            } else if (isSpawn) {
+                this.stationSpawnBtn.textContent = 'Primary Spawn Point';
+                this.stationSpawnBtn.classList.add('spawn-active');
+                this.stationSpawnBtn.disabled = true;
+                this.stationSpawnBtn.onclick = null;
+            } else {
+                this.stationSpawnBtn.textContent = 'Set as Spawn Point';
+                this.stationSpawnBtn.classList.remove('spawn-active');
+                this.stationSpawnBtn.disabled = false;
+                
+                this.stationSpawnBtn.onclick = (e) => {
+                    e.preventDefault();
+                    player.setSpawnPoint(obj.x, obj.y);
+                    this.updateStationPanel(obj); // force re-check with new spawn state
+                    this.showFloatingReward('SPAWN POINT SET', '#50dc78');
+                };
+            }
+        }
+
+        // 2. Population Crew List
+        if (this.stationCrewListEl) {
+            const crew = Object.values(NPC_ROSTER).filter(npc => npc.locationId === obj.id);
+            
+            if (crew.length === 0) {
+                this.stationCrewListEl.innerHTML = '<div class="role-text" style="opacity:0.5; padding: 10px; font-size: 0.7rem;">NO CREW MEMBERS PRESENT</div>';
+            } else {
+                this.stationCrewListEl.innerHTML = crew.map(npc => `
+                    <div class="crew-item">
+                        <div class="crew-info">
+                            <div class="crew-name">${npc.name}</div>
+                            <div class="crew-role">${npc.role || 'Personnel'}</div>
+                        </div>
+                        <button class="crew-talk-btn" data-npc-name="${npc.name}">Talk</button>
+                    </div>
+                `).join('');
+
+                this.stationCrewListEl.querySelectorAll('.crew-talk-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const name = btn.dataset.npcName;
+                        const npcMatch = crew.find(n => n.name === name);
+                        if (npcMatch) {
+                            const dialogue = npcMatch.dialogues.find(d => !d.condition || d.condition(this.game));
+                            if (dialogue) {
+                                this.openContactDialogue(npcMatch.name, dialogue);
+                            }
+                        }
+                    });
+                });
+            }
+        }
     }
 
     addCommsMessage(msgData) {

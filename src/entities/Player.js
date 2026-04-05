@@ -11,9 +11,19 @@ export class Player {
         this.angle = 0;
         this.radius = 18; // will be overwritten by updateShipRadius() after _loadProgress
 
-        this.stats = { engine: 1, hull: 1, weapons: 1, magnet: 1, booster: 1 };
-        this.tech = { biometric_filtering: false, heat_shield: false };
+        this.stats = { engine: 1, hull: 1, weapons: 1, magnet: 1, booster: 1, cargo: 0, healing: 0 };
+        this.tech = { 
+            biometric_filtering: false, 
+            heat_shield: false, 
+            auto_heal: false, 
+            proton_torpedo: false,
+            gravity_laser: false
+        };
+        this.isFiringGravityLaser = false;
+        this._autoHealTimer = 0;
         this.lastFireTime = 0;
+        this.lastTorpedoTime = 0;
+        this.torpedoCooldown = 3000; // 3 seconds
 
         // ── Persistence ───────────────────────────────────────────
         this._baseHealth = 30; // Base health (hull upgrades add to this)
@@ -102,7 +112,9 @@ export class Player {
 
     /** Maximum gems the current ship can hold. */
     get cargoCapacity() {
-        return SHIPS[this.shipIndex]?.shipCargo || 50;
+        const baseCapacity = SHIPS[this.shipIndex]?.shipCargo || 50;
+        const upgradeBonus = (this.stats.cargo || 0) * 50;
+        return baseCapacity + upgradeBonus;
     }
 
     /** 0–1 fraction of cargo used. */
@@ -148,9 +160,20 @@ export class Player {
         }
     }
 
+    /** Set the player's respawn point to the given coordinates. */
+    setSpawnPoint(x, y) {
+        this.lastStationX = x;
+        this.lastStationY = y;
+        this.save();
+    }
+
 
     get shipBaseStats() {
         return SHIPS[this.shipIndex].stats;
+    }
+
+    get healingRate() {
+        return this.stats.healing === 0 ? 1 : this.stats.healing * 2;
     }
 
     get maxHealth() {
@@ -276,6 +299,20 @@ export class Player {
 
         this.x += this.vx; this.y += this.vy;
 
+        // Auto-Heal Tech
+        if (this.tech.auto_heal && this.health < this.maxHealth) {
+            this._autoHealTimer++;
+            if (this._autoHealTimer >= 120) { // ~2 seconds at 60fps
+                this.health = Math.min(this.maxHealth, this.health + 1);
+                this._autoHealTimer = 0;
+                if (game.hud) {
+                    game.hud.showFloatingReward('+1 ❤️', '#50dc78');
+                }
+            }
+        } else {
+            this._autoHealTimer = 0;
+        }
+
         if (Input.mouse.left && performance.now() - this.lastFireTime > this.fireRate) {
             this.lastFireTime = performance.now();
             const aimAngle = Utils.ang(this.x, this.y, Input.mouse.worldX, Input.mouse.worldY);
@@ -287,6 +324,24 @@ export class Player {
             this.vx -= Math.cos(aimAngle) * 0.5;
             this.vy -= Math.sin(aimAngle) * 0.5;
         }
+
+        // Proton Torpedo Fire (Right-Click)
+        if (Input.mouse.right && this.tech.proton_torpedo && performance.now() - this.lastTorpedoTime > this.torpedoCooldown) {
+            this.lastTorpedoTime = performance.now();
+            const torpAngle = Utils.ang(this.x, this.y, Input.mouse.worldX, Input.mouse.worldY);
+            // Torpedo fires towards the mouse click
+            game.projectiles.push(new Projectile(
+                this.x + Math.cos(torpAngle) * (this.radius + 10),
+                this.y + Math.sin(torpAngle) * (this.radius + 10),
+                torpAngle, 10, 600, undefined, true
+            ));
+            // Visual kickback effect (opposite to shot direction)
+            this.vx -= Math.cos(torpAngle) * 4;
+            this.vy -= Math.sin(torpAngle) * 4;
+        }
+
+        // Gravity Beam (Hold Space)
+        this.isFiringGravityLaser = (Input.keys[' '] && this.tech.gravity_laser);
     }
 
     draw(ctx) {

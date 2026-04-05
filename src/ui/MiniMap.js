@@ -1,4 +1,4 @@
-import { REGIONS } from '../data/regions.js';
+import { REGIONS, DEFAULT_REGION } from '../data/regions.js';
 import { Utils } from '../utils.js';
 
 export class MiniMap {
@@ -61,7 +61,18 @@ export class MiniMap {
         // Stellar Objects
         this.drawStellarObjects(ctx, player);
 
-        ctx.restore();
+        // Enemies
+        this._drawEnemyMarkers(ctx, player);
+
+        // Large Asteroids
+        this._drawLargeAsteroids(ctx, player);
+
+        ctx.restore(); // Pop the world-space scale/translate
+
+        // Region Hints (Screen space inside the clip)
+        this.drawRegionHints(ctx, centerX, centerY, player);
+
+        ctx.restore(); // Pop the clip segment
 
         // Draw Player Icon (Always in center)
         this.drawPlayerIcon(ctx, centerX, centerY, player.angle);
@@ -186,6 +197,81 @@ export class MiniMap {
         });
     }
 
+    _drawEnemyMarkers(ctx, player) {
+        // Collect all potential hostile entities
+        const hostiles = [
+            ...this.game.enemies,
+            ...this.game.battleships,
+            ...this.game.dreadnoughts,
+            ...this.game.neutralShips.filter(ns => ns.wasAttacked)
+        ];
+
+        hostiles.forEach(e => {
+            const ex = e.x - player.x;
+            const ey = e.y - player.y;
+
+            // Simple distance check to avoid drawing entities that are definitely clipped
+            // (The radar circle clip is ~2250 units at 0.04 scale)
+            const tacticalRange = 2500;
+            if (Math.abs(ex) > tacticalRange || Math.abs(ey) > tacticalRange) return;
+
+            ctx.save();
+            ctx.translate(ex, ey);
+
+            // Red glow for hostiles
+            ctx.fillStyle = '#ff3c3c';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ff3c3c';
+
+            // Draw based on size (radius)
+            if (e.radius > 30) {
+                // Large ships: Diamond shape
+                ctx.beginPath();
+                ctx.moveTo(0, -180);
+                ctx.lineTo(120, 0);
+                ctx.lineTo(0, 180);
+                ctx.lineTo(-120, 0);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                // Small ships: Circle
+                ctx.beginPath();
+                ctx.arc(0, 0, 75, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        });
+    }
+
+    _drawLargeAsteroids(ctx, player) {
+        this.game.asteroids.forEach(a => {
+            // "Max size for the region" logic:
+            // Region Level 1-2: maxSize is 2
+            // Region Level 3+: maxSize is 3
+            const maxSize = a.regionLevel <= 2 ? 2 : 3;
+            if (a.size < maxSize) return;
+
+            const ax = a.x - player.x;
+            const ay = a.y - player.y;
+
+            // Simple distance check to avoid drawing entities that are definitely clipped
+            const tacticalRange = 2500;
+            if (Math.abs(ax) > tacticalRange || Math.abs(ay) > tacticalRange) return;
+
+            ctx.save();
+            ctx.translate(ax, ay);
+
+            // Grey/Stone color for asteroids
+            ctx.fillStyle = 'rgba(150, 150, 150, 0.6)';
+            ctx.beginPath();
+            ctx.arc(0, 0, 100, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        });
+    }
+
     drawPlayerIcon(ctx, x, y, rotation) {
         ctx.save();
         ctx.translate(x, y);
@@ -247,5 +333,60 @@ export class MiniMap {
             ctx.stroke();
             ctx.restore();
         }
+    }
+
+    drawRegionHints(ctx, x, y, player) {
+        if (!this.game.regionManager) return;
+        const currentRegion = this.game.regionManager.currentRegion;
+        const allRegions = [...REGIONS, DEFAULT_REGION];
+
+        // 1. Gather all candidate regions with their distances
+        const candidates = allRegions
+            .filter(reg => {
+                const isDiscovered = (reg === DEFAULT_REGION) || (this.game.regionManager.discoveredRegions.has(reg.name));
+                return reg !== currentRegion && reg.center && isDiscovered;
+            })
+            .map(reg => {
+                const dx = reg.center.worldX - player.x;
+                const dy = reg.center.worldY - player.y;
+                return { reg, dx, dy, dist: Math.hypot(dx, dy) };
+            })
+            .filter(c => c.dist > this.radarRadius / this.scale) // Only off-screen regions
+            .sort((a, b) => a.dist - b.dist) // Closest first
+            .slice(0, 5); // Limit to top 5
+
+        // 2. Draw the limited hints
+        candidates.forEach(({ reg, dx, dy, dist }) => {
+            const angle = Math.atan2(dy, dx);
+            // Draw at the edge of the radar circle (inset slightly)
+            const indicatorRadius = this.radarRadius - 5;
+            const ix = x + Math.cos(angle) * indicatorRadius;
+            const iy = y + Math.sin(angle) * indicatorRadius;
+
+            ctx.save();
+            ctx.translate(ix, iy);
+            
+            // Draw a small colored dot
+            ctx.beginPath();
+            ctx.arc(0, 0, 3, 0, Math.PI * 2);
+            ctx.fillStyle = reg.color;
+            ctx.shadowBlur = 5;
+            ctx.shadowColor = reg.color;
+            ctx.fill();
+            
+            // Draw the icon/emoji if it exists
+            if (reg.icon) {
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowBlur = 0;
+                // Offset emoji slightly inward from the dot
+                const ex = -Math.cos(angle) * 12;
+                const ey = -Math.sin(angle) * 12;
+                ctx.fillText(reg.icon, ex, ey);
+            }
+            
+            ctx.restore();
+        });
     }
 }

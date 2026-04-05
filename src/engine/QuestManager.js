@@ -12,6 +12,10 @@ export class QuestManager {
         return this.completedQuestIds.has(questId) || this.activeQuests.some(q => q.id === questId);
     }
 
+    isQuestCompleted(questId) {
+        return this.completedQuestIds.has(questId);
+    }
+
     acceptQuest(questId) {
         if (this.completedQuestIds.has(questId)) return;
         if (this.activeQuests.find(q => q.id === questId)) return;

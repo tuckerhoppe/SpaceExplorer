@@ -53,9 +53,19 @@ export class GhostCompanion {
         let minDist = Infinity;
 
         for (const obj of game.sectorManager.objects) {
+            const isDiscovered = game.sectorManager.discoveredIds.has(obj.id);
+            const isScanned = this.scannedIds.has(obj.id);
+            const hasParasite = !!obj.parasite;
             const d = Utils.dist(this.player.x, this.player.y, obj.x, obj.y);
+
+            // The Ghost targets:
+            // 1. Undiscovered objects (to aid exploration)
+            // 2. Discovered but unscanned objects ONLY if the player is very close (to aid science)
+            // 3. Discovered objects with parasites ONLY if the player is nearby (to alert to hazards)
+            const isTarget = (!isDiscovered) || (!isScanned && d < 250) || (hasParasite && d < 800);
+            if (!isTarget) continue;
+
             // Only skip the last docked object if we are still very close to it.
-            // This prevents the ghost from "forgetting" the station if it's the only thing nearby.
             if (obj.id === this.lastDockedId && d < 1200) continue;
 
             if (d < minDist) {

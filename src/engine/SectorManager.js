@@ -174,10 +174,6 @@ export class SectorManager {
 
             // === STATION: Deposit cargo gems into vault ===
             if (this.dockedAt.type === 'station') {
-                // Record last docked station position for respawn
-                player.lastStationX = this.dockedAt.x;
-                player.lastStationY = this.dockedAt.y;
-
                 // Deposit all cargo on first frame of docking (and whenever new cargo arrives)
                 if (player.cargoGems > 0 && !this._depositedThisDock) {
                     const deposited = player.cargoGems;
@@ -195,10 +191,11 @@ export class SectorManager {
             }
 
             if (this.dockedAt.dockEffect === 'heal') {
-                // Heal 1 HP every 30 frames (~2 HP/sec)
+                // Heal at a rate based on player stats every 30 frames (~2 heals/sec)
                 if (f % 30 === 0 && player.health < player.maxHealth) {
-                    player.health = Math.min(player.maxHealth, player.health + 1);
-                    if (game.hud) game.hud.showFloatingReward('+1 ❤️', '#ff6b6b');
+                    const amount = player.healingRate || 1;
+                    player.health = Math.min(player.maxHealth, player.health + amount);
+                    if (game.hud) game.hud.showFloatingReward(`+${amount} ❤️`, '#ff6b6b');
                 }
             } else if (this.dockedAt.dockEffect === 'gems') {
                 // +1 gem every 90 frames (~0.67 gems/sec)
