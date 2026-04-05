@@ -415,6 +415,8 @@ export class HUD {
                         this.game.player.health += 20;
                     }
                     this.refreshUpgrades();
+                    this.refreshShips();
+                    this.refreshTechUpgrades();
                     this.update(this.game.player);
                     this.game.player.save();
                 }
@@ -424,12 +426,16 @@ export class HUD {
         this.refreshUpgrades();
     }
 
+    _updateUpgradeGemCount() {
+        const gemDisplay = document.getElementById('upgrade-gem-count');
+        if (gemDisplay) gemDisplay.textContent = this.game.player.gems;
+    }
+
     refreshUpgrades() {
         const list = document.getElementById('upgrade-list');
         const sciLevel = this.game.player.scienceLevel;
         
-        const gemDisplay = document.getElementById('upgrade-gem-count');
-        if (gemDisplay) gemDisplay.textContent = this.game.player.gems;
+        this._updateUpgradeGemCount();
 
         UPGRADES.forEach((u, index) => {
             const level = this.game.player.stats[u.id];
@@ -521,7 +527,9 @@ export class HUD {
                     // Restore health proportional to new max health if it jumped (or just heal to full on buy)
                     this.game.player.health = this.game.player.maxHealth;
 
+                    this.refreshUpgrades();
                     this.refreshShips();
+                    this.refreshTechUpgrades();
                     this.update(this.game.player);
                     this.game.player.save();
                 }
@@ -533,6 +541,7 @@ export class HUD {
     refreshShips() {
         if (!document.getElementById('ship-list')) return;
         const list = document.getElementById('ship-list');
+        this._updateUpgradeGemCount();
         const sciLevel = this.game.player.scienceLevel;
 
         SHIPS.forEach((s, index) => {
@@ -603,6 +612,8 @@ export class HUD {
                     this.game.player.gems -= def.cost;
                     this.game.player.gemVault = Math.max(0, (this.game.player.gemVault || 0) - def.cost);
                     this.game.player.tech[id] = true;
+                    this.refreshUpgrades();
+                    this.refreshShips();
                     this.refreshTechUpgrades();
                     this.update(this.game.player);
                     this.game.player.save();
@@ -615,6 +626,7 @@ export class HUD {
     refreshTechUpgrades() {
         const list = document.getElementById('tech-list');
         if (!list || list.children.length === 0) return;
+        this._updateUpgradeGemCount();
         const sciLevel = this.game.player.scienceLevel;
         TECH_UPGRADES.forEach((u, index) => {
             const card = list.children[index];
