@@ -271,6 +271,64 @@ canvas {
     color: rgba(0, 255, 208, 0.55);
 }
 
+/* ─── Evasive Maneuvers HUD ───────────────────────── */
+.dash-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    min-width: 130px;
+    padding: 8px 12px;
+}
+
+.dash-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dash-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #fff;
+    opacity: 0.7;
+}
+
+.dash-dots {
+    display: flex;
+    gap: 4px;
+}
+
+.dash-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.2s;
+}
+
+.dash-dot.filled {
+    background: #fff;
+    box-shadow: 0 0 8px #fff;
+    border-color: #fff;
+}
+
+.dash-bar-track {
+    height: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.dash-bar-fill {
+    height: 100%;
+    background: #fff;
+    width: 0%;
+    transition: width 0.1s linear;
+}
+
 .health-container {
     position: relative;
     width: 220px;

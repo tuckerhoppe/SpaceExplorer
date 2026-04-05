@@ -14,6 +14,7 @@ export const TECH_UPGRADES = [
     { id: 'auto_heal', name: 'Auto-Heal Nanites', desc: 'Slowly repairs your ship while exploring (1 HP every 3 seconds).', cost: 2500, sciLevel: 7 },
     { id: 'proton_torpedo', name: 'Proton Torpedoes', desc: 'Heavy secondary weapon fired with RIGHT-CLICK. Fires towards cursor with 600 DMG and 3s reload.', cost: 3500, sciLevel: 8 },
     { id: 'gravity_laser', name: 'Gravity Beam Emitter', desc: 'Continuous void beam fired with SPACE. Deals massive DPS, especially to asteroids.', cost: 5000, sciLevel: 10 },
+    { id: 'evasive_maneuvers', name: 'Evasive Maneuvers', desc: 'Perform a fast dash with ARROW KEYS to evade attacks. 3 Charges, rechargeable.', cost: 2000, sciLevel: 6 },
 ];
 
 export const SHIPS = [

@@ -999,6 +999,11 @@ export class HUD {
     update(player) {
         // Vault (spending pool) displayed as the main gem total
         document.getElementById('gem-count').textContent = player.gems;
+        
+        // Keep terminal gems in sync if it is open
+        const upgradeGems = document.getElementById('upgrade-gem-count');
+        if (upgradeGems) upgradeGems.textContent = player.gems;
+
         document.getElementById('health-text').textContent = `${Math.ceil(player.health)} / ${player.maxHealth}`;
         const healthPercent = Math.max(0, (player.health / player.maxHealth) * 100);
         document.getElementById('health-bar-fill').style.width = `${healthPercent}%`;
@@ -1021,6 +1026,28 @@ export class HUD {
             } else {
                 cargoFill.style.background = ''; // CSS default teal
                 cargoFill.classList.remove('cargo-caution', 'cargo-full');
+            }
+        }
+
+        // Evasive Maneuvers HUD
+        const dashPanel = document.getElementById('dash-panel');
+        if (dashPanel) {
+            if (player.tech.evasive_maneuvers) {
+                dashPanel.classList.remove('hidden');
+                for (let i = 1; i <= 3; i++) {
+                    const dot = document.getElementById(`dash-dot-${i}`);
+                    if (dot) {
+                        dot.classList.toggle('filled', player.dashCharges >= i);
+                    }
+                }
+                const dashFill = document.getElementById('dash-bar-fill');
+                if (dashFill) {
+                    // Unified progress: base (charges) + partial (timer)
+                    const totalProgress = player.dashCharges + player.dashRechargeTimer;
+                    dashFill.style.width = `${(totalProgress / player.maxDashCharges) * 100}%`;
+                }
+            } else {
+                dashPanel.classList.add('hidden');
             }
         }
 

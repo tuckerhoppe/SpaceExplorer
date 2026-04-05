@@ -17,8 +17,13 @@ export class Player {
             heat_shield: false, 
             auto_heal: false, 
             proton_torpedo: false,
-            gravity_laser: false
+            gravity_laser: false,
+            evasive_maneuvers: false
         };
+        this.dashCharges = 3;
+        this.maxDashCharges = 3;
+        this.dashRechargeTimer = 0; // 0 to 1
+        this._dashKeysPressed = {}; // Local state to prevent continuous dashing
         this.isFiringGravityLaser = false;
         this._autoHealTimer = 0;
         this.lastFireTime = 0;
@@ -63,6 +68,8 @@ export class Player {
             if (data.tech) {
                 this.tech = { ...this.tech, ...data.tech };
             }
+            this.dashCharges = data.dashCharges !== undefined ? data.dashCharges : 3;
+            this.dashRechargeTimer = data.dashRechargeTimer || 0;
         } catch (e) {
             console.error("Failed to load player progress", e);
             this.gems = 0;
@@ -87,6 +94,8 @@ export class Player {
                 sciencePoints: this.sciencePoints,
                 stats: this.stats,
                 tech: this.tech,
+                dashCharges: this.dashCharges,
+                dashRechargeTimer: this.dashRechargeTimer,
                 shipIndex: this.shipIndex,
                 lastStationX: this.lastStationX,
                 lastStationY: this.lastStationY
@@ -340,8 +349,68 @@ export class Player {
             this.vy -= Math.sin(torpAngle) * 4;
         }
 
+        // Dash logic (Arrow Keys) - Trigger an impulse
+        if (this.tech.evasive_maneuvers) {
+            const dashKeys = [
+                { key: 'arrowup', dx: 0, dy: -1 },
+                { key: 'arrowdown', dx: 0, dy: 1 },
+                { key: 'arrowleft', dx: -1, dy: 0 },
+                { key: 'arrowright', dx: 1, dy: 0 }
+            ];
+
+            let triggered = false;
+            for (const dk of dashKeys) {
+                if (Input.keys[dk.key]) {
+                    if (!this._dashKeysPressed[dk.key] && this.dashCharges >= 1) {
+                        this.performDash(dk.dx, dk.dy, game);
+                        this.dashCharges--;
+                        this.save();
+                        triggered = true;
+                    }
+                    this._dashKeysPressed[dk.key] = true;
+                } else {
+                    this._dashKeysPressed[dk.key] = false;
+                }
+                if (triggered) break;
+            }
+
+            // Dash Recharge logic (3x faster: 0.004 -> 0.012)
+            if (this.dashCharges < this.maxDashCharges) {
+                this.dashRechargeTimer = Math.min(1, this.dashRechargeTimer + 0.012); 
+                if (this.dashRechargeTimer >= 1) {
+                    this.dashCharges++;
+                    this.dashRechargeTimer = (this.dashCharges < this.maxDashCharges) ? 0 : 0;
+                    this.save();
+                }
+            } else {
+                this.dashRechargeTimer = 0;
+            }
+        }
+
         // Gravity Beam (Hold Space)
         this.isFiringGravityLaser = (Input.keys[' '] && this.tech.gravity_laser);
+    }
+
+    performDash(dx, dy, game) {
+        const dashStrength = 42; // Increased again from 28 to 42
+        this.vx += dx * dashStrength;
+        this.vy += dy * dashStrength;
+
+        // Visual feedback
+        if (game.hud) {
+            game.hud.showFloatingReward('EVASIVE!', '#ffffff');
+        }
+
+        // Particles
+        for (let i = 0; i < 15; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const s = Math.random() * 5 + 2;
+            game.particles.push(Particle.get(
+                this.x, this.y,
+                Math.cos(a) * s, Math.sin(a) * s,
+                '#ffffff', 10 + Math.random() * 10
+            ));
+        }
     }
 
     draw(ctx) {
