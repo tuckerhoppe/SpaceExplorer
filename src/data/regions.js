@@ -3,6 +3,25 @@
 
 export const REGIONS = [
     {
+        name: 'The Void',
+        icon: '🌌',
+        color: '#00f0ff',
+        description: 'You have strayed too far from the galactic core. The void awaits.',
+        test: (cx, cy) => Math.abs(cx) > 30 || Math.abs(cy) > 30,
+        center: { worldX: 0, worldY: 0 },
+        difficulty: 1,
+        isVoid: true,
+        bgColor: '#000105',
+        particleType: 'none',
+        caps: {
+            asteroids: 0,
+            fighters: 0,
+            battleships: 0,
+            neutrals: 0,
+            dreadnoughts: 0,
+        }
+    },
+    {
         name: 'The Badlands',
         icon: '💀',
         color: '#ff6a00',

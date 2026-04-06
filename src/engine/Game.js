@@ -399,6 +399,29 @@ export class Game {
 
         this.regionManager.update(this.player, this);
 
+        // --- THE VOID HANDLING ---
+        if (this.regionManager.currentRegion.isVoid) {
+            // Apply damage over time
+            const voidDamage = 0.1; // ~6 HP per second at 60fps
+            this.player.health -= voidDamage;
+            
+            // Show alert occasionally
+            if (this._hudFrame % 120 === 0 && this.player.health > 0) {
+                if (this.hud) this.hud.showFloatingReward(`!!! VOID RADIATION WARNING !!!`, '#ff3c3c');
+            }
+
+            if (this.player.health <= 0 && !this.gameOver) {
+                this.triggerGameOver();
+            }
+
+            // Clear entities immediately
+            this.asteroids = [];
+            this.enemies = [];
+            this.battleships = [];
+            this.dreadnoughts = [];
+            this.neutralShips = [];
+        }
+
         // Notify QuestManager of current region
         this.questManager.notify('region', { region: this.regionManager.currentRegion.name });
 
@@ -1082,19 +1105,22 @@ export class Game {
         this.ctx.fillStyle = this._bgColor;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        this.stars.forEach(s => {
-            let px = ((s.x - this.camera.x * s.parallax) % this.canvas.width + this.canvas.width) % this.canvas.width;
-            let py = ((s.y - this.camera.y * s.parallax) % this.canvas.height + this.canvas.height) % this.canvas.height;
-
-            // Instead of alpha blending (which tints stars the background color),
-            // calculate a solid greyscale color based on parallax depth
-            const brightness = Math.floor(255 * s.parallax);
-            this.ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness})`;
-
-            this.ctx.beginPath();
-            this.ctx.arc(px, py, s.s, 0, Math.PI * 2);
-            this.ctx.fill();
-        });
+        // Skip background elements in the Void
+        if (!this.regionManager.currentRegion.isVoid) {
+            this.stars.forEach(s => {
+                let px = ((s.x - this.camera.x * s.parallax) % this.canvas.width + this.canvas.width) % this.canvas.width;
+                let py = ((s.y - this.camera.y * s.parallax) % this.canvas.height + this.canvas.height) % this.canvas.height;
+    
+                // Instead of alpha blending (which tints stars the background color),
+                // calculate a solid greyscale color based on parallax depth
+                const brightness = Math.floor(255 * s.parallax);
+                this.ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness})`;
+    
+                this.ctx.beginPath();
+                this.ctx.arc(px, py, s.s, 0, Math.PI * 2);
+                this.ctx.fill();
+            });
+        }
 
         // Draw ambient background particles (behind entities)
         this.ambientParticles.forEach(p => p.draw(this.ctx));
