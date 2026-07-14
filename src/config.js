@@ -27,7 +27,7 @@ export const SHIPS = [
         recommendedLevel: 2,
         shipRadius: 18,     // world-space radius (px)
         shipZoom: 1.00,     // base camera zoom at rest
-        shipCargo: 50,      // base cargo capacity
+        shipCargo: 100,      // base cargo capacity
         stats: { engine: 0, booster: 0, hull: 0, weapons: 0, magnet: 0 },
         drawShape: (ctx, radius) => {
             ctx.beginPath();
@@ -54,7 +54,7 @@ export const SHIPS = [
         recommendedLevel: 4,
         shipRadius: 22,
         shipZoom: 0.96,
-        shipCargo: 150,
+        shipCargo: 300,
         stats: { engine: 1, booster: 1, hull: 2, weapons: 2, magnet: 1 },
         drawShape: (ctx, radius) => {
             // A bulky, wider ship with swept back wings
@@ -88,7 +88,7 @@ export const SHIPS = [
         recommendedLevel: 6,
         shipRadius: 27,
         shipZoom: 0.91,
-        shipCargo: 400,
+        shipCargo: 800,
         stats: { engine: 2, booster: 2, hull: 5, weapons: 4, magnet: 2 },
         drawShape: (ctx, radius) => {
             // Sleek central fuselage
@@ -139,7 +139,7 @@ export const SHIPS = [
         recommendedLevel: 8,
         shipRadius: 33,
         shipZoom: 0.85,
-        shipCargo: 750,
+        shipCargo: 1500,
         stats: { engine: 3, booster: 4, hull: 8, weapons: 4, magnet: 2 },
         drawShape: (ctx, radius) => {
             // Main Saucer
@@ -196,7 +196,7 @@ export const SHIPS = [
         recommendedLevel: 10,
         shipRadius: 40,
         shipZoom: 0.79,
-        shipCargo: 1200,
+        shipCargo: 2400,
         stats: { engine: 3, booster: 3, hull: 12, weapons: 5, magnet: 2 },
         drawShape: (ctx, radius) => {
             // Colors
@@ -283,7 +283,7 @@ export const SHIPS = [
         recommendedLevel: 12,
         shipRadius: 48,
         shipZoom: 0.72,
-        shipCargo: 2500,
+        shipCargo: 5000,
         stats: { engine: 3, booster: 3, hull: 15, weapons: 6, magnet: 3 },
         drawShape: (ctx, radius) => {
             // Pylons

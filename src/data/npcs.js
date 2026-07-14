@@ -1,4 +1,41 @@
 export const NPC_ROSTER = {
+    // --- FRONTIER STATION (0, 0) ---
+    'resistance_liaison': {
+        name: "Resistance Liaison",
+        locationId: 'station_frontier',
+        role: "Intelligence Officer",
+        dialogues: [
+            {
+                condition: (game) => !game.questManager.isQuestCompletedOrActive('region_empire_boss'),
+                text: "The Star Empire has locked down our core sectors. Their Arbiter is personally overseeing the blockade. If you can thin out their forces and eliminate the Arbiter, we might actually have a chance at liberation.",
+                options: [
+                    { 
+                        text: "I'll break the blockade.", 
+                        reply: "A true hero's path. Be warned—the Arbiter's flagship is a fortress. You'll need to clear out their escorts first.",
+                        action: (game) => game.questManager.acceptQuest('region_empire_boss')
+                    },
+                    { text: "I'm not ready for a war.", reply: "None of us are, but we fight anyway. Come back when you've upgraded your ship." }
+                ]
+            },
+            {
+                condition: () => true,
+                text: "The Frontier is the only place left that hasn't bowed to the Empire. Keep it that way.",
+                options: [{ text: "I will.", reply: "Good." }]
+            }
+        ]
+    },
+    'navigator_sol': {
+        name: "Navigator Sol",
+        locationId: 'station_frontier',
+        role: "Lead Cartographer",
+        dialogues: [
+            {
+                condition: () => true,
+                text: "The galaxy is vast, but with a good map, no one is truly lost.",
+                options: [{ text: "Wise words.", reply: "Carry on." }]
+            }
+        ]
+    },
     // --- DEEP SPACE 1 (0, 3) ---
     'cmd_ds1': {
         name: "Cmdr. Vahl",
@@ -59,6 +96,30 @@ export const NPC_ROSTER = {
                 condition: () => true,
                 text: "Mapping the void is a noble pursuit. Let me know what you find.",
                 options: [{ text: "Will do.", reply: "Safe journeys." }]
+            }
+        ]
+    },
+    'valerius': {
+        name: "Cmdr. Valerius",
+        locationId: 'station_ds2',
+        role: "Imperial Defect",
+        dialogues: [
+            {
+                condition: (game) => !game.questManager.isQuestCompletedOrActive('region_sentinel_boss'),
+                text: "The Sentinel Commander has been strangling the trade lanes for months. I defected because I couldn't watch them slaughter another merchant fleet. Will you help us end their command?",
+                options: [
+                    { 
+                        text: "I'll take the head of the Commander.", 
+                        reply: "A bold mission. They patrol the heart of the Sentinel's Post, just East of here. Target their flagship and show no mercy.",
+                        action: (game) => game.questManager.acceptQuest('region_sentinel_boss')
+                    },
+                    { text: "My ship isn't ready.", reply: "Then prepare, pilot. The Commander's flagship is unlike anything you've faced." }
+                ]
+            },
+            {
+                condition: () => true,
+                text: "The Empire calls us traitors, but we are the ones who remember what true duty means.",
+                options: [{ text: "Respect.", reply: "Stay sharp." }]
             }
         ]
     },
@@ -477,30 +538,6 @@ export const NPC_ROSTER = {
                 condition: () => true,
                 text: "The biological properties of the Blobs are fascinating. Their evolution is... aggressive.",
                 options: [{ text: "Stay safe, Doctor.", reply: "Science is my shield." }]
-            }
-        ]
-    },
-    'resistance_liaison': {
-        name: "Resistance Liaison",
-        locationId: 'station_frontier',
-        role: "Intelligence Officer",
-        dialogues: [
-            {
-                condition: () => true,
-                text: "The Frontier is the only place left that hasn't bowed to the Empire. Keep it that way.",
-                options: [{ text: "I will.", reply: "Good." }]
-            }
-        ]
-    },
-    'navigator_sol': {
-        name: "Navigator Sol",
-        locationId: 'station_frontier',
-        role: "Lead Cartographer",
-        dialogues: [
-            {
-                condition: () => true,
-                text: "The galaxy is vast, but with a good map, no one is truly lost.",
-                options: [{ text: "Wise words.", reply: "Carry on." }]
             }
         ]
     },

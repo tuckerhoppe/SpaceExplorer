@@ -56,7 +56,7 @@ export class RegionManager {
             }
 
             this._prevRegion = newRegion;
-            
+
             if (game?.questManager) {
                 game.questManager.notify('reach', { region: newRegion.name });
             }
@@ -95,7 +95,85 @@ export class RegionManager {
         }
     }
 
+    draw(ctx, camera) {
+        ctx.save();
+
+        const tick = Date.now() / 150;
+
+        for (const region of REGIONS) {
+            if (!region.bounds) continue;
+
+            const rx1 = region.bounds.minX * 1000;
+            const rx2 = region.bounds.maxX * 1000;
+            const ry1 = -region.bounds.maxY * 1000;
+            const ry2 = -region.bounds.minY * 1000;
+
+            // Viewport culling to only draw visible regions
+            if (rx2 < camera.x || rx1 > camera.x + camera.viewW ||
+                ry2 < camera.y || ry1 > camera.y + camera.viewH) {
+                continue;
+            }
+
+            // 1. Watermarked Region Name in the center
+            const cx = (rx1 + rx2) / 2;
+            const cy = (ry1 + ry2) / 2;
+            ctx.fillStyle = (region.color || '#ffffff') + '15'; // Very subtle watermark
+            ctx.font = '900 64px Orbitron, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(region.name.toUpperCase(), cx, cy);
+
+            // 2. Corner Accents (Solid brackets)
+            const len = 30;
+            ctx.strokeStyle = (region.color || '#ffffff') + 'aa';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([]);
+
+            // Top-left
+            ctx.beginPath();
+            ctx.moveTo(rx1 + len, ry1); ctx.lineTo(rx1, ry1); ctx.lineTo(rx1, ry1 + len);
+            ctx.stroke();
+
+            // Top-right
+            ctx.beginPath();
+            ctx.moveTo(rx2 - len, ry1); ctx.lineTo(rx2, ry1); ctx.lineTo(rx2, ry1 + len);
+            ctx.stroke();
+
+            // Bottom-left
+            ctx.beginPath();
+            ctx.moveTo(rx1 + len, ry2); ctx.lineTo(rx1, ry2); ctx.lineTo(rx1, ry2 - len);
+            ctx.stroke();
+
+            // Bottom-right
+            ctx.beginPath();
+            ctx.moveTo(rx2 - len, ry2); ctx.lineTo(rx2, ry2); ctx.lineTo(rx2, ry2 - len);
+            ctx.stroke();
+
+            // 3. Animated Glowing Dotted Border
+            // Outer wider glow line
+            ctx.strokeStyle = (region.color || '#ffffff') + '22';
+            ctx.lineWidth = 6;
+            ctx.setLineDash([12, 18]);
+            ctx.lineDashOffset = -tick * 1.5;
+            ctx.beginPath();
+            ctx.rect(rx1, ry1, rx2 - rx1, ry2 - ry1);
+            ctx.stroke();
+
+            // Inner sharp line
+            ctx.strokeStyle = (region.color || '#ffffff') + '88';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([12, 18]);
+            ctx.lineDashOffset = -tick * 1.5;
+            ctx.beginPath();
+            ctx.rect(rx1, ry1, rx2 - rx1, ry2 - ry1);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
     get caps() {
         return this.currentRegion.caps;
     }
 }
+

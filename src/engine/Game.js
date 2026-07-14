@@ -19,11 +19,17 @@ import { HAIL_MESSAGES, SPECIFIC_HAILS } from '../data/messages.js';
 import { NPC_ROSTER, getGenericShipContact } from '../data/npcs.js';
 import { GhostCompanion } from '../entities/GhostCompanion.js';
 import { IntroTerminal } from '../ui/IntroTerminal.js';
+import { TradeRouteManager } from './TradeRouteManager.js';
 
 import { Dreadnought } from '../entities/Dreadnought.js';
+import { Boss } from '../entities/Boss.js';
 import { TutorialShip } from '../entities/TutorialShip.js';
 import { MegaLandmark } from '../entities/MegaLandmark.js';
 import { MEGA_LANDMARKS } from '../data/landmarks.js';
+import { DerelictHull } from '../entities/DerelictHull.js';
+import { SpaceMine } from '../entities/SpaceMine.js';
+import { CargoTrain } from '../entities/CargoTrain.js';
+import { Comet } from '../entities/Comet.js';
 
 export class Game {
     constructor() {
@@ -36,6 +42,12 @@ export class Game {
         this.tutorialShip = null;
         this.projectiles = [];
         this.asteroids = [];
+        this.derelicts = [];
+        this.mines = [];
+        this.cargoTrains = [];
+        this.comets = [];
+        this.shockwaves = [];
+        this.shakeIntensity = 0;
         this.enemies = [];
         this.tutorialEnemySpawned = false;
         this.battleships = [];
@@ -46,6 +58,7 @@ export class Game {
         this.stars = [];
         this.ambientParticles = [];
         this.dreadnoughts = [];
+        this.bosses = [];
         this.megaLandmarks = MEGA_LANDMARKS.map(lm => new MegaLandmark(lm));
         this._ambushSpawned = false;
         this.waypoint = null;
@@ -57,6 +70,7 @@ export class Game {
         this.questManager = new QuestManager(this);
         this.sectorManager = new SectorManager();
         this.regionManager = new RegionManager();
+        this.tradeRouteManager = new TradeRouteManager();
 
         this.init();
     }
@@ -245,6 +259,17 @@ export class Game {
         this.camera.h = this.canvas.height;
     }
 
+    getRegionAt(worldX, worldY) {
+        const cx = worldX / 1000;
+        const cy = -worldY / 1000;
+        for (const region of REGIONS) {
+            if (region.test(cx, cy)) {
+                return region;
+            }
+        }
+        return DEFAULT_REGION;
+    }
+
     /**
      * Map a region's difficulty float to an integer level 1-12,
      * then pick a size (1-3) weighted toward large in high levels.
@@ -253,10 +278,11 @@ export class Game {
     spawnAsteroid(cx, cy, range) {
         const angle = Utils.rand(0, Math.PI * 2);
         const dist = Utils.rand(1000, range);
+        const spawnX = cx + Math.cos(angle) * dist;
+        const spawnY = cy + Math.sin(angle) * dist;
 
-        const diff = this.regionManager ? this.regionManager.currentRegion.difficulty : 1.0;
-        // Map difficulty to level 1-12  (difficulty 1.0 → level 1, 10.0 → level 10, capped at 12)
-        const regionLevel = Math.max(1, Math.min(12, Math.round(diff)));
+        const region = this.getRegionAt(spawnX, spawnY);
+        const regionLevel = Math.max(1, Math.min(12, Math.round(region.difficulty)));
 
         // Size weighting: 20% chance of small (size 1) for scale reference,
         // remaining 80% weighted toward the top of the tier.
@@ -277,35 +303,114 @@ export class Game {
         }
 
         this.asteroids.push(new Asteroid(
-            cx + Math.cos(angle) * dist,
-            cy + Math.sin(angle) * dist,
+            spawnX,
+            spawnY,
             size,
             regionLevel
         ));
     }
 
+    spawnDerelict(cx, cy, range) {
+        const angle = Utils.rand(0, Math.PI * 2);
+        const dist = Utils.rand(1000, range);
+        const spawnX = cx + Math.cos(angle) * dist;
+        const spawnY = cy + Math.sin(angle) * dist;
+        const region = this.getRegionAt(spawnX, spawnY);
+        const regionLevel = Math.max(1, Math.min(12, Math.round(region.difficulty)));
+        this.derelicts.push(new DerelictHull(
+            spawnX,
+            spawnY,
+            regionLevel
+        ));
+    }
+
+    spawnMine(cx, cy, range) {
+        const angle = Utils.rand(0, Math.PI * 2);
+        const dist = Utils.rand(1000, range);
+        const spawnX = cx + Math.cos(angle) * dist;
+        const spawnY = cy + Math.sin(angle) * dist;
+        const region = this.getRegionAt(spawnX, spawnY);
+        const regionLevel = Math.max(1, Math.min(12, Math.round(region.difficulty)));
+        this.mines.push(new SpaceMine(
+            spawnX,
+            spawnY,
+            regionLevel
+        ));
+    }
+
+    spawnCargoTrain(cx, cy, range) {
+        const angle = Utils.rand(0, Math.PI * 2);
+        const dist = Utils.rand(1000, range);
+        const spawnX = cx + Math.cos(angle) * dist;
+        const spawnY = cy + Math.sin(angle) * dist;
+        const region = this.getRegionAt(spawnX, spawnY);
+        const regionLevel = Math.max(1, Math.min(12, Math.round(region.difficulty)));
+        this.cargoTrains.push(new CargoTrain(
+            spawnX,
+            spawnY,
+            regionLevel
+        ));
+    }
+
+    spawnComet(cx, cy, range) {
+        const angle = Utils.rand(0, Math.PI * 2);
+        const dist = Utils.rand(1000, range);
+        const spawnX = cx + Math.cos(angle) * dist;
+        const spawnY = cy + Math.sin(angle) * dist;
+        const region = this.getRegionAt(spawnX, spawnY);
+        const regionLevel = Math.max(1, Math.min(12, Math.round(region.difficulty)));
+        this.comets.push(new Comet(
+            spawnX,
+            spawnY,
+            regionLevel
+        ));
+    }
+
+    spawnShockwave(x, y, maxRadius, color, lineWidth = 4) {
+        const life = 28; // slightly longer lifetime for epic wave expansion
+        const speed = maxRadius / life;
+        this.shockwaves.push({
+            x, y,
+            radius: 5,
+            maxRadius,
+            speed,
+            color,
+            lineWidth,
+            life,
+            maxLife: life
+        });
+    }
+
     spawnEnemy(cx, cy, minDist = 1200, maxDist = 3000, color = undefined) {
         const angle = Utils.rand(0, Math.PI * 2);
         const dist = Utils.rand(minDist, maxDist);
-        const diff = this.regionManager ? this.regionManager.currentRegion.difficulty : 1.0;
+        const spawnX = cx + Math.cos(angle) * dist;
+        const spawnY = cy + Math.sin(angle) * dist;
+        const region = this.getRegionAt(spawnX, spawnY);
+        const diff = region.difficulty;
+        const enemyColor = color || (region.name === 'Blob Space' ? region.color : undefined);
         this.enemies.push(new Enemy(
-            cx + Math.cos(angle) * dist,
-            cy + Math.sin(angle) * dist,
+            spawnX,
+            spawnY,
             diff,
             null,
-            color
+            enemyColor
         ));
     }
 
     spawnBattleship(cx, cy, minDist = 2000, maxDist = 4000, color = undefined) {
         const angle = Utils.rand(0, Math.PI * 2);
         const dist = Utils.rand(minDist, maxDist); // spawn farther away
-        const diff = this.regionManager ? this.regionManager.currentRegion.difficulty : 1.0;
+        const spawnX = cx + Math.cos(angle) * dist;
+        const spawnY = cy + Math.sin(angle) * dist;
+        const region = this.getRegionAt(spawnX, spawnY);
+        const diff = region.difficulty;
+        const enemyColor = color || (region.name === 'Blob Space' ? region.color : undefined);
         this.battleships.push(new Battleship(
-            cx + Math.cos(angle) * dist,
-            cy + Math.sin(angle) * dist,
+            spawnX,
+            spawnY,
             diff,
-            color
+            enemyColor
         ));
     }
 
@@ -321,13 +426,54 @@ export class Game {
     spawnDreadnought(cx, cy, color = undefined) {
         const angle = Utils.rand(0, Math.PI * 2);
         const dist = Utils.rand(3000, 5000); // spawn very far away
-        const diff = this.regionManager ? this.regionManager.currentRegion.difficulty : 1.0;
+        const spawnX = cx + Math.cos(angle) * dist;
+        const spawnY = cy + Math.sin(angle) * dist;
+        const region = this.getRegionAt(spawnX, spawnY);
+        const diff = region.difficulty;
+        const enemyColor = color || (region.name === 'Blob Space' ? region.color : undefined);
         this.dreadnoughts.push(new Dreadnought(
-            cx + Math.cos(angle) * dist,
-            cy + Math.sin(angle) * dist,
+            spawnX,
+            spawnY,
             diff,
-            color
+            enemyColor
         ));
+    }
+
+    spawnBoss(regionName) {
+        // Find region center
+        const region = REGIONS.find(r => r.name === regionName);
+        if (!region) return;
+
+        const bx = region.center.worldX;
+        const by = region.center.worldY;
+
+        let bossId, bossName, commsText;
+        if (regionName === "The Sentinel's Post") {
+            bossId = 'sentinel_commander';
+            bossName = 'Sentinel Commander';
+            commsText = "CRITICAL THREAT DETECTED: Imperial Flagship 'The Sentinel' has entered the sector.";
+        } else if (regionName === "Star Empire") {
+            bossId = 'imperial_arbiter';
+            bossName = 'The Imperial Arbiter';
+            commsText = "URGENT BROADCAST: The Imperial Arbiter's Dreadnought has been deployed to suppress local resistance!";
+        } else {
+            return;
+        }
+
+        // Check if boss already exists
+        if (this.bosses.some(b => b.id === bossId)) return;
+
+        const diff = (region.difficulty || 4.0) * 1.5; // Bosses are harder than region default
+        console.log("SPAWNING BOSS:", bossName, "at", bx, by);
+        this.bosses.push(new Boss(bx, by, bossId, bossName, diff));
+
+        if (this.hud) {
+            this.hud.addCommsMessage({
+                sender: "SYSTEM SCANNER",
+                text: commsText,
+                entity: "system"
+            });
+        }
     }
 
     spawnExplosion(x, y, count, color) {
@@ -347,6 +493,14 @@ export class Game {
 
         this.player.update(this);
         this.ghost.update(this);
+
+        if (this.tradeRouteManager) {
+            this.tradeRouteManager.update(this);
+        }
+
+        if (this.sectorManager) {
+            this.sectorManager.update();
+        }
 
         // Tutorial Ship Lifecycle
         const isTutorialActive = this.questManager.activeQuests.some(q => q.id.startsWith('tut_'));
@@ -404,7 +558,7 @@ export class Game {
             // Apply damage over time
             const voidDamage = 0.1; // ~6 HP per second at 60fps
             this.player.health -= voidDamage;
-            
+
             // Show alert occasionally
             if (this._hudFrame % 120 === 0 && this.player.health > 0) {
                 if (this.hud) this.hud.showFloatingReward(`!!! VOID RADIATION WARNING !!!`, '#ff3c3c');
@@ -434,42 +588,54 @@ export class Game {
             }
         }
 
-        // Background color transition
-        if (currentRegion.bgColor) {
-            this._targetBgColor = currentRegion.bgColor;
-        }
-        if (this._bgColor !== this._targetBgColor) {
-            this._bgColor = Utils.lerpColor(this._bgColor, this._targetBgColor, 0.001);
-            // Snap if close enough
-            if (this._bgColor === Utils.lerpColor(this._bgColor, this._targetBgColor, 0.0001)) {
-                this._bgColor = this._targetBgColor;
-            }
-        }
-
         // Ambient Particles management
-        const targetType = currentRegion.particleType || 'none';
-
-        // Remove particles that don't match the current region
+        // Update existing ambient particles and fade them out if they cross boundaries into non-matching regions
         for (let i = this.ambientParticles.length - 1; i >= 0; i--) {
             const p = this.ambientParticles[i];
             p.update();
-            // Fast fade out if the region changed
-            if (p.type !== targetType) p.life -= 5;
-
+            const pRegion = this.getRegionAt(p.x, p.y);
+            const expectedType = pRegion.particleType || 'none';
+            if (p.type !== expectedType) {
+                p.life -= 10;
+            }
             if (p.life <= 0) {
                 this.ambientParticles.splice(i, 1);
             }
         }
 
-        // Spawn new particles if beneath cap for the region
-        if (targetType !== 'none' && this.ambientParticles.length < 40) {
-            if (Math.random() < 0.1) { // trickle spawn
-                this.ambientParticles.push(new AmbientParticle(this.camera, targetType));
+        // Spawn new particles based on visible regions
+        if (this.ambientParticles.length < 60) {
+            if (Math.random() < 0.25) {
+                const px = this.camera.x + Math.random() * this.camera.viewW;
+                const py = this.camera.y + Math.random() * this.camera.viewH;
+                const spawnRegion = this.getRegionAt(px, py);
+                if (spawnRegion.particleType && spawnRegion.particleType !== 'none') {
+                    const p = new AmbientParticle(this.camera, spawnRegion.particleType);
+                    p.x = px;
+                    p.y = py;
+                    this.ambientParticles.push(p);
+                }
             }
         }
 
         if (this.asteroids.length < caps.asteroids) {
             this.spawnAsteroid(this.player.x, this.player.y, 3000);
+        }
+
+        if (caps.derelicts && this.derelicts.length < caps.derelicts) {
+            this.spawnDerelict(this.player.x, this.player.y, 3000);
+        }
+
+        if (caps.mines && this.mines.length < caps.mines) {
+            this.spawnMine(this.player.x, this.player.y, 3000);
+        }
+
+        if (caps.cargoTrains && this.cargoTrains.length < caps.cargoTrains) {
+            this.spawnCargoTrain(this.player.x, this.player.y, 3000);
+        }
+
+        if (caps.comets && this.comets.length < caps.comets) {
+            this.spawnComet(this.player.x, this.player.y, 3000);
         }
 
         // Enemy spawning — cap driven by region
@@ -520,6 +686,18 @@ export class Game {
         if (caps.dreadnoughts && this.dreadnoughts.length < caps.dreadnoughts) {
             const enemyColor = currentRegion.name === 'Blob Space' ? currentRegion.color : undefined;
             this.spawnDreadnought(this.player.x, this.player.y, enemyColor);
+        }
+
+        // --- BOSS SPAWN HANDLING ---
+        if (this.bosses.length === 0) {
+            const hasSentinelQuest = this.questManager.activeQuests.some(q => q.id === 'region_sentinel_boss');
+            const hasArbiterQuest = this.questManager.activeQuests.some(q => q.id === 'region_empire_boss');
+
+            if (currentRegion.name === "The Sentinel's Post" && hasSentinelQuest) {
+                this.spawnBoss(currentRegion.name);
+            } else if (currentRegion.name === "Star Empire" && hasArbiterQuest) {
+                this.spawnBoss(currentRegion.name);
+            }
         }
 
         // Handle _neutralGemDrop signal from NeutralShip
@@ -580,8 +758,7 @@ export class Game {
                     ast.health -= proj.damage;
                     this.projectiles.splice(p, 1);
                     if (proj.isTorpedo) {
-                        this.spawnExplosion(proj.x, proj.y, 60, '#00eaff');
-                        this.spawnExplosion(proj.x, proj.y, 40, '#ffffff');
+                        this._explodeTorpedo(proj.x, proj.y);
                     } else {
                         this.spawnExplosion(proj.x, proj.y, 3, '#ff3c3c');
                     }
@@ -592,6 +769,230 @@ export class Game {
                     break;
                 }
             }
+        }
+
+        // Update and prune derelict hulls
+        for (let d = this.derelicts.length - 1; d >= 0; d--) {
+            let hull = this.derelicts[d];
+            hull.update();
+
+            if (Utils.dist(this.player.x, this.player.y, hull.x, hull.y) > 4000) {
+                this.derelicts.splice(d, 1);
+                continue;
+            }
+
+            if (Utils.dist(this.player.x, this.player.y, hull.x, hull.y) < this.player.radius + hull.radius) {
+                const isBoosting = this.player.engineMode === 'boost';
+                const hasHeatShield = this.player.tech.heat_shield;
+
+                if (!(isBoosting && hasHeatShield)) {
+                    this.player.health -= 25;
+                }
+
+                this.spawnExplosion(hull.x, hull.y, 20, '#a08877');
+                this.derelicts.splice(d, 1);
+                this.hud.update(this.player);
+
+                if (this.player.health <= 0 && !this.gameOver) {
+                    this.triggerGameOver();
+                }
+                continue;
+            }
+
+            for (let p = this.projectiles.length - 1; p >= 0; p--) {
+                let proj = this.projectiles[p];
+                if (Utils.dist(proj.x, proj.y, hull.x, hull.y) < hull.radius + 4) {
+                    hull.health -= proj.damage;
+                    this.projectiles.splice(p, 1);
+                    if (proj.isTorpedo) {
+                        this._explodeTorpedo(proj.x, proj.y);
+                    } else {
+                        this.spawnExplosion(proj.x, proj.y, 3, '#ff3c3c');
+                    }
+
+                    if (hull.health <= 0) {
+                        this._onDerelictDestroyed(hull, d);
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Update and prune space mines
+        for (let m = this.mines.length - 1; m >= 0; m--) {
+            let mine = this.mines[m];
+            if (!mine || mine.destroyed) continue;
+            mine.update();
+
+            if (Utils.dist(this.player.x, this.player.y, mine.x, mine.y) > 4000) {
+                this.mines.splice(m, 1);
+                continue;
+            }
+
+            // Player collision
+            if (Utils.dist(this.player.x, this.player.y, mine.x, mine.y) < this.player.radius + mine.radius) {
+                this._explodeMine(mine);
+                continue;
+            }
+
+            // Enemy collision
+            let triggeredByEnemy = false;
+            const checkEnemyCollision = (group) => {
+                for (let e = group.length - 1; e >= 0; e--) {
+                    const enemy = group[e];
+                    if (Utils.dist(enemy.x, enemy.y, mine.x, mine.y) < enemy.radius + mine.radius) {
+                        this._explodeMine(mine);
+                        triggeredByEnemy = true;
+                        break;
+                    }
+                }
+            };
+            checkEnemyCollision(this.enemies);
+            if (triggeredByEnemy) continue;
+            checkEnemyCollision(this.battleships);
+            if (triggeredByEnemy) continue;
+            checkEnemyCollision(this.dreadnoughts);
+            if (triggeredByEnemy) continue;
+
+            // Projectile collision
+            for (let p = this.projectiles.length - 1; p >= 0; p--) {
+                let proj = this.projectiles[p];
+                if (Utils.dist(proj.x, proj.y, mine.x, mine.y) < mine.radius + 4) {
+                    this.projectiles.splice(p, 1);
+                    this._explodeMine(mine);
+                    triggeredByEnemy = true;
+                    break;
+                }
+            }
+            if (triggeredByEnemy) continue;
+
+            // Enemy projectile collision
+            for (let p = this.enemyProjectiles.length - 1; p >= 0; p--) {
+                let proj = this.enemyProjectiles[p];
+                if (Utils.dist(proj.x, proj.y, mine.x, mine.y) < mine.radius + 4) {
+                    this.enemyProjectiles.splice(p, 1);
+                    this._explodeMine(mine);
+                    triggeredByEnemy = true;
+                    break;
+                }
+            }
+        }
+
+        // Clean up exploded/destroyed mines
+        this.mines = this.mines.filter(m => !m.destroyed);
+
+        // Update and prune cargo trains
+        for (let t = this.cargoTrains.length - 1; t >= 0; t--) {
+            let train = this.cargoTrains[t];
+            train.update();
+
+            if (Utils.dist(this.player.x, this.player.y, train.x, train.y) > 4500) {
+                this.cargoTrains.splice(t, 1);
+                continue;
+            }
+
+            // Player collision
+            if (Utils.dist(this.player.x, this.player.y, train.x, train.y) < this.player.radius + train.radius) {
+                const isBoosting = this.player.engineMode === 'boost';
+                const hasHeatShield = this.player.tech.heat_shield;
+
+                if (!(isBoosting && hasHeatShield)) {
+                    this.player.health -= 20;
+                }
+
+                this.spawnExplosion(train.x, train.y, 25, '#777777');
+                this.cargoTrains.splice(t, 1);
+                this.hud.update(this.player);
+
+                if (this.player.health <= 0 && !this.gameOver) {
+                    this.triggerGameOver();
+                }
+                continue;
+            }
+
+            // Projectile collision
+            for (let p = this.projectiles.length - 1; p >= 0; p--) {
+                let proj = this.projectiles[p];
+                if (Utils.dist(proj.x, proj.y, train.x, train.y) < train.radius + 4) {
+                    train.health -= proj.damage;
+                    this.projectiles.splice(p, 1);
+                    if (proj.isTorpedo) {
+                        this._explodeTorpedo(proj.x, proj.y);
+                    } else {
+                        this.spawnExplosion(proj.x, proj.y, 3, '#ff3c3c');
+                    }
+
+                    if (train.health <= 0) {
+                        this._onCargoTrainDestroyed(train, t);
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Update and prune comets
+        for (let c = this.comets.length - 1; c >= 0; c--) {
+            let comet = this.comets[c];
+            comet.update(this);
+
+            if (Utils.dist(this.player.x, this.player.y, comet.x, comet.y) > 5500) {
+                this.comets.splice(c, 1);
+                continue;
+            }
+
+            // Player collision -> bounces!
+            const hitPlayer = comet.bounceOff(this.player.x, this.player.y, this.player.radius);
+            if (hitPlayer) {
+                // Inflict small collision damage to player
+                const isBoosting = this.player.engineMode === 'boost';
+                const hasHeatShield = this.player.tech.heat_shield;
+                if (!(isBoosting && hasHeatShield)) {
+                    this.player.health -= 10;
+                }
+                this.hud.update(this.player);
+                if (this.player.health <= 0 && !this.gameOver) {
+                    this.triggerGameOver();
+                }
+            }
+
+            // Bounce off other obstacles (asteroids, derelicts, cargo trains)
+            this.asteroids.forEach(ast => comet.bounceOff(ast.x, ast.y, ast.radius));
+            this.derelicts.forEach(hull => comet.bounceOff(hull.x, hull.y, hull.radius));
+            this.cargoTrains.forEach(train => comet.bounceOff(train.x, train.y, train.radius));
+
+            // Projectile collision -> damages comet
+            for (let p = this.projectiles.length - 1; p >= 0; p--) {
+                let proj = this.projectiles[p];
+                if (Utils.dist(proj.x, proj.y, comet.x, comet.y) < comet.radius + 4) {
+                    comet.health -= proj.damage;
+                    this.projectiles.splice(p, 1);
+                    if (proj.isTorpedo) {
+                        this._explodeTorpedo(proj.x, proj.y);
+                    } else {
+                        this.spawnExplosion(proj.x, proj.y, 3, '#00f0ff');
+                    }
+
+                    if (comet.health <= 0) {
+                        this._onCometDestroyed(comet, c);
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Update shockwaves
+        for (let i = this.shockwaves.length - 1; i >= 0; i--) {
+            const sw = this.shockwaves[i];
+            sw.radius += sw.speed;
+            sw.life -= 1;
+            if (sw.life <= 0) {
+                this.shockwaves.splice(i, 1);
+            }
+        }
+
+        // Decay screen shake
+        if (this.shakeIntensity > 0) {
+            this.shakeIntensity = Math.max(0, this.shakeIntensity - 0.7);
         }
 
         for (let g = this.gems.length - 1; g >= 0; g--) {
@@ -686,8 +1087,7 @@ export class Game {
                         parasite.health -= proj.damage;
                         this.projectiles.splice(p, 1);
                         if (proj.isTorpedo) {
-                            this.spawnExplosion(proj.x, proj.y, 70, '#00eaff');
-                            this.spawnExplosion(proj.x, proj.y, 40, '#ffffff');
+                            this._explodeTorpedo(proj.x, proj.y);
                         } else {
                             this.spawnExplosion(proj.x, proj.y, 5, parasite.color);
                         }
@@ -719,8 +1119,7 @@ export class Game {
                     enemy.health -= proj.damage;
                     this.projectiles.splice(p, 1);
                     if (proj.isTorpedo) {
-                        this.spawnExplosion(proj.x, proj.y, 60, '#00eaff');
-                        this.spawnExplosion(proj.x, proj.y, 30, '#ffffff');
+                        this._explodeTorpedo(proj.x, proj.y);
                     } else {
                         this.spawnExplosion(proj.x, proj.y, 3, '#ff9500');
                     }
@@ -765,8 +1164,7 @@ export class Game {
                     bs.health -= proj.damage;
                     this.projectiles.splice(p, 1);
                     if (proj.isTorpedo) {
-                        this.spawnExplosion(proj.x, proj.y, 80, '#00eaff');
-                        this.spawnExplosion(proj.x, proj.y, 50, '#ffffff');
+                        this._explodeTorpedo(proj.x, proj.y);
                     } else {
                         this.spawnExplosion(proj.x, proj.y, 4, '#ff4400');
                     }
@@ -795,14 +1193,39 @@ export class Game {
                     dn.health -= proj.damage;
                     this.projectiles.splice(p, 1);
                     if (proj.isTorpedo) {
-                        this.spawnExplosion(proj.x, proj.y, 100, '#00eaff');
-                        this.spawnExplosion(proj.x, proj.y, 60, '#ffffff');
+                        this._explodeTorpedo(proj.x, proj.y);
                     } else {
                         this.spawnExplosion(proj.x, proj.y, 6, '#ff00ff');
                     }
 
                     if (dn.health <= 0) {
                         this._onHostileDestroyed(dn, e, this.dreadnoughts, 'dreadnought');
+                    }
+                    break;
+                }
+            }
+        }
+
+        // ── Boss update & collision ──────────────────────────────
+        for (let b = this.bosses.length - 1; b >= 0; b--) {
+            const boss = this.bosses[b];
+            boss.update(this);
+
+            // Boss health bar is handled in HUD.js (we'll ensure it has access to active bosses)
+
+            for (let p = this.projectiles.length - 1; p >= 0; p--) {
+                const proj = this.projectiles[p];
+                if (Utils.dist(proj.x, proj.y, boss.x, boss.y) < boss.radius + 4) {
+                    boss.health -= proj.damage;
+                    this.projectiles.splice(p, 1);
+                    if (proj.isTorpedo) {
+                        this._explodeTorpedo(proj.x, proj.y);
+                    } else {
+                        this.spawnExplosion(proj.x, proj.y, 6, boss.color);
+                    }
+
+                    if (boss.health <= 0) {
+                        this._onBossDestroyed(boss, b);
                     }
                     break;
                 }
@@ -826,8 +1249,7 @@ export class Game {
                     ns.wasAttacked = true; // turns hostile!
                     this.projectiles.splice(p, 1);
                     if (proj.isTorpedo) {
-                        this.spawnExplosion(proj.x, proj.y, 60, '#00eaff');
-                        this.spawnExplosion(proj.x, proj.y, 30, '#ffffff');
+                        this._explodeTorpedo(proj.x, proj.y);
                     } else {
                         this.spawnExplosion(proj.x, proj.y, 3, '#55ffcc');
                     }
@@ -895,6 +1317,54 @@ export class Game {
             }
         }
 
+        // Damage Derelict Hulls
+        for (let i = this.derelicts.length - 1; i >= 0; i--) {
+            const hull = this.derelicts[i];
+            const d = Utils.distToSegment(hull.x, hull.y, x1, y1, x2, y2);
+            if (d < hull.radius + 10) {
+                hull.health -= 150;
+                if (Math.random() < 0.3) this.spawnExplosion(hull.x, hull.y, 2, '#ff9800');
+                if (hull.health <= 0) {
+                    this._onDerelictDestroyed(hull, i);
+                }
+            }
+        }
+
+        // Damage Space Mines
+        for (let i = this.mines.length - 1; i >= 0; i--) {
+            const mine = this.mines[i];
+            const d = Utils.distToSegment(mine.x, mine.y, x1, y1, x2, y2);
+            if (d < mine.radius + 10) {
+                this._explodeMine(mine);
+            }
+        }
+
+        // Damage Cargo Trains
+        for (let i = this.cargoTrains.length - 1; i >= 0; i--) {
+            const train = this.cargoTrains[i];
+            const d = Utils.distToSegment(train.x, train.y, x1, y1, x2, y2);
+            if (d < train.radius + 10) {
+                train.health -= 150;
+                if (Math.random() < 0.3) this.spawnExplosion(train.x, train.y, 2, '#ffaa00');
+                if (train.health <= 0) {
+                    this._onCargoTrainDestroyed(train, i);
+                }
+            }
+        }
+
+        // Damage Comets
+        for (let i = this.comets.length - 1; i >= 0; i--) {
+            const comet = this.comets[i];
+            const d = Utils.distToSegment(comet.x, comet.y, x1, y1, x2, y2);
+            if (d < comet.radius + 10) {
+                comet.health -= 150;
+                if (Math.random() < 0.3) this.spawnExplosion(comet.x, comet.y, 2, '#00eaff');
+                if (comet.health <= 0) {
+                    this._onCometDestroyed(comet, i);
+                }
+            }
+        }
+
         // Damage Hostiles
         const processGroup = (group, type) => {
             for (let i = group.length - 1; i >= 0; i--) {
@@ -904,7 +1374,7 @@ export class Game {
                     target.health -= 60; // Extreme constant damage
                     if (target.wasAttacked !== undefined) target.wasAttacked = true;
                     if (Math.random() < 0.2) this.spawnExplosion(target.x, target.y, 1, '#8a2be2');
-                    
+
                     if (target.health <= 0) {
                         this._onHostileDestroyed(target, i, group, type);
                     }
@@ -936,10 +1406,10 @@ export class Game {
         const y2 = y1 + Math.sin(this.player.angle) * beamLength;
 
         this.ctx.save();
-        
+
         // Multi-layered glow
         this.ctx.lineCap = 'round';
-        
+
         // Outer glow
         this.ctx.globalAlpha = 0.3;
         this.ctx.strokeStyle = '#8a2be2';
@@ -1001,6 +1471,302 @@ export class Game {
         this.asteroids.splice(index, 1);
     }
 
+    _onDerelictDestroyed(hull, index) {
+        if (hull.destroyed) return;
+        hull.destroyed = true;
+        this.spawnExplosion(hull.x, hull.y, Math.floor(hull.radius * 0.8), '#a08877');
+
+        // Gem drops
+        const isInfected = this.regionManager?.currentRegion?.name === 'Blob Space';
+        for (let i = 0; i < hull.gemCount; i++) {
+            this.gems.push(new Gem(hull.x, hull.y, hull.gemValue, isInfected, hull.gemColor));
+        }
+
+        this.questManager.notify('destroy', {
+            type: 'derelict',
+            region: this.regionManager?.currentRegion?.name
+        });
+
+        this.derelicts.splice(index, 1);
+    }
+
+    _explodeMine(mine) {
+        if (mine.destroyed) return;
+        mine.destroyed = true;
+
+        if (mine.blastTier === 'small') {
+            this.shakeIntensity = Math.max(this.shakeIntensity, 7);
+            this.spawnExplosion(mine.x, mine.y, 50, '#ff3c3c');
+            this.spawnExplosion(mine.x, mine.y, 30, '#ffff00');
+            this.spawnShockwave(mine.x, mine.y, mine.blastRadius, '#ff3c3c', 8.0);
+        } else if (mine.blastTier === 'medium') {
+            this.shakeIntensity = Math.max(this.shakeIntensity, 16);
+            this.spawnExplosion(mine.x, mine.y, 90, '#ff8000');
+            this.spawnExplosion(mine.x, mine.y, 60, '#ffbb00');
+            this.spawnExplosion(mine.x, mine.y, 40, '#ffffff');
+            this.spawnShockwave(mine.x, mine.y, mine.blastRadius, '#ff8000', 16.0);
+            this.spawnShockwave(mine.x, mine.y, mine.blastRadius * 0.55, '#ffff33', 8.0);
+        } else {
+            this.shakeIntensity = Math.max(this.shakeIntensity, 32);
+            this.spawnExplosion(mine.x, mine.y, 160, '#ff3c00');
+            this.spawnExplosion(mine.x, mine.y, 110, '#ffbb00');
+            this.spawnExplosion(mine.x, mine.y, 80, '#ffffff');
+            this.spawnShockwave(mine.x, mine.y, mine.blastRadius, '#ff3c00', 28.0);
+            this.spawnShockwave(mine.x, mine.y, mine.blastRadius * 0.7, '#ff9900', 16.0);
+            this.spawnShockwave(mine.x, mine.y, mine.blastRadius * 0.35, '#ffffff', 8.0);
+        }
+
+        const playerDist = Utils.dist(this.player.x, this.player.y, mine.x, mine.y);
+        if (playerDist < mine.blastRadius) {
+            const pct = 1 - (playerDist / mine.blastRadius);
+            const dmg = Math.floor(mine.blastDamage * pct);
+            if (dmg > 0) {
+                const isBoosting = this.player.engineMode === 'boost';
+                const hasHeatShield = this.player.tech.heat_shield;
+                if (!(isBoosting && hasHeatShield)) {
+                    this.player.health -= dmg;
+                }
+            }
+            this.hud.update(this.player);
+            if (this.player.health <= 0 && !this.gameOver) {
+                this.triggerGameOver();
+            }
+        }
+
+        const dealSplash = (group, type) => {
+            for (let e = group.length - 1; e >= 0; e--) {
+                const enemy = group[e];
+                const dist = Utils.dist(enemy.x, enemy.y, mine.x, mine.y);
+                if (dist < mine.blastRadius) {
+                    const pct = 1 - (dist / mine.blastRadius);
+                    enemy.health -= Math.floor(mine.blastDamage * pct);
+                    if (enemy.wasAttacked !== undefined) enemy.wasAttacked = true;
+                    if (enemy.health <= 0) {
+                        this._onHostileDestroyed(enemy, e, group, type);
+                    }
+                }
+            }
+        };
+        dealSplash(this.enemies, 'fighter');
+        dealSplash(this.battleships, 'battleship');
+        dealSplash(this.dreadnoughts, 'dreadnought');
+        dealSplash(this.neutralShips, 'neutral');
+
+        for (let a = this.asteroids.length - 1; a >= 0; a--) {
+            const ast = this.asteroids[a];
+            const dist = Utils.dist(ast.x, ast.y, mine.x, mine.y);
+            if (dist < mine.blastRadius) {
+                const pct = 1 - (dist / mine.blastRadius);
+                ast.health -= Math.floor(mine.blastDamage * 1.5 * pct);
+                if (ast.health <= 0) {
+                    this._onAsteroidDestroyed(ast, a);
+                }
+            }
+        }
+
+        for (let d = this.derelicts.length - 1; d >= 0; d--) {
+            const hull = this.derelicts[d];
+            const dist = Utils.dist(hull.x, hull.y, mine.x, mine.y);
+            if (dist < mine.blastRadius) {
+                const pct = 1 - (dist / mine.blastRadius);
+                hull.health -= Math.floor(mine.blastDamage * pct);
+                if (hull.health <= 0) {
+                    this._onDerelictDestroyed(hull, d);
+                }
+            }
+        }
+
+        // Chain Reaction! Detonate adjacent space mines in blast radius
+        for (let m = this.mines.length - 1; m >= 0; m--) {
+            const otherMine = this.mines[m];
+            if (!otherMine || otherMine.destroyed) continue;
+            const dist = Utils.dist(otherMine.x, otherMine.y, mine.x, mine.y);
+            if (dist < mine.blastRadius) {
+                this._explodeMine(otherMine);
+            }
+        }
+
+        // Splash damage to Cargo Trains
+        for (let t = this.cargoTrains.length - 1; t >= 0; t--) {
+            const train = this.cargoTrains[t];
+            const dist = Utils.dist(train.x, train.y, mine.x, mine.y);
+            if (dist < mine.blastRadius) {
+                const pct = 1 - (dist / mine.blastRadius);
+                train.health -= Math.floor(mine.blastDamage * pct);
+                if (train.health <= 0) {
+                    this._onCargoTrainDestroyed(train, t);
+                }
+            }
+        }
+
+        // Splash damage to Comets
+        for (let c = this.comets.length - 1; c >= 0; c--) {
+            const comet = this.comets[c];
+            const dist = Utils.dist(comet.x, comet.y, mine.x, mine.y);
+            if (dist < mine.blastRadius) {
+                const pct = 1 - (dist / mine.blastRadius);
+                comet.health -= Math.floor(mine.blastDamage * pct);
+                if (comet.health <= 0) {
+                    this._onCometDestroyed(comet, c);
+                }
+            }
+        }
+    }
+
+    _explodeTorpedo(x, y) {
+        // Visual particles
+        this.spawnExplosion(x, y, 60, '#00eaff');
+        this.spawnExplosion(x, y, 40, '#ffffff');
+
+        // Glowing nested shockwave rings
+        this.spawnShockwave(x, y, 180, '#00eaff', 10.0);
+        this.spawnShockwave(x, y, 110, '#ffffff', 5.0);
+
+        const blastRadius = 180;
+        const blastDamage = 100;
+
+        // Splash proximity damage to hostiles
+        const dealSplash = (group, type) => {
+            for (let e = group.length - 1; e >= 0; e--) {
+                const enemy = group[e];
+                const dist = Utils.dist(enemy.x, enemy.y, x, y);
+                if (dist < blastRadius) {
+                    const pct = 1 - (dist / blastRadius);
+                    enemy.health -= Math.floor(blastDamage * pct);
+                    if (enemy.wasAttacked !== undefined) enemy.wasAttacked = true;
+                    if (enemy.health <= 0) {
+                        this._onHostileDestroyed(enemy, e, group, type);
+                    }
+                }
+            }
+        };
+        dealSplash(this.enemies, 'fighter');
+        dealSplash(this.battleships, 'battleship');
+        dealSplash(this.dreadnoughts, 'dreadnought');
+        dealSplash(this.neutralShips, 'neutral');
+
+        // Splash proximity damage to bosses
+        for (let b = this.bosses.length - 1; b >= 0; b--) {
+            const boss = this.bosses[b];
+            const dist = Utils.dist(boss.x, boss.y, x, y);
+            if (dist < blastRadius) {
+                const pct = 1 - (dist / blastRadius);
+                boss.health -= Math.floor(blastDamage * pct);
+                if (boss.health <= 0) {
+                    this._onBossDestroyed(boss, b);
+                }
+            }
+        }
+
+        // Splash damage to Asteroids
+        for (let a = this.asteroids.length - 1; a >= 0; a--) {
+            const ast = this.asteroids[a];
+            const dist = Utils.dist(ast.x, ast.y, x, y);
+            if (dist < blastRadius) {
+                const pct = 1 - (dist / blastRadius);
+                ast.health -= Math.floor(blastDamage * 1.5 * pct);
+                if (ast.health <= 0) {
+                    this._onAsteroidDestroyed(ast, a);
+                }
+            }
+        }
+
+        // Splash damage to Derelict Hulls
+        for (let d = this.derelicts.length - 1; d >= 0; d--) {
+            const hull = this.derelicts[d];
+            const dist = Utils.dist(hull.x, hull.y, x, y);
+            if (dist < blastRadius) {
+                const pct = 1 - (dist / blastRadius);
+                hull.health -= Math.floor(blastDamage * pct);
+                if (hull.health <= 0) {
+                    this._onDerelictDestroyed(hull, d);
+                }
+            }
+        }
+
+        // Proximity detonation of space mines
+        for (let m = this.mines.length - 1; m >= 0; m--) {
+            const mine = this.mines[m];
+            if (!mine || mine.destroyed) continue;
+            const dist = Utils.dist(mine.x, mine.y, x, y);
+            if (dist < blastRadius) {
+                this._explodeMine(mine);
+            }
+        }
+
+        // Splash damage to Cargo Trains
+        for (let t = this.cargoTrains.length - 1; t >= 0; t--) {
+            const train = this.cargoTrains[t];
+            const dist = Utils.dist(train.x, train.y, x, y);
+            if (dist < blastRadius) {
+                const pct = 1 - (dist / blastRadius);
+                train.health -= Math.floor(blastDamage * pct);
+                if (train.health <= 0) {
+                    this._onCargoTrainDestroyed(train, t);
+                }
+            }
+        }
+
+        // Splash damage to Comets
+        for (let c = this.comets.length - 1; c >= 0; c--) {
+            const comet = this.comets[c];
+            const dist = Utils.dist(comet.x, comet.y, x, y);
+            if (dist < blastRadius) {
+                const pct = 1 - (dist / blastRadius);
+                comet.health -= Math.floor(blastDamage * pct);
+                if (comet.health <= 0) {
+                    this._onCometDestroyed(comet, c);
+                }
+            }
+        }
+    }
+
+    _onCargoTrainDestroyed(train, index) {
+        if (train.destroyed) return;
+        train.destroyed = true;
+        this.spawnExplosion(train.x, train.y, 60, train.containerColor);
+        this.spawnExplosion(train.x, train.y, 35, '#ffffff');
+
+        // Glowing shockwave matching container theme
+        this.spawnShockwave(train.x, train.y, 200, train.containerColor, 6.0);
+
+        // Gem drops (drops twice the regional max!)
+        const isInfected = this.regionManager?.currentRegion?.name === 'Blob Space';
+        for (let i = 0; i < train.gemCount; i++) {
+            this.gems.push(new Gem(train.x, train.y, train.gemValue, isInfected, train.gemColor));
+        }
+
+        this.questManager.notify('destroy', {
+            type: 'cargo_train',
+            region: this.regionManager?.currentRegion?.name
+        });
+
+        this.cargoTrains.splice(index, 1);
+    }
+
+    _onCometDestroyed(comet, index) {
+        if (comet.destroyed) return;
+        comet.destroyed = true;
+        this.spawnExplosion(comet.x, comet.y, 65, '#00f0ff');
+        this.spawnExplosion(comet.x, comet.y, 40, '#ffffff');
+
+        // Shockwave
+        this.spawnShockwave(comet.x, comet.y, 220, '#00eaff', 6.0);
+
+        // Gem drops (worth 5 times regional value!)
+        const isInfected = this.regionManager?.currentRegion?.name === 'Blob Space';
+        for (let i = 0; i < comet.gemCount; i++) {
+            this.gems.push(new Gem(comet.x, comet.y, comet.gemValue, isInfected, comet.gemColor));
+        }
+
+        this.questManager.notify('destroy', {
+            type: 'comet',
+            region: this.regionManager?.currentRegion?.name
+        });
+
+        this.comets.splice(index, 1);
+    }
+
     _onHostileDestroyed(target, index, group, type) {
         const explosionColors = {
             fighter: '#ff6a00',
@@ -1016,7 +1782,7 @@ export class Game {
         };
 
         this.spawnExplosion(target.x, target.y, explosionSizes[type] || 20, explosionColors[type] || '#ff6a00');
-        
+
         const isInfected = target.color === '#09ab29ff';
         let drops = 0;
         if (type === 'fighter') drops = Utils.randInt(3, 8);
@@ -1034,6 +1800,29 @@ export class Game {
             type: type,
             region: this.regionManager?.currentRegion?.name
         });
+    }
+
+    _onBossDestroyed(boss, index) {
+        this.spawnExplosion(boss.x, boss.y, 150, boss.color);
+        this.spawnExplosion(boss.x, boss.y, 100, '#ffffff');
+        this.spawnExplosion(boss.x, boss.y, 80, boss.accent);
+
+        // Massive gem drop
+        const drops = 150;
+        for (let i = 0; i < drops; i++) {
+            this.gems.push(new Gem(boss.x, boss.y, 1, false));
+        }
+
+        this.bosses.splice(index, 1);
+
+        this.questManager.notify('destroy_boss', {
+            target: boss.id,
+            region: this.regionManager?.currentRegion?.name
+        });
+
+        if (this.hud) {
+            this.hud.showFloatingReward(`!!! BOSS DEFEATED: ${boss.name.toUpperCase()} !!!`, '#ffd700');
+        }
     }
 
     _onParasiteDestroyed(obj, parasite) {
@@ -1102,25 +1891,61 @@ export class Game {
     }
 
     draw() {
-        this.ctx.fillStyle = this._bgColor;
+        // 1. Fill entire screen with deep space background color
+        this.ctx.fillStyle = '#000105';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Skip background elements in the Void
-        if (!this.regionManager.currentRegion.isVoid) {
-            this.stars.forEach(s => {
-                let px = ((s.x - this.camera.x * s.parallax) % this.canvas.width + this.canvas.width) % this.canvas.width;
-                let py = ((s.y - this.camera.y * s.parallax) % this.canvas.height + this.canvas.height) % this.canvas.height;
-    
-                // Instead of alpha blending (which tints stars the background color),
-                // calculate a solid greyscale color based on parallax depth
-                const brightness = Math.floor(255 * s.parallax);
-                this.ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness})`;
-    
-                this.ctx.beginPath();
-                this.ctx.arc(px, py, s.s, 0, Math.PI * 2);
-                this.ctx.fill();
-            });
+        // 2. Draw Playable Galaxy (Neutral Space fallback area) bounds: -30000 to 30000
+        const gx1 = -30000;
+        const gx2 = 30000;
+        const gy1 = -30000;
+        const gy2 = 30000;
+        if (!(gx2 < this.camera.x || gx1 > this.camera.x + this.camera.viewW ||
+            gy2 < this.camera.y || gy1 > this.camera.y + this.camera.viewH)) {
+            const gsx = (gx1 - this.camera.x) * this.camera.zoom;
+            const gsy = (gy1 - this.camera.y) * this.camera.zoom;
+            const gsw = (gx2 - gx1) * this.camera.zoom;
+            const gsh = (gy2 - gy1) * this.camera.zoom;
+            this.ctx.fillStyle = DEFAULT_REGION.bgColor;
+            this.ctx.fillRect(gsx, gsy, gsw, gsh);
         }
+
+        // 3. Draw each specific region background
+        for (const region of REGIONS) {
+            if (!region.bounds) continue;
+
+            const rx1 = region.bounds.minX * 1000;
+            const rx2 = region.bounds.maxX * 1000;
+            const ry1 = -region.bounds.maxY * 1000;
+            const ry2 = -region.bounds.minY * 1000;
+
+            // Viewport culling to check if the region's background is on screen
+            if (rx2 < this.camera.x || rx1 > this.camera.x + this.camera.viewW ||
+                ry2 < this.camera.y || ry1 > this.camera.y + this.camera.viewH) {
+                continue;
+            }
+
+            const sx = (rx1 - this.camera.x) * this.camera.zoom;
+            const sy = (ry1 - this.camera.y) * this.camera.zoom;
+            const sw = (rx2 - rx1) * this.camera.zoom;
+            const sh = (ry2 - ry1) * this.camera.zoom;
+
+            this.ctx.fillStyle = region.bgColor;
+            this.ctx.fillRect(sx, sy, sw, sh);
+        }
+
+        // 4. Draw background stars
+        this.stars.forEach(s => {
+            let px = ((s.x - this.camera.x * s.parallax) % this.canvas.width + this.canvas.width) % this.canvas.width;
+            let py = ((s.y - this.camera.y * s.parallax) % this.canvas.height + this.canvas.height) % this.canvas.height;
+
+            const brightness = Math.floor(255 * s.parallax);
+            this.ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness})`;
+
+            this.ctx.beginPath();
+            this.ctx.arc(px, py, s.s, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
 
         // Draw ambient background particles (behind entities)
         this.ambientParticles.forEach(p => p.draw(this.ctx));
@@ -1138,22 +1963,66 @@ export class Game {
             cx += Utils.rand(-3, 3) / this.camera.zoom;
             cy += Utils.rand(-3, 3) / this.camera.zoom;
         }
+        if (this.shakeIntensity > 0) {
+            cx += Utils.rand(-this.shakeIntensity, this.shakeIntensity) / this.camera.zoom;
+            cy += Utils.rand(-this.shakeIntensity, this.shakeIntensity) / this.camera.zoom;
+        }
 
         this.ctx.translate(cx, cy);
+
+        if (this.tradeRouteManager) {
+            this.tradeRouteManager.draw(this.ctx, this.camera);
+        }
+
+        if (this.regionManager) {
+            this.regionManager.draw(this.ctx, this.camera);
+        }
 
         this.sectorManager.draw(this.ctx, this.camera, this.player);
         this.gems.forEach(g => g.draw(this.ctx, this.camera));
         this.asteroids.forEach(a => a.draw(this.ctx, this.camera));
+        this.derelicts.forEach(d => d.draw(this.ctx, this.camera));
+        this.mines.forEach(m => m.draw(this.ctx, this.camera));
+        this.cargoTrains.forEach(t => t.draw(this.ctx, this.camera));
+        this.comets.forEach(c => c.draw(this.ctx, this.camera));
+
+        // Draw shockwaves
+        this.shockwaves.forEach(sw => {
+            this.ctx.save();
+            this.ctx.strokeStyle = sw.color;
+            this.ctx.lineWidth = sw.lineWidth * (sw.life / sw.maxLife);
+            this.ctx.globalAlpha = sw.life / sw.maxLife;
+            this.ctx.shadowBlur = 24 * (sw.life / sw.maxLife);
+            this.ctx.shadowColor = sw.color;
+            this.ctx.beginPath();
+            this.ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+            this.ctx.stroke();
+            this.ctx.restore();
+        });
+
         this.enemies.forEach(e => e.draw(this.ctx, this.camera));
         this.battleships.forEach(b => b.draw(this.ctx, this.camera));
         this.dreadnoughts.forEach(d => d.draw(this.ctx, this.camera));
+        this.bosses.forEach(b => b.draw(this.ctx, this.camera));
         this.neutralShips.forEach(n => n.draw(this.ctx, this.camera));
         this.projectiles.forEach(p => p.draw(this.ctx, this.camera));
         this.enemyProjectiles.forEach(p => p.draw(this.ctx, this.camera));
-        
+
         this.drawGravityBeam();
-        
+
         this.player.draw(this.ctx);
+        if (this.player.onTradeRoute && !this.player.tradeRouteCharged) {
+            const progress = Math.min(1, this.player.tradeRouteTimeOn / 90);
+            this.ctx.save();
+            this.ctx.strokeStyle = this.player.tradeRouteColor || '#00ffcc';
+            this.ctx.lineWidth = 2.5;
+            this.ctx.shadowColor = this.player.tradeRouteColor || '#00ffcc';
+            this.ctx.shadowBlur = 8;
+            this.ctx.beginPath();
+            this.ctx.arc(this.player.x, this.player.y, this.player.radius + 14, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+            this.ctx.stroke();
+            this.ctx.restore();
+        }
         if (this.tutorialShip) this.tutorialShip.draw(this.ctx);
         this.ghost.draw(this.ctx, this);
         this.particles.forEach(p => p.draw(this.ctx, this.camera));
@@ -1163,6 +2032,30 @@ export class Game {
         // Draw science mini-game in screen space
         if (this.hud.scienceMiniGame) {
             this.hud.scienceMiniGame.draw(this.ctx, this.canvas.width, this.canvas.height);
+        }
+
+        // Draw trade route speed boost HUD indicator in screen space (fades smoothly on exit)
+        if (this.player.tradeRouteSpeedBoostValue > 1.0) {
+            const opacity = Math.min(1, (this.player.tradeRouteSpeedBoostValue - 1.0) / (this.player.tradeRouteMultiplier - 1.0 || 1.5));
+            this.ctx.save();
+            this.ctx.globalAlpha = opacity;
+            this.ctx.fillStyle = this.player.tradeRouteColor || '#00ffcc';
+            this.ctx.font = 'bold 15px Orbitron, sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.shadowBlur = 10;
+            this.ctx.shadowColor = this.player.tradeRouteColor || '#00ffcc';
+            this.ctx.fillText('⚡ TRADE ROUTE SPEED BOOST ACTIVE ⚡', this.canvas.width / 2, this.canvas.height - 65);
+            this.ctx.restore();
+        } else if (this.player.onTradeRoute && !this.player.tradeRouteCharged) {
+            // Draw charging drive banner!
+            this.ctx.save();
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            this.ctx.font = 'bold 13px Orbitron, sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.shadowBlur = 5;
+            this.ctx.shadowColor = '#ffffff';
+            this.ctx.fillText('⚡ ENGAGING HYPER-DRIVE... ⚡', this.canvas.width / 2, this.canvas.height - 65);
+            this.ctx.restore();
         }
 
         // Draw nav hints in screen space

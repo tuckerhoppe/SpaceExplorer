@@ -49,6 +49,15 @@ export class Player {
         } catch {
             this.scienceEarned = {};
         }
+
+        // ── Trade Route fields ────────────────────────────────────
+        this.onTradeRoute = false;
+        this.tradeRouteMultiplier = 1.0;
+        this.tradeRouteColor = '#00f0ff';
+        this.tradeRouteSpeedBoostValue = 1.0;
+        this.tradeRouteTimeOn = 0;
+        this.tradeRouteTimeOff = 0;
+        this.tradeRouteCharged = false;
     }
 
     _loadProgress() {
@@ -75,7 +84,7 @@ export class Player {
             this.gems = 0;
             this.cargoGems = 0;
             this.gemVault = 0;
-            this.cargoCapacity = 50;
+            this.cargoCapacity = 100;
             this.totalGemsCollected = 0;
             this.sciencePoints = 0;
             this.shipIndex = 0;
@@ -121,8 +130,8 @@ export class Player {
 
     /** Maximum gems the current ship can hold. */
     get cargoCapacity() {
-        const baseCapacity = SHIPS[this.shipIndex]?.shipCargo || 50;
-        const upgradeBonus = (this.stats.cargo || 0) * 50;
+        const baseCapacity = SHIPS[this.shipIndex]?.shipCargo || 100;
+        const upgradeBonus = (this.stats.cargo || 0) * 100;
         return baseCapacity + upgradeBonus;
     }
 
@@ -199,6 +208,7 @@ export class Player {
 
     // Active speed: crawl during charge-up, then "punch it" surge in the last 15%
     get maxSpeed() {
+        let baseMax;
         if (this.engineMode === 'boost') {
             const THRESHOLD = 0.85;   // charge level where the surge begins
             const CRAWL = 0.08;    // fraction of max speed during the crawl phase
@@ -211,13 +221,23 @@ export class Player {
                 const t = (this.boostCharge - THRESHOLD) / (1 - THRESHOLD);
                 effectiveness = CRAWL + (1 - CRAWL) * t;
             }
-            return this.boostMaxSpeed * Math.max(0.01, effectiveness);
+            baseMax = this.boostMaxSpeed * Math.max(0.01, effectiveness);
+        } else {
+            baseMax = this.thrusterMaxSpeed;
         }
-        return this.thrusterMaxSpeed;
+
+        if (this.tradeRouteSpeedBoostValue > 1.0) {
+            baseMax *= this.tradeRouteSpeedBoostValue;
+        }
+        return baseMax;
     }
 
     get accel() {
-        return this.engineMode === 'boost' ? this.boostAccel : this.thrusterAccel;
+        let baseAccel = this.engineMode === 'boost' ? this.boostAccel : this.thrusterAccel;
+        if (this.tradeRouteSpeedBoostValue > 1.0) {
+            baseAccel *= this.tradeRouteSpeedBoostValue;
+        }
+        return baseAccel;
     }
 
     get friction() { return 0.96; }
@@ -389,6 +409,31 @@ export class Player {
 
         // Gravity Beam (Hold Space)
         this.isFiringGravityLaser = (Input.keys[' '] && this.tech.gravity_laser);
+
+        // Smooth transition / decay of trade route speed boost multiplier
+        if (this.onTradeRoute) {
+            this.tradeRouteTimeOn++;
+            this.tradeRouteTimeOff = 0;
+            if (!this.tradeRouteCharged && this.tradeRouteTimeOn >= 90) { // 1.5 seconds charge up
+                this.tradeRouteCharged = true;
+            }
+
+            if (this.tradeRouteCharged) {
+                // Rapidly build up to the route speed boost multiplier
+                this.tradeRouteSpeedBoostValue = Math.min(this.tradeRouteMultiplier, this.tradeRouteSpeedBoostValue + 0.1);
+            } else {
+                this.tradeRouteSpeedBoostValue = 1.0;
+            }
+        } else {
+            this.tradeRouteTimeOff++;
+            this.tradeRouteTimeOn = 0;
+            if (this.tradeRouteCharged && this.tradeRouteTimeOff >= 60) { // 1.0 second grace period
+                this.tradeRouteCharged = false;
+            }
+
+            // Decay back to 1.0 (smooth, elastic exit)
+            this.tradeRouteSpeedBoostValue = Math.max(1.0, this.tradeRouteSpeedBoostValue - 0.05);
+        }
     }
 
     performDash(dx, dy, game) {
@@ -417,6 +462,29 @@ export class Player {
         if (this.health <= 0) return;
         ctx.save();
         ctx.translate(this.x, this.y);
+
+        // Trade route speed boost visual aura
+        if (this.tradeRouteSpeedBoostValue > 1.0) {
+            const intensity = Math.max(0, Math.min(1, (this.tradeRouteSpeedBoostValue - 1.0) / (this.tradeRouteMultiplier - 1.0 || 1.5)));
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 8 + intensity * 4 + Math.sin(performance.now() / 80) * 3, 0, Math.PI * 2);
+            
+            const alphaHex = Math.round(intensity * 176).toString(16).padStart(2, '0');
+            ctx.strokeStyle = this.tradeRouteColor + alphaHex;
+            ctx.lineWidth = 2 + intensity * 1.5;
+            ctx.shadowColor = this.tradeRouteColor;
+            ctx.shadowBlur = Math.round(10 + intensity * 8);
+            ctx.stroke();
+            
+            // Faint inner speed ring
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 3 + intensity * 2, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 255, 255, ${intensity * 0.6})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+        }
 
         const aimAngle = Utils.ang(this.x, this.y, Input.mouse.worldX, Input.mouse.worldY);
         ctx.save();

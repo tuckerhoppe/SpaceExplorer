@@ -25,6 +25,11 @@ export class HUD {
         this._lastStationId = null;
         this._lastStationSpawn = null;
 
+        // Boss Health UI
+        this.bossPanel = document.getElementById('boss-health-panel');
+        this.bossNameText = document.getElementById('boss-name-text');
+        this.bossHealthFill = document.getElementById('boss-health-bar-fill');
+
         this.setupEventListeners();
     }
 
@@ -922,6 +927,33 @@ export class HUD {
             }
         };
 
+        // Draw Trade Routes
+        if (this.game.tradeRouteManager && this.game.tradeRouteManager.activeRoutes) {
+            this.game.tradeRouteManager.activeRoutes.forEach(route => {
+                const xA = route.planetA.coordX * GRID_SIZE;
+                const yA = -route.planetA.coordY * GRID_SIZE;
+                const xB = route.planetB.coordX * GRID_SIZE;
+                const yB = -route.planetB.coordY * GRID_SIZE;
+
+                ctx.save();
+                ctx.strokeStyle = route.color || '#00f0ff';
+                ctx.lineWidth = 4 / this.mapState.zoom;
+                ctx.lineCap = 'round';
+                ctx.globalAlpha = 0.4;
+                ctx.beginPath();
+                ctx.moveTo(xA, yA);
+                ctx.lineTo(xB, yB);
+                ctx.stroke();
+
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1 / this.mapState.zoom;
+                ctx.globalAlpha = 0.8;
+                ctx.stroke();
+
+                ctx.restore();
+            });
+        }
+
         // Draw Objects
         for (const obj of sm.objects) {
             if (sm.discoveredIds.has(obj.id)) {
@@ -997,6 +1029,7 @@ export class HUD {
     }
 
     update(player) {
+        this._updateBossHealth();
         // Vault (spending pool) displayed as the main gem total
         document.getElementById('gem-count').textContent = player.gems;
         
@@ -1410,6 +1443,7 @@ export class HUD {
         // 2. Population Crew List
         if (this.stationCrewListEl) {
             const crew = Object.values(NPC_ROSTER).filter(npc => npc.locationId === obj.id);
+            console.log("HUD: Crew found for station", obj.id, crew);
             
             if (crew.length === 0) {
                 this.stationCrewListEl.innerHTML = '<div class="role-text" style="opacity:0.5; padding: 10px; font-size: 0.7rem;">NO CREW MEMBERS PRESENT</div>';
@@ -1884,6 +1918,39 @@ export class HUD {
                 <h3 style="color:#4aff80; font-family:'Orbitron'; font-size: 0.8rem; margin: 30px 0 15px 5px; opacity: 0.8;">MISSION HISTORY</h3>
                 ${completedHtml}
             `;
+        }
+    }
+
+    _updateBossHealth() {
+        if (!this.bossPanel) return;
+
+        const boss = this.game.bosses[0];
+        if (boss) {
+            const dist = Math.hypot(boss.x - this.game.player.x, boss.y - this.game.player.y);
+            // Show bar if close enough (engaged or nearby)
+            if (dist < 4000) {
+                this.bossPanel.classList.add('active');
+                this.bossPanel.classList.remove('hidden');
+                
+                if (this.bossNameText) this.bossNameText.textContent = boss.name.toUpperCase();
+                if (this.bossHealthFill) {
+                    const pct = Math.max(0, boss.health / boss.maxHealth) * 100;
+                    this.bossHealthFill.style.width = `${pct}%`;
+                    
+                    // Low health flashing
+                    if (pct < 20) {
+                        this.bossHealthFill.style.animation = 'cargoPulse 0.5s infinite';
+                    } else {
+                        this.bossHealthFill.style.animation = 'none';
+                    }
+                }
+            } else {
+                this.bossPanel.classList.remove('active');
+                this.bossPanel.classList.add('hidden');
+            }
+        } else {
+            this.bossPanel.classList.remove('active');
+            this.bossPanel.classList.add('hidden');
         }
     }
 }

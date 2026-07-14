@@ -329,5 +329,30 @@ export const QUESTS = {
         ],
         rewards: { gems: 500, sci: 150 },
         completionMessage: "The Obsidian Marches have been documented. The council acknowledges your persistence, explorer."
+    },
+    'region_sentinel_boss': {
+        id: 'region_sentinel_boss',
+        title: "The Sentinel's Command",
+        description: "Defeat the Sentinel Commander guarding the Imperial Post. This is a high-level engagement.",
+        category: 'region',
+        regionId: "The Sentinel's Post",
+        objectives: [
+            { id: 'defeat_boss', type: 'destroy_boss', target: 'sentinel_commander', count: 1, current: 0 }
+        ],
+        rewards: { gems: 3000, sci: 500 },
+        completionMessage: "The Sentinel Commander has been defeated! The imperial grip on this sector has withered. Outstanding bravery, pilot."
+    },
+    'region_empire_boss': {
+        id: 'region_empire_boss',
+        title: "Empire's End",
+        description: "The Imperial Arbiter has locked down the Star Empire core. Decimate their fleet and take out the Arbiter's command ship.",
+        category: 'region',
+        regionId: 'Star Empire',
+        objectives: [
+            { id: 'destroy_imperial_forces', type: 'destroy', count: 20, current: 0 },
+            { id: 'destroy_arbiter', type: 'destroy_boss', target: 'imperial_arbiter', count: 1, current: 0 }
+        ],
+        rewards: { gems: 2000, sci: 400 },
+        completionMessage: "The Arbiter is gone. The Star Empire's grip on the galaxy has been shattered."
     }
 };

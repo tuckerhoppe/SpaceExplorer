@@ -54,6 +54,12 @@ export class SectorManager {
         }
     }
 
+    update() {
+        for (const obj of this.objects) {
+            obj.update(this.objects);
+        }
+    }
+
     discoverAll() {
         for (const obj of this.objects) {
             this.discoveredIds.add(obj.id);
