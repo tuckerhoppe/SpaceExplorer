@@ -28,12 +28,42 @@ export class StellarObject {
         if (data.parasite) {
             this.parasite = new Parasite(this, data.parasite, difficulty);
         }
+
+        if (this.type === 'star') {
+            this.orbitDiameters = data.orbitDiameters || {
+                inner: this.radius * 3.0,
+                mid: this.radius * 4.4,
+                outer: this.radius * 6.0
+            };
+        }
+
+        this.orbitsStarId = data.orbitsStarId || null;
+        this.orbitDistance = data.orbitDistance || 0;
+        this.orbitSpeed = data.orbitSpeed || 0;
+        this.orbitAngle = data.initialAngle !== undefined ? data.initialAngle : Math.random() * Math.PI * 2;
+    }
+
+    update(allObjects) {
+        if (this.orbitsStarId) {
+            const star = allObjects.find(o => o.id === this.orbitsStarId);
+            if (star) {
+                this.orbitAngle += this.orbitSpeed;
+                this.x = star.x + Math.cos(this.orbitAngle) * this.orbitDistance;
+                this.y = star.y + Math.sin(this.orbitAngle) * this.orbitDistance;
+                this.coordX = this.x / 1000;
+                this.coordY = -this.y / 1000;
+            }
+        }
     }
 
     draw(ctx, isDiscovered, camera, sciEarned = 0) {
-        // Viewport cull — use radius as bounds
-        if (this.x + this.radius < camera.x || this.x - this.radius > camera.x + camera.viewW ||
-            this.y + this.radius < camera.y || this.y - this.radius > camera.y + camera.viewH) return;
+        // Viewport cull — use outer orbit radius if star, otherwise object radius
+        let cullRadius = this.radius;
+        if (this.type === 'star' && this.orbitDiameters) {
+            cullRadius = Math.max(cullRadius, this.orbitDiameters.outer / 2);
+        }
+        if (this.x + cullRadius < camera.x || this.x - cullRadius > camera.x + camera.viewW ||
+            this.y + cullRadius < camera.y || this.y - cullRadius > camera.y + camera.viewH) return;
 
         ctx.save();
         ctx.translate(this.x, this.y);
@@ -215,7 +245,36 @@ export class StellarObject {
         ctx.fill();
     }
 
+    _drawOrbitLines(ctx) {
+        if (!this.orbitDiameters) return;
+
+        ctx.save();
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([8, 12]);
+
+        // Inner Orbit
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.orbitDiameters.inner / 2, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Mid Orbit
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.orbitDiameters.mid / 2, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Outer Orbit
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.orbitDiameters.outer / 2, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
     _drawStar(ctx) {
+        this._drawOrbitLines(ctx);
         const r = this.radius * 0.4;
         const spikes = 6;
 

@@ -58,6 +58,9 @@ export class MiniMap {
         // Region Borders
         this.drawRegionBorders(ctx, player);
 
+        // Trade Routes
+        this.drawTradeRoutes(ctx, player);
+
         // Stellar Objects
         this.drawStellarObjects(ctx, player);
 
@@ -158,6 +161,35 @@ export class MiniMap {
                 ctx.strokeStyle = reg.color + '33';
                 ctx.stroke();
             }
+        });
+    }
+
+    drawTradeRoutes(ctx, player) {
+        if (!this.game.tradeRouteManager || !this.game.tradeRouteManager.activeRoutes) return;
+
+        this.game.tradeRouteManager.activeRoutes.forEach(route => {
+            const xA = route.planetA.x - player.x;
+            const yA = route.planetA.y - player.y;
+            const xB = route.planetB.x - player.x;
+            const yB = route.planetB.y - player.y;
+
+            ctx.save();
+            ctx.strokeStyle = route.color || '#00f0ff';
+            ctx.lineWidth = 150; // Thick line relative to scale
+            ctx.lineCap = 'round';
+            ctx.globalAlpha = 0.4;
+            ctx.beginPath();
+            ctx.moveTo(xA, yA);
+            ctx.lineTo(xB, yB);
+            ctx.stroke();
+
+            // A thin bright center core line
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 40;
+            ctx.globalAlpha = 0.8;
+            ctx.stroke();
+
+            ctx.restore();
         });
     }
 
