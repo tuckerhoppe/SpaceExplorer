@@ -74,12 +74,14 @@ export class HUD {
         const tabTech = document.getElementById('tab-tech');
         const tabObjectives = document.getElementById('tab-objectives');
         const tabCodex = document.getElementById('tab-codex');
+        const tabConquest = document.getElementById('tab-conquest');
         const tabSettings = document.getElementById('tab-settings');
         const contentUpgrades = document.getElementById('content-upgrades');
         const contentShips = document.getElementById('content-ships');
         const contentTech = document.getElementById('content-tech');
         const contentObjectives = document.getElementById('content-objectives');
         const contentCodex = document.getElementById('content-codex');
+        const contentConquest = document.getElementById('content-conquest');
         const contentSettings = document.getElementById('content-settings');
 
         const resetTabs = () => {
@@ -88,6 +90,7 @@ export class HUD {
             tabTech.classList.remove('active');
             if (tabObjectives) tabObjectives.classList.remove('active');
             if (tabCodex) tabCodex.classList.remove('active');
+            if (tabConquest) tabConquest.classList.remove('active');
             tabSettings.classList.remove('active');
             contentUpgrades.classList.add('hidden');
             contentUpgrades.classList.remove('active');
@@ -102,6 +105,10 @@ export class HUD {
             if (contentCodex) {
                 contentCodex.classList.add('hidden');
                 contentCodex.classList.remove('active');
+            }
+            if (contentConquest) {
+                contentConquest.classList.add('hidden');
+                contentConquest.classList.remove('active');
             }
             contentSettings.classList.add('hidden');
             contentSettings.classList.remove('active');
@@ -144,6 +151,15 @@ export class HUD {
                     this.refreshCodex();
                 });
             }
+            if (tabConquest) {
+                tabConquest.addEventListener('click', () => {
+                    resetTabs();
+                    tabConquest.classList.add('active');
+                    if (contentConquest) contentConquest.classList.remove('hidden');
+                    if (contentConquest) contentConquest.classList.add('active');
+                    this.refreshConquestTab();
+                });
+            }
             tabSettings.addEventListener('click', () => {
                 resetTabs();
                 tabSettings.classList.add('active');
@@ -169,6 +185,8 @@ export class HUD {
                 'space_explorer_progress',
                 'space_explorer_hailed',
                 'space_explorer_quests',
+                'space_explorer_cleared',
+                'space_explorer_conquered_regions',
                 'setting_dynamic_zoom',
                 'setting_nav_hints',
                 'setting_show_stats',
@@ -704,6 +722,114 @@ export class HUD {
         }).join('');
     }
 
+    refreshConquestTab() {
+        const list = document.getElementById('conquest-list');
+        if (!list) return;
+
+        const game = this.game;
+        const conquestRegions = REGIONS.filter(reg => reg.conquest);
+
+        list.innerHTML = conquestRegions.map(reg => {
+            const isDiscovered = game.regionManager.discoveredRegions.has(reg.name);
+            const isConquered = game.conqueredRegions.has(reg.name);
+            const isCurrentRegion = game.regionManager.currentRegion?.name === reg.name;
+
+            if (!isDiscovered) {
+                return `
+                    <div class="conquest-card">
+                        <div class="conquest-card-header">
+                            <div class="conquest-card-name">🔒 ??? Sector</div>
+                            <div class="conquest-card-status" style="color: #666;">UNDISCOVERED</div>
+                        </div>
+                        <div class="conquest-card-body">
+                            <div style="font-size: 0.8rem; color: #555;">Explore the galaxy to discover this region.</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const kills = game.conquestSessionKills[reg.name] || { fighters: 0, battleships: 0, dreadnoughts: 0 };
+            const req = reg.conquest;
+
+            const regionObjects = game.sectorManager.objects.filter(obj => {
+                const cx = obj.x / 1000;
+                const cy = -obj.y / 1000;
+                return reg.test(cx, cy);
+            });
+            const enemyStations = regionObjects.filter(obj => obj.initialParasite);
+            const clearedStationsCount = enemyStations.filter(obj => game.sectorManager.clearedIds.has(obj.id)).length;
+            const totalStationsCount = req.stations;
+
+            let statusText = 'INCOMPLETE';
+            let statusColor = '#ff3c3c';
+            if (isConquered) {
+                statusText = 'CONQUERED ✓';
+                statusColor = '#50dc78';
+            } else if (isCurrentRegion) {
+                statusText = 'IN PROGRESS';
+                statusColor = '#ff9500';
+            }
+
+            const getRowValue = (currentVal, reqVal, met) => {
+                if (isConquered || met) return `${reqVal} ✓`;
+                if (isCurrentRegion) return `${currentVal} / ${reqVal}`;
+                return `${reqVal}`;
+            };
+
+            let reqsHtml = '';
+            
+            const fighterMet = kills.fighters >= req.fighters;
+            reqsHtml += `
+                <div class="conquest-requirement-row ${fighterMet || isConquered ? 'met' : ''}">
+                    <span>Defeat Fighter Drones:</span>
+                    <span>${getRowValue(kills.fighters, req.fighters, fighterMet)}</span>
+                </div>
+            `;
+
+            if (req.battleships > 0) {
+                const bsMet = kills.battleships >= req.battleships;
+                reqsHtml += `
+                    <div class="conquest-requirement-row ${bsMet || isConquered ? 'met' : ''}">
+                        <span>Defeat Battleships:</span>
+                        <span>${getRowValue(kills.battleships, req.battleships, bsMet)}</span>
+                    </div>
+                `;
+            }
+
+            if (req.dreadnoughts > 0) {
+                const dnMet = kills.dreadnoughts >= req.dreadnoughts;
+                reqsHtml += `
+                    <div class="conquest-requirement-row ${dnMet || isConquered ? 'met' : ''}">
+                        <span>Defeat Dreadnoughts:</span>
+                        <span>${getRowValue(kills.dreadnoughts, req.dreadnoughts, dnMet)}</span>
+                    </div>
+                `;
+            }
+
+            if (totalStationsCount > 0) {
+                const stationsMet = clearedStationsCount >= totalStationsCount;
+                reqsHtml += `
+                    <div class="conquest-requirement-row ${stationsMet || isConquered ? 'met' : ''}">
+                        <span>Clear Enemy Stations:</span>
+                        <span>${getRowValue(clearedStationsCount, totalStationsCount, stationsMet)}</span>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="conquest-card ${isConquered ? 'conquered' : ''} ${isCurrentRegion && !isConquered ? 'active-region' : ''}">
+                    <div class="conquest-card-header">
+                        <div class="conquest-card-name">${reg.icon || '🪐'} ${reg.name}</div>
+                        <div class="conquest-card-status" style="color: ${statusColor};">${statusText}</div>
+                    </div>
+                    <div class="conquest-card-body">
+                        ${reqsHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
     toggleUpgradeMenu(isPaused) {
         const menu = document.getElementById('upgrade-menu');
         const map = document.getElementById('map-modal');
@@ -711,6 +837,15 @@ export class HUD {
             this.refreshUpgrades();
             this.refreshShips();
             this.refreshTechUpgrades();
+            
+            const tabObjectives = document.getElementById('tab-objectives');
+            const tabConquest = document.getElementById('tab-conquest');
+            if (tabObjectives && tabObjectives.classList.contains('active')) {
+                this.refreshObjectivesTab();
+            } else if (tabConquest && tabConquest.classList.contains('active')) {
+                this.refreshConquestTab();
+            }
+
             menu.classList.remove('hidden');
             menu.classList.add('active'); // mark as currently open UI
         } else {
@@ -1143,6 +1278,52 @@ export class HUD {
                     discoveryEl.textContent = `✅ ${region.name} 100% Discovered`;
                 } else {
                     discoveryEl.classList.remove('survey-complete');
+                }
+            }
+
+            const conquestContainer = document.getElementById('region-conquest-container');
+            const conquestFill = document.getElementById('region-conquest-fill');
+            const conquestText = document.getElementById('region-conquest-text');
+
+            if (conquestContainer && conquestFill && conquestText) {
+                if (!region || !region.conquest) {
+                    conquestContainer.classList.add('hidden');
+                } else {
+                    conquestContainer.classList.remove('hidden');
+                    const isConquered = this.game.conqueredRegions.has(region.name);
+                    
+                    if (isConquered) {
+                        conquestFill.style.width = '100%';
+                        conquestFill.style.background = '#50dc78';
+                        conquestText.innerHTML = `<span style="color: #50dc78; font-weight: bold;">CONQUERED ✓</span>`;
+                    } else {
+                        const kills = this.game.conquestSessionKills[region.name] || { fighters: 0, battleships: 0, dreadnoughts: 0 };
+                        const req = region.conquest;
+                        
+                        const regionObjects = this.game.sectorManager.objects.filter(obj => {
+                            const cx = obj.x / 1000;
+                            const cy = -obj.y / 1000;
+                            return region.test(cx, cy);
+                        });
+                        const enemyStations = regionObjects.filter(obj => obj.initialParasite);
+                        const clearedStationsCount = enemyStations.filter(obj => this.game.sectorManager.clearedIds.has(obj.id)).length;
+                        const totalStationsCount = req.stations;
+
+                        const totalRequired = req.fighters + req.battleships + (req.dreadnoughts || 0) + totalStationsCount;
+                        const totalCleared = Math.min(req.fighters, kills.fighters) + Math.min(req.battleships, kills.battleships) + (req.dreadnoughts ? Math.min(req.dreadnoughts, kills.dreadnoughts) : 0) + clearedStationsCount;
+                        
+                        const pct = totalRequired > 0 ? (totalCleared / totalRequired) * 100 : 100;
+                        conquestFill.style.width = `${pct}%`;
+                        conquestFill.style.background = ''; // use CSS default gradient
+                        
+                        let progressParts = [];
+                        progressParts.push(`Fighters: ${kills.fighters}/${req.fighters}`);
+                        if (req.battleships > 0) progressParts.push(`Battleships: ${kills.battleships}/${req.battleships}`);
+                        if (req.dreadnoughts > 0) progressParts.push(`Dreadnoughts: ${kills.dreadnoughts}/${req.dreadnoughts}`);
+                        if (totalStationsCount > 0) progressParts.push(`Stations: ${clearedStationsCount}/${totalStationsCount}`);
+                        
+                        conquestText.innerHTML = `Conquest: ${Math.round(pct)}%<br/><span style="font-size: 0.52rem; opacity: 0.7;">${progressParts.join(' | ')}</span>`;
+                    }
                 }
             }
         }

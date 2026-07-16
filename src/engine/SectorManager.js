@@ -32,7 +32,9 @@ export class SectorManager {
             }
             // If this object was previously cleared, don't pass the parasite data
             const cleanData = this.clearedIds.has(data.id) ? { ...data, parasite: null } : data;
-            return new StellarObject(cleanData, difficulty, regionName);
+            const obj = new StellarObject(cleanData, difficulty, regionName);
+            obj.initialParasite = !!data.parasite;
+            return obj;
         });
         this.dockedAt = null;
 

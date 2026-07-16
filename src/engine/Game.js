@@ -72,6 +72,34 @@ export class Game {
         this.regionManager = new RegionManager();
         this.tradeRouteManager = new TradeRouteManager();
 
+        this.conquestSessionKills = {};
+        for (const reg of REGIONS) {
+            if (reg.name !== 'Neutral Space' && !reg.isVoid) {
+                const parasiteCount = this.sectorManager.objects.filter(obj => {
+                    const cx = obj.x / 1000;
+                    const cy = -obj.y / 1000;
+                    return reg.test(cx, cy) && obj.initialParasite;
+                }).length;
+
+                if (!reg.conquest) {
+                    const diff = reg.difficulty || 1;
+                    const fighters = 5 + Math.min(15, Math.floor(diff * 1.0));
+                    const battleships = diff >= 3 ? Math.min(5, Math.floor(diff / 3)) : 0;
+                    const dreadnoughts = diff >= 6 ? Math.min(3, Math.floor(diff / 6)) : 0;
+                    reg.conquest = { fighters, battleships, dreadnoughts, stations: parasiteCount };
+                } else {
+                    reg.conquest.stations = parasiteCount;
+                }
+                this.conquestSessionKills[reg.name] = { fighters: 0, battleships: 0, dreadnoughts: 0 };
+            }
+        }
+        try {
+            const savedConquered = JSON.parse(localStorage.getItem('space_explorer_conquered_regions') || '[]');
+            this.conqueredRegions = new Set(savedConquered);
+        } catch {
+            this.conqueredRegions = new Set();
+        }
+
         this.init();
     }
 
@@ -553,6 +581,25 @@ export class Game {
 
         this.regionManager.update(this.player, this);
 
+        // --- CONQUEST EXIT RESET TIMER CHECK ---
+        const now = Date.now();
+        for (const [regionName, exitTime] of this.regionManager._lastExitTimes.entries()) {
+            if (regionName !== this.regionManager.currentRegion.name) {
+                if (now - exitTime > 15000) {
+                    const kills = this.conquestSessionKills[regionName];
+                    if (kills && (kills.fighters > 0 || kills.battleships > 0 || kills.dreadnoughts > 0)) {
+                        kills.fighters = 0;
+                        kills.battleships = 0;
+                        kills.dreadnoughts = 0;
+                        if (this.hud) {
+                            this.hud.showFloatingReward(`${regionName} progress reset (left > 15s)`, '#ff3c3c');
+                        }
+                    }
+                    this.regionManager._lastExitTimes.delete(regionName);
+                }
+            }
+        }
+
         // --- THE VOID HANDLING ---
         if (this.regionManager.currentRegion.isVoid) {
             // Apply damage over time
@@ -586,6 +633,13 @@ export class Game {
             if (currentRegion.clearedCaps) {
                 caps = { ...caps, ...currentRegion.clearedCaps };
             }
+        }
+
+        // Before region is conquered, scale up hostile spawn limits
+        if (currentRegion.conquest && !this.conqueredRegions.has(currentRegion.name)) {
+            if (caps.fighters > 0) caps.fighters = Math.floor(caps.fighters * 2.5);
+            if (caps.battleships > 0) caps.battleships = Math.floor(caps.battleships * 2.0);
+            if (caps.dreadnoughts > 0) caps.dreadnoughts = Math.floor(caps.dreadnoughts * 2.0);
         }
 
         // Ambient Particles management
@@ -1800,6 +1854,15 @@ export class Game {
             type: type,
             region: this.regionManager?.currentRegion?.name
         });
+
+        const currentRegionName = this.regionManager?.currentRegion?.name;
+        if (currentRegionName && this.conquestSessionKills[currentRegionName] && !this.conqueredRegions.has(currentRegionName)) {
+            const kills = this.conquestSessionKills[currentRegionName];
+            if (type === 'fighter') kills.fighters++;
+            else if (type === 'battleship') kills.battleships++;
+            else if (type === 'dreadnought') kills.dreadnoughts++;
+            this.checkRegionConquest(currentRegionName);
+        }
     }
 
     _onBossDestroyed(boss, index) {
@@ -1835,6 +1898,11 @@ export class Game {
         }
         obj.parasite = null;
         this.sectorManager.markCleared(obj.id);
+
+        const currentRegionName = this.regionManager?.currentRegion?.name;
+        if (currentRegionName && !this.conqueredRegions.has(currentRegionName)) {
+            this.checkRegionConquest(currentRegionName);
+        }
 
         // Trigger Liberation Hail! (Only for planets and stations)
         if (obj.type === 'planet' || obj.type === 'station') {
@@ -2192,6 +2260,58 @@ export class Game {
             const wy = (this.waypoint.y / 1000).toFixed(1);
             drawHint(this.waypoint.x, this.waypoint.y, `NAV WAYPOINT (${wx} : ${wy})`, '🎯', '#00ffcc');
         }
+    }
+
+    checkRegionConquest(regionName) {
+        if (this.conqueredRegions.has(regionName)) return true;
+
+        const region = REGIONS.find(r => r.name === regionName);
+        if (!region || !region.conquest) return false;
+
+        const kills = this.conquestSessionKills[regionName];
+        if (!kills) return false;
+
+        const req = region.conquest;
+        if (kills.fighters < req.fighters || kills.battleships < req.battleships || (req.dreadnoughts && kills.dreadnoughts < req.dreadnoughts)) {
+            return false;
+        }
+
+        // Check if all enemy stations (parasites/oppressors) in the region are cleared.
+        const regionObjects = this.sectorManager.objects.filter(obj => {
+            const cx = obj.x / 1000;
+            const cy = -obj.y / 1000;
+            return region.test(cx, cy);
+        });
+
+        const enemyStations = regionObjects.filter(obj => obj.initialParasite);
+
+        for (const station of enemyStations) {
+            if (!this.sectorManager.clearedIds.has(station.id)) {
+                return false;
+            }
+        }
+
+        // Met all requirements! Conquer region
+        this.conqueredRegions.add(regionName);
+        localStorage.setItem('space_explorer_conquered_regions', JSON.stringify([...this.conqueredRegions]));
+        
+        if (this.hud) {
+            this.hud.showFloatingReward(`REGION CONQUERED: ${regionName.toUpperCase()}`, '#00ffcc');
+            this.hud.showDiscoveryPopup({
+                name: regionName,
+                type: 'region_conquest',
+                description: `You have successfully liberated ${regionName} from hostile forces! It is now permanently secure.`,
+                gemReward: region.gemReward || 100,
+                sciReward: 50
+            });
+        }
+        
+        this.player.gems += region.gemReward || 100;
+        this.player.gemVault += region.gemReward || 100;
+        this.player.totalGemsCollected += region.gemReward || 100;
+        this.player.addScience(50);
+        this.player.save();
+        return true;
     }
 
     triggerGameOver() {
