@@ -30,6 +30,8 @@ import { DerelictHull } from '../entities/DerelictHull.js';
 import { SpaceMine } from '../entities/SpaceMine.js';
 import { CargoTrain } from '../entities/CargoTrain.js';
 import { Comet } from '../entities/Comet.js';
+import { SQUAD_DEFINITIONS } from '../data/patrols.js';
+import { Squad } from '../entities/Squad.js';
 
 export class Game {
     constructor() {
@@ -81,18 +83,31 @@ export class Game {
                     return reg.test(cx, cy) && obj.initialParasite;
                 }).length;
 
+                const regionSquads = SQUAD_DEFINITIONS[reg.name] || [];
+                const squadCount = regionSquads.length;
+
                 if (!reg.conquest) {
                     const diff = reg.difficulty || 1;
                     const fighters = 5 + Math.min(15, Math.floor(diff * 1.0));
                     const battleships = diff >= 3 ? Math.min(5, Math.floor(diff / 3)) : 0;
                     const dreadnoughts = diff >= 6 ? Math.min(3, Math.floor(diff / 6)) : 0;
-                    reg.conquest = { fighters, battleships, dreadnoughts, stations: parasiteCount };
+                    reg.conquest = { fighters, battleships, dreadnoughts, stations: parasiteCount, squads: squadCount };
                 } else {
                     reg.conquest.stations = parasiteCount;
+                    reg.conquest.squads = squadCount;
                 }
                 this.conquestSessionKills[reg.name] = { fighters: 0, battleships: 0, dreadnoughts: 0 };
             }
         }
+
+        this.activeSquads = [];
+        try {
+            const savedDefeatedSquads = JSON.parse(localStorage.getItem('space_explorer_defeated_squads') || '[]');
+            this.defeatedSquadIds = new Set(savedDefeatedSquads);
+        } catch {
+            this.defeatedSquadIds = new Set();
+        }
+
         try {
             const savedConquered = JSON.parse(localStorage.getItem('space_explorer_conquered_regions') || '[]');
             this.conqueredRegions = new Set(savedConquered);
@@ -586,6 +601,7 @@ export class Game {
         for (const [regionName, exitTime] of this.regionManager._lastExitTimes.entries()) {
             if (regionName !== this.regionManager.currentRegion.name) {
                 if (now - exitTime > 15000) {
+                    this.despawnSquadsForRegion(regionName);
                     const kills = this.conquestSessionKills[regionName];
                     if (kills && (kills.fighters > 0 || kills.battleships > 0 || kills.dreadnoughts > 0)) {
                         kills.fighters = 0;
@@ -694,11 +710,12 @@ export class Game {
 
         // Enemy spawning — cap driven by region
         // Guard: No hostile enemies in Neutral Space during the tutorial
-        if (this.enemies.length < caps.fighters && !(isTutorialActive && currentRegion.name === DEFAULT_REGION.name)) {
+        const activeFighters = this.enemies.filter(e => !e.isPatrolSquadMember).length;
+        if (activeFighters < caps.fighters && !(isTutorialActive && currentRegion.name === DEFAULT_REGION.name)) {
             // Faster spawning in Home Region
             const spawnCount = currentRegion.name === 'Home Region' ? 3 : 1;
             const enemyColor = currentRegion.name === 'Blob Space' ? currentRegion.color : undefined;
-            for (let i = 0; i < spawnCount && this.enemies.length < caps.fighters; i++) {
+            for (let i = 0; i < spawnCount && this.enemies.filter(e => !e.isPatrolSquadMember).length < caps.fighters; i++) {
                 const minDist = currentRegion.name === 'Home Region' ? 800 : 1200;
                 const maxDist = currentRegion.name === 'Home Region' ? 2000 : 3000;
                 this.spawnEnemy(this.player.x, this.player.y, minDist, maxDist, enemyColor);
@@ -706,7 +723,8 @@ export class Game {
         }
 
         // Battleship spawning
-        if (this.battleships.length < caps.battleships && !(isTutorialActive && currentRegion.name === DEFAULT_REGION.name)) {
+        const activeBattleships = this.battleships.filter(b => !b.isPatrolSquadMember).length;
+        if (activeBattleships < caps.battleships && !(isTutorialActive && currentRegion.name === DEFAULT_REGION.name)) {
             const minDist = currentRegion.name === 'Home Region' ? 1200 : 2000;
             const maxDist = currentRegion.name === 'Home Region' ? 2500 : 4000;
             const enemyColor = currentRegion.name === 'Blob Space' ? currentRegion.color : undefined;
@@ -737,7 +755,8 @@ export class Game {
         }
 
         // Dreadnought spawning — rare cap
-        if (caps.dreadnoughts && this.dreadnoughts.length < caps.dreadnoughts) {
+        const activeDreadnoughts = this.dreadnoughts.filter(d => !d.isPatrolSquadMember).length;
+        if (caps.dreadnoughts && activeDreadnoughts < caps.dreadnoughts) {
             const enemyColor = currentRegion.name === 'Blob Space' ? currentRegion.color : undefined;
             this.spawnDreadnought(this.player.x, this.player.y, enemyColor);
         }
@@ -1155,13 +1174,18 @@ export class Game {
             }
         }
 
+        // ── Patrol Squads update ──────────────────────────────────
+        for (const squad of this.activeSquads) {
+            squad.update(this);
+        }
+
         // ── Enemy update & collision ──────────────────────────────
         for (let e = this.enemies.length - 1; e >= 0; e--) {
             const enemy = this.enemies[e];
             enemy.update(this);
 
             // Despawn if too far from player
-            if (Utils.dist(this.player.x, this.player.y, enemy.x, enemy.y) > 4500) {
+            if (Utils.dist(this.player.x, this.player.y, enemy.x, enemy.y) > 4500 && !enemy.isPatrolSquadMember) {
                 this.enemies.splice(e, 1);
                 continue;
             }
@@ -1207,7 +1231,7 @@ export class Game {
             const bs = this.battleships[e];
             bs.update(this);
 
-            if (Utils.dist(this.player.x, this.player.y, bs.x, bs.y) > 5000) {
+            if (Utils.dist(this.player.x, this.player.y, bs.x, bs.y) > 5000 && !bs.isPatrolSquadMember) {
                 this.battleships.splice(e, 1);
                 continue;
             }
@@ -1236,7 +1260,7 @@ export class Game {
             const dn = this.dreadnoughts[e];
             dn.update(this);
 
-            if (Utils.dist(this.player.x, this.player.y, dn.x, dn.y) > 6000) {
+            if (Utils.dist(this.player.x, this.player.y, dn.x, dn.y) > 6000 && !dn.isPatrolSquadMember) {
                 this.dreadnoughts.splice(e, 1);
                 continue;
             }
@@ -1856,6 +1880,28 @@ export class Game {
         });
 
         const currentRegionName = this.regionManager?.currentRegion?.name;
+
+        // Squad member check
+        if (target.isPatrolSquadMember) {
+            const squad = this.activeSquads.find(s => s.id === target.squadId);
+            if (squad) {
+                // Filter out the dead ship
+                squad.ships = squad.ships.filter(s => s !== target);
+                if (squad.isDefeated()) {
+                    this.defeatedSquadIds.add(squad.id);
+                    localStorage.setItem('space_explorer_defeated_squads', JSON.stringify([...this.defeatedSquadIds]));
+                    this.activeSquads = this.activeSquads.filter(s => s !== squad);
+
+                    if (this.hud) {
+                        this.hud.showFloatingReward(`SQUAD ELIMINATED: ${squad.name.toUpperCase()}`, '#ff9500');
+                    }
+                    if (currentRegionName) {
+                        this.checkRegionConquest(currentRegionName);
+                    }
+                }
+            }
+        }
+
         if (currentRegionName && this.conquestSessionKills[currentRegionName] && !this.conqueredRegions.has(currentRegionName)) {
             const kills = this.conquestSessionKills[currentRegionName];
             if (type === 'fighter') kills.fighters++;
@@ -2262,6 +2308,30 @@ export class Game {
         }
     }
 
+    spawnSquadsForRegion(regionName) {
+        this.despawnSquadsForRegion(regionName);
+
+        const region = REGIONS.find(r => r.name === regionName);
+        if (!region) return;
+
+        const squadConfigs = SQUAD_DEFINITIONS[regionName] || [];
+        for (const config of squadConfigs) {
+            if (!this.defeatedSquadIds.has(config.id)) {
+                const squad = new Squad(config, region);
+                squad.spawn(this);
+                this.activeSquads.push(squad);
+            }
+        }
+    }
+
+    despawnSquadsForRegion(regionName) {
+        const toDespawn = this.activeSquads.filter(s => s.region.name === regionName);
+        for (const squad of toDespawn) {
+            squad.despawn(this);
+        }
+        this.activeSquads = this.activeSquads.filter(s => s.region.name !== regionName);
+    }
+
     checkRegionConquest(regionName) {
         if (this.conqueredRegions.has(regionName)) return true;
 
@@ -2274,6 +2344,14 @@ export class Game {
         const req = region.conquest;
         if (kills.fighters < req.fighters || kills.battleships < req.battleships || (req.dreadnoughts && kills.dreadnoughts < req.dreadnoughts)) {
             return false;
+        }
+
+        // Check if all region squads are defeated
+        const regionSquads = SQUAD_DEFINITIONS[regionName] || [];
+        for (const s of regionSquads) {
+            if (!this.defeatedSquadIds.has(s.id)) {
+                return false;
+            }
         }
 
         // Check if all enemy stations (parasites/oppressors) in the region are cleared.

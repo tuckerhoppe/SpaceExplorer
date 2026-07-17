@@ -60,6 +60,10 @@ export class RegionManager {
 
             this._prevRegion = newRegion;
 
+            if (game?.spawnSquadsForRegion) {
+                game.spawnSquadsForRegion(newRegion.name);
+            }
+
             if (game?.questManager) {
                 game.questManager.notify('reach', { region: newRegion.name });
             }

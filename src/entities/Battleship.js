@@ -26,6 +26,9 @@ export class Battleship {
     }
 
     update(game) {
+        if (this.isPatrolSquadMember && this.inSquadFormation) {
+            return;
+        }
         this._frame++;
         const px = game.player.x, py = game.player.y;
         const d = Utils.dist(this.x, this.y, px, py);

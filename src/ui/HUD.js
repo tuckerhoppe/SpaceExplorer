@@ -1,6 +1,7 @@
 import { UPGRADES, TECH_UPGRADES, SHIPS } from '../config.js';
 import { QUESTS } from '../data/quests.js';
 import { REGIONS, DEFAULT_REGION } from '../data/regions.js';
+import { SQUAD_DEFINITIONS } from '../data/patrols.js';
 import { ScienceMiniGame } from './ScienceMiniGame.js';
 import { MiniMap } from './MiniMap.js';
 import { SPECIFIC_HAILS } from '../data/messages.js';
@@ -187,6 +188,7 @@ export class HUD {
                 'space_explorer_quests',
                 'space_explorer_cleared',
                 'space_explorer_conquered_regions',
+                'space_explorer_defeated_squads',
                 'setting_dynamic_zoom',
                 'setting_nav_hints',
                 'setting_show_stats',
@@ -760,6 +762,10 @@ export class HUD {
             const clearedStationsCount = enemyStations.filter(obj => game.sectorManager.clearedIds.has(obj.id)).length;
             const totalStationsCount = req.stations;
 
+            const regionSquads = SQUAD_DEFINITIONS[reg.name] || [];
+            const totalSquadsCount = req.squads || 0;
+            const defeatedSquadsCount = regionSquads.filter(s => game.defeatedSquadIds.has(s.id)).length;
+
             let statusText = 'INCOMPLETE';
             let statusColor = '#ff3c3c';
             if (isConquered) {
@@ -812,6 +818,16 @@ export class HUD {
                     <div class="conquest-requirement-row ${stationsMet || isConquered ? 'met' : ''}">
                         <span>Clear Enemy Stations:</span>
                         <span>${getRowValue(clearedStationsCount, totalStationsCount, stationsMet)}</span>
+                    </div>
+                `;
+            }
+
+            if (totalSquadsCount > 0) {
+                const squadsMet = defeatedSquadsCount >= totalSquadsCount;
+                reqsHtml += `
+                    <div class="conquest-requirement-row ${squadsMet || isConquered ? 'met' : ''}">
+                        <span>Eliminate Patrol Squads:</span>
+                        <span>${getRowValue(defeatedSquadsCount, totalSquadsCount, squadsMet)}</span>
                     </div>
                 `;
             }
@@ -1309,8 +1325,12 @@ export class HUD {
                         const clearedStationsCount = enemyStations.filter(obj => this.game.sectorManager.clearedIds.has(obj.id)).length;
                         const totalStationsCount = req.stations;
 
-                        const totalRequired = req.fighters + req.battleships + (req.dreadnoughts || 0) + totalStationsCount;
-                        const totalCleared = Math.min(req.fighters, kills.fighters) + Math.min(req.battleships, kills.battleships) + (req.dreadnoughts ? Math.min(req.dreadnoughts, kills.dreadnoughts) : 0) + clearedStationsCount;
+                        const regionSquads = SQUAD_DEFINITIONS[region.name] || [];
+                        const totalSquadsCount = req.squads || 0;
+                        const defeatedSquadsCount = regionSquads.filter(s => this.game.defeatedSquadIds.has(s.id)).length;
+
+                        const totalRequired = req.fighters + req.battleships + (req.dreadnoughts || 0) + totalStationsCount + totalSquadsCount;
+                        const totalCleared = Math.min(req.fighters, kills.fighters) + Math.min(req.battleships, kills.battleships) + (req.dreadnoughts ? Math.min(req.dreadnoughts, kills.dreadnoughts) : 0) + clearedStationsCount + defeatedSquadsCount;
                         
                         const pct = totalRequired > 0 ? (totalCleared / totalRequired) * 100 : 100;
                         conquestFill.style.width = `${pct}%`;
@@ -1321,6 +1341,7 @@ export class HUD {
                         if (req.battleships > 0) progressParts.push(`Battleships: ${kills.battleships}/${req.battleships}`);
                         if (req.dreadnoughts > 0) progressParts.push(`Dreadnoughts: ${kills.dreadnoughts}/${req.dreadnoughts}`);
                         if (totalStationsCount > 0) progressParts.push(`Stations: ${clearedStationsCount}/${totalStationsCount}`);
+                        if (totalSquadsCount > 0) progressParts.push(`Squads: ${defeatedSquadsCount}/${totalSquadsCount}`);
                         
                         conquestText.innerHTML = `Conquest: ${Math.round(pct)}%<br/><span style="font-size: 0.52rem; opacity: 0.7;">${progressParts.join(' | ')}</span>`;
                     }
