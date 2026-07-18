@@ -12,10 +12,10 @@ export class Player {
         this.radius = 18; // will be overwritten by updateShipRadius() after _loadProgress
 
         this.stats = { engine: 1, hull: 1, weapons: 1, magnet: 1, booster: 1, cargo: 0, healing: 0 };
-        this.tech = { 
-            biometric_filtering: false, 
-            heat_shield: false, 
-            auto_heal: false, 
+        this.tech = {
+            biometric_filtering: false,
+            heat_shield: false,
+            auto_heal: false,
             proton_torpedo: false,
             gravity_laser: false,
             evasive_maneuvers: false
@@ -229,6 +229,9 @@ export class Player {
         if (this.tradeRouteSpeedBoostValue > 1.0) {
             baseMax *= this.tradeRouteSpeedBoostValue;
         }
+        if (this.inNebula) {
+            baseMax *= 0.25; // 75% speed reduction
+        }
         return baseMax;
     }
 
@@ -236,6 +239,9 @@ export class Player {
         let baseAccel = this.engineMode === 'boost' ? this.boostAccel : this.thrusterAccel;
         if (this.tradeRouteSpeedBoostValue > 1.0) {
             baseAccel *= this.tradeRouteSpeedBoostValue;
+        }
+        if (this.inNebula) {
+            baseAccel *= 0.25; // 75% speed reduction
         }
         return baseAccel;
     }
@@ -257,6 +263,31 @@ export class Player {
 
     update(game) {
         if (this.health <= 0) return;
+
+        // Check if player is inside any large hazard nebula
+        this.inNebula = false;
+        let activeNebulaColor = '#00f0ff';
+        if (game.nebulas) {
+            for (const nebula of game.nebulas) {
+                if (nebula.contains(this.x, this.y)) {
+                    this.inNebula = true;
+                    activeNebulaColor = nebula.color;
+                    break;
+                }
+            }
+        }
+
+        // Spawn gas particles around ship when inside nebula
+        if (this.inNebula && Math.random() < 0.25) {
+            game.particles.push(Particle.get(
+                this.x + Utils.rand(-this.radius * 2, this.radius * 2),
+                this.y + Utils.rand(-this.radius * 2, this.radius * 2),
+                this.vx * 0.5 + Utils.rand(-0.3, 0.3),
+                this.vy * 0.5 + Utils.rand(-0.3, 0.3),
+                activeNebulaColor,
+                Utils.randInt(15, 35)
+            ));
+        }
 
         // Boost: slower turning — you commit to a direction before the surge
         const turnRate = this.engineMode === 'boost' ? 0.03 : 0.08;
@@ -396,7 +427,7 @@ export class Player {
 
             // Dash Recharge logic (3x faster: 0.004 -> 0.012)
             if (this.dashCharges < this.maxDashCharges) {
-                this.dashRechargeTimer = Math.min(1, this.dashRechargeTimer + 0.012); 
+                this.dashRechargeTimer = Math.min(1, this.dashRechargeTimer + 0.012);
                 if (this.dashRechargeTimer >= 1) {
                     this.dashCharges++;
                     this.dashRechargeTimer = (this.dashCharges < this.maxDashCharges) ? 0 : 0;
@@ -469,14 +500,14 @@ export class Player {
             ctx.save();
             ctx.beginPath();
             ctx.arc(0, 0, this.radius + 8 + intensity * 4 + Math.sin(performance.now() / 80) * 3, 0, Math.PI * 2);
-            
+
             const alphaHex = Math.round(intensity * 176).toString(16).padStart(2, '0');
             ctx.strokeStyle = this.tradeRouteColor + alphaHex;
             ctx.lineWidth = 2 + intensity * 1.5;
             ctx.shadowColor = this.tradeRouteColor;
             ctx.shadowBlur = Math.round(10 + intensity * 8);
             ctx.stroke();
-            
+
             // Faint inner speed ring
             ctx.beginPath();
             ctx.arc(0, 0, this.radius + 3 + intensity * 2, 0, Math.PI * 2);

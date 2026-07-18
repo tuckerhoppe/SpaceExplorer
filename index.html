@@ -93,6 +93,12 @@
                         <span class="diff-warn"></span>
                     </div>
                     <div id="region-discovery-info" style="font-size: 0.6rem; color: #00f0ff; opacity: 0.8; margin-top: 0;">0 / 0 Stellar Objects Discovered</div>
+                    <div id="region-conquest-container" class="conquest-container hidden">
+                        <div id="region-conquest-track" class="conquest-progress-track">
+                            <div id="region-conquest-fill" class="conquest-progress-fill"></div>
+                        </div>
+                        <span id="region-conquest-text" class="conquest-text">Conquest: 0%</span>
+                    </div>
                     <div id="region-quests-panel" style="margin-top: 2px; text-align: center; width: 100%;"></div>
                 </div>
                 <!-- Spacer for Grid Centering -->
@@ -120,6 +126,7 @@
                         <button id="tab-ships" class="modal-tab">Ships</button>
                         <button id="tab-tech" class="modal-tab">Tech</button>
                         <button id="tab-objectives" class="modal-tab">Objectives</button>
+                        <button id="tab-conquest" class="modal-tab">Liberation</button>
                         <!-- <button id="tab-codex" class="modal-tab">Codex</button> -->
                         <button id="tab-settings" class="modal-tab">Settings</button>
                     </div>
@@ -134,6 +141,9 @@
                     </div>
                     <div id="content-objectives" class="tab-content hidden">
                         <div id="objectives-list" class="upgrade-list" style="max-height: 60vh;"></div>
+                    </div>
+                    <div id="content-conquest" class="tab-content hidden">
+                        <div id="conquest-list" class="upgrade-list" style="max-height: 60vh; overflow-y: auto;"></div>
                     </div>
                     <!-- <div id="content-codex" class="tab-content hidden">
                         <div id="codex-list" class="upgrade-list"></div>

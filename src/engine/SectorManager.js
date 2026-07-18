@@ -18,7 +18,53 @@ export class SectorManager {
             this.clearedIds = new Set();
         }
 
-        this.objects = STELLAR_OBJECTS.map(data => {
+        // Group/map objects to ensure oppressors are added to almost every planet
+        // and at least one per region in the upper two quadrants.
+        const objectsWithRegions = STELLAR_OBJECTS.map(data => {
+            const cx = data.worldX / 1000;
+            const cy = -data.worldY / 1000;
+            let regionName = DEFAULT_REGION.name;
+            let isUpperQuadrant = false;
+            for (const reg of REGIONS) {
+                if (reg.test(cx, cy)) {
+                    regionName = reg.name;
+                    // Upper two quadrants: cy > 0
+                    if (cy > 0) {
+                        isUpperQuadrant = true;
+                    }
+                    break;
+                }
+            }
+            return { data: { ...data }, regionName, isUpperQuadrant };
+        });
+
+        // Track how many oppressors each region has on its planets
+        const regionOppressorCount = {};
+        for (const item of objectsWithRegions) {
+            if (item.data.parasite && item.data.parasite.type === 'oppressor') {
+                regionOppressorCount[item.regionName] = (regionOppressorCount[item.regionName] || 0) + 1;
+            }
+        }
+
+        // Pass: Ensure at least one planet per region in the upper two quadrants has an oppressor
+        // and add oppressor to "almost every" planet (85% chance)
+        for (const item of objectsWithRegions) {
+            if (item.data.type === 'planet') {
+                const needsOppressorGuarantee = item.isUpperQuadrant && !regionOppressorCount[item.regionName];
+                const randOppressor = Math.random() < 0.85; // 85% chance for "almost every planet"
+                
+                if (!item.data.parasite && (needsOppressorGuarantee || randOppressor)) {
+                    item.data.parasite = {
+                        type: 'oppressor',
+                        guards: 4
+                    };
+                    regionOppressorCount[item.regionName] = (regionOppressorCount[item.regionName] || 0) + 1;
+                }
+            }
+        }
+
+        this.objects = objectsWithRegions.map(item => {
+            const data = item.data;
             const cx = data.worldX / 1000;
             const cy = -data.worldY / 1000;
             let difficulty = DEFAULT_REGION.difficulty;
@@ -32,7 +78,9 @@ export class SectorManager {
             }
             // If this object was previously cleared, don't pass the parasite data
             const cleanData = this.clearedIds.has(data.id) ? { ...data, parasite: null } : data;
-            return new StellarObject(cleanData, difficulty, regionName);
+            const obj = new StellarObject(cleanData, difficulty, regionName);
+            obj.initialParasite = !!data.parasite;
+            return obj;
         });
         this.dockedAt = null;
 

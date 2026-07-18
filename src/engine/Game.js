@@ -30,6 +30,12 @@ import { DerelictHull } from '../entities/DerelictHull.js';
 import { SpaceMine } from '../entities/SpaceMine.js';
 import { CargoTrain } from '../entities/CargoTrain.js';
 import { Comet } from '../entities/Comet.js';
+import { SQUAD_DEFINITIONS } from '../data/patrols.js';
+import { Squad } from '../entities/Squad.js';
+import { NEBULA_DEFINITIONS } from '../data/nebulas.js';
+import { Nebula } from '../entities/Nebula.js';
+import { LARGE_ASTEROID_DEFINITIONS } from '../data/largeAsteroids.js';
+import { LargeAsteroid } from '../entities/LargeAsteroid.js';
 
 export class Game {
     constructor() {
@@ -60,6 +66,8 @@ export class Game {
         this.dreadnoughts = [];
         this.bosses = [];
         this.megaLandmarks = MEGA_LANDMARKS.map(lm => new MegaLandmark(lm));
+        this.nebulas = NEBULA_DEFINITIONS.map(def => new Nebula(def));
+        this.largeAsteroids = LARGE_ASTEROID_DEFINITIONS.map(def => new LargeAsteroid(def));
         this._ambushSpawned = false;
         this.waypoint = null;
 
@@ -71,6 +79,47 @@ export class Game {
         this.sectorManager = new SectorManager();
         this.regionManager = new RegionManager();
         this.tradeRouteManager = new TradeRouteManager();
+
+        this.conquestSessionKills = {};
+        for (const reg of REGIONS) {
+            if (reg.name !== 'Neutral Space' && !reg.isVoid) {
+                const parasiteCount = this.sectorManager.objects.filter(obj => {
+                    const cx = obj.x / 1000;
+                    const cy = -obj.y / 1000;
+                    return reg.test(cx, cy) && obj.initialParasite;
+                }).length;
+
+                const regionSquads = SQUAD_DEFINITIONS[reg.name] || [];
+                const squadCount = regionSquads.length;
+
+                if (!reg.conquest) {
+                    const diff = reg.difficulty || 1;
+                    const fighters = 5 + Math.min(15, Math.floor(diff * 1.0));
+                    const battleships = diff >= 3 ? Math.min(5, Math.floor(diff / 3)) : 0;
+                    const dreadnoughts = diff >= 6 ? Math.min(3, Math.floor(diff / 6)) : 0;
+                    reg.conquest = { fighters, battleships, dreadnoughts, stations: parasiteCount, squads: squadCount };
+                } else {
+                    reg.conquest.stations = parasiteCount;
+                    reg.conquest.squads = squadCount;
+                }
+                this.conquestSessionKills[reg.name] = { fighters: 0, battleships: 0, dreadnoughts: 0 };
+            }
+        }
+
+        this.activeSquads = [];
+        try {
+            const savedDefeatedSquads = JSON.parse(localStorage.getItem('space_explorer_defeated_squads') || '[]');
+            this.defeatedSquadIds = new Set(savedDefeatedSquads);
+        } catch {
+            this.defeatedSquadIds = new Set();
+        }
+
+        try {
+            const savedConquered = JSON.parse(localStorage.getItem('space_explorer_conquered_regions') || '[]');
+            this.conqueredRegions = new Set(savedConquered);
+        } catch {
+            this.conqueredRegions = new Set();
+        }
 
         this.init();
     }
@@ -494,6 +543,80 @@ export class Game {
         this.player.update(this);
         this.ghost.update(this);
 
+        // --- LARGE ASTEROIDS COLLISION CHECK ---
+        if (this.largeAsteroids) {
+            this.largeAsteroids.forEach(largeAst => {
+                largeAst.update(); // Update slow rotation
+
+                // 1. Player collision
+                const distToPlayer = Utils.dist(this.player.x, this.player.y, largeAst.x, largeAst.y);
+                if (this.player.health > 0 && distToPlayer < this.player.radius + largeAst.radius) {
+                    const angle = Utils.ang(largeAst.x, largeAst.y, this.player.x, this.player.y);
+                    
+                    // Push player out to boundary
+                    this.player.x = largeAst.x + Math.cos(angle) * (this.player.radius + largeAst.radius);
+                    this.player.y = largeAst.y + Math.sin(angle) * (this.player.radius + largeAst.radius);
+
+                    // Reflect / Bounce velocity
+                    const normalX = Math.cos(angle);
+                    const normalY = Math.sin(angle);
+                    const dot = this.player.vx * normalX + this.player.vy * normalY;
+                    
+                    // Only bounce and damage if moving towards the asteroid
+                    if (dot < 0) {
+                        // Elastic bounce + extra repulsive impulse away from the rock
+                        this.player.vx = (this.player.vx - 2 * dot * normalX) * 0.85 + normalX * 2.0;
+                        this.player.vy = (this.player.vy - 2 * dot * normalY) * 0.85 + normalY * 2.0;
+                        
+                        // Inflict small damage (5 HP)
+                        this.player.health -= 5;
+                        this.hud.update(this.player);
+                        this.shakeIntensity = Math.max(this.shakeIntensity, 6);
+                        
+                        // Spawn dust/debris particles
+                        for (let i = 0; i < 6; i++) {
+                            const pAngle = angle + Utils.rand(-0.6, 0.6);
+                            const pSpeed = Utils.rand(1, 3.5);
+                            this.particles.push(Particle.get(
+                                this.player.x - Math.cos(angle) * this.player.radius,
+                                this.player.y - Math.sin(angle) * this.player.radius,
+                                Math.cos(pAngle) * pSpeed,
+                                Math.sin(pAngle) * pSpeed,
+                                '#888888',
+                                Utils.randInt(12, 24)
+                            ));
+                        }
+
+                        if (this.player.health <= 0 && !this.gameOver) {
+                            this.triggerGameOver();
+                        }
+                    }
+                }
+
+                // 2. Enemy ship collisions (fighters, battleships, dreadnoughts, neutrals)
+                const checkEnemyShipCollision = (ship) => {
+                    const dist = Utils.dist(ship.x, ship.y, largeAst.x, largeAst.y);
+                    if (dist < ship.radius + largeAst.radius) {
+                        const angle = Utils.ang(largeAst.x, largeAst.y, ship.x, ship.y);
+                        ship.x = largeAst.x + Math.cos(angle) * (ship.radius + largeAst.radius);
+                        ship.y = largeAst.y + Math.sin(angle) * (ship.radius + largeAst.radius);
+                        
+                        const normalX = Math.cos(angle);
+                        const normalY = Math.sin(angle);
+                        const dot = ship.vx * normalX + ship.vy * normalY;
+                        if (dot < 0) {
+                            ship.vx = (ship.vx - 2 * dot * normalX) * 0.4;
+                            ship.vy = (ship.vy - 2 * dot * normalY) * 0.4;
+                        }
+                    }
+                };
+                this.enemies.forEach(checkEnemyShipCollision);
+                this.battleships.forEach(checkEnemyShipCollision);
+                this.dreadnoughts.forEach(checkEnemyShipCollision);
+                this.neutralShips.forEach(checkEnemyShipCollision);
+            });
+        }
+
         if (this.tradeRouteManager) {
             this.tradeRouteManager.update(this);
         }
@@ -553,6 +676,26 @@ export class Game {
 
         this.regionManager.update(this.player, this);
 
+        // --- CONQUEST EXIT RESET TIMER CHECK ---
+        const now = Date.now();
+        for (const [regionName, exitTime] of this.regionManager._lastExitTimes.entries()) {
+            if (regionName !== this.regionManager.currentRegion.name) {
+                if (now - exitTime > 15000) {
+                    this.despawnSquadsForRegion(regionName);
+                    const kills = this.conquestSessionKills[regionName];
+                    if (kills && (kills.fighters > 0 || kills.battleships > 0 || kills.dreadnoughts > 0)) {
+                        kills.fighters = 0;
+                        kills.battleships = 0;
+                        kills.dreadnoughts = 0;
+                        if (this.hud) {
+                            this.hud.showFloatingReward(`${regionName} progress reset (left > 15s)`, '#ff3c3c');
+                        }
+                    }
+                    this.regionManager._lastExitTimes.delete(regionName);
+                }
+            }
+        }
+
         // --- THE VOID HANDLING ---
         if (this.regionManager.currentRegion.isVoid) {
             // Apply damage over time
@@ -586,6 +729,13 @@ export class Game {
             if (currentRegion.clearedCaps) {
                 caps = { ...caps, ...currentRegion.clearedCaps };
             }
+        }
+
+        // Before region is conquered, scale up hostile spawn limits
+        if (currentRegion.conquest && !this.conqueredRegions.has(currentRegion.name)) {
+            if (caps.fighters > 0) caps.fighters = Math.floor(caps.fighters * 2.5);
+            if (caps.battleships > 0) caps.battleships = Math.floor(caps.battleships * 2.0);
+            if (caps.dreadnoughts > 0) caps.dreadnoughts = Math.floor(caps.dreadnoughts * 2.0);
         }
 
         // Ambient Particles management
@@ -640,11 +790,12 @@ export class Game {
 
         // Enemy spawning — cap driven by region
         // Guard: No hostile enemies in Neutral Space during the tutorial
-        if (this.enemies.length < caps.fighters && !(isTutorialActive && currentRegion.name === DEFAULT_REGION.name)) {
+        const activeFighters = this.enemies.filter(e => !e.isPatrolSquadMember).length;
+        if (activeFighters < caps.fighters && !(isTutorialActive && currentRegion.name === DEFAULT_REGION.name)) {
             // Faster spawning in Home Region
             const spawnCount = currentRegion.name === 'Home Region' ? 3 : 1;
             const enemyColor = currentRegion.name === 'Blob Space' ? currentRegion.color : undefined;
-            for (let i = 0; i < spawnCount && this.enemies.length < caps.fighters; i++) {
+            for (let i = 0; i < spawnCount && this.enemies.filter(e => !e.isPatrolSquadMember).length < caps.fighters; i++) {
                 const minDist = currentRegion.name === 'Home Region' ? 800 : 1200;
                 const maxDist = currentRegion.name === 'Home Region' ? 2000 : 3000;
                 this.spawnEnemy(this.player.x, this.player.y, minDist, maxDist, enemyColor);
@@ -652,7 +803,8 @@ export class Game {
         }
 
         // Battleship spawning
-        if (this.battleships.length < caps.battleships && !(isTutorialActive && currentRegion.name === DEFAULT_REGION.name)) {
+        const activeBattleships = this.battleships.filter(b => !b.isPatrolSquadMember).length;
+        if (activeBattleships < caps.battleships && !(isTutorialActive && currentRegion.name === DEFAULT_REGION.name)) {
             const minDist = currentRegion.name === 'Home Region' ? 1200 : 2000;
             const maxDist = currentRegion.name === 'Home Region' ? 2500 : 4000;
             const enemyColor = currentRegion.name === 'Blob Space' ? currentRegion.color : undefined;
@@ -683,7 +835,8 @@ export class Game {
         }
 
         // Dreadnought spawning — rare cap
-        if (caps.dreadnoughts && this.dreadnoughts.length < caps.dreadnoughts) {
+        const activeDreadnoughts = this.dreadnoughts.filter(d => !d.isPatrolSquadMember).length;
+        if (caps.dreadnoughts && activeDreadnoughts < caps.dreadnoughts) {
             const enemyColor = currentRegion.name === 'Blob Space' ? currentRegion.color : undefined;
             this.spawnDreadnought(this.player.x, this.player.y, enemyColor);
         }
@@ -728,6 +881,18 @@ export class Game {
         for (let a = this.asteroids.length - 1; a >= 0; a--) {
             let ast = this.asteroids[a];
             ast.update();
+
+            // Check collision with large asteroids (shatter small asteroid)
+            let shattered = false;
+            for (const largeAst of this.largeAsteroids) {
+                if (Utils.dist(ast.x, ast.y, largeAst.x, largeAst.y) < ast.radius + largeAst.radius) {
+                    this.spawnExplosion(ast.x, ast.y, Math.floor(ast.radius * 0.75), '#aaa');
+                    this.asteroids.splice(a, 1);
+                    shattered = true;
+                    break;
+                }
+            }
+            if (shattered) continue;
 
             if (Utils.dist(this.player.x, this.player.y, ast.x, ast.y) > 4000) {
                 this.asteroids.splice(a, 1);
@@ -1101,13 +1266,18 @@ export class Game {
             }
         }
 
+        // ── Patrol Squads update ──────────────────────────────────
+        for (const squad of this.activeSquads) {
+            squad.update(this);
+        }
+
         // ── Enemy update & collision ──────────────────────────────
         for (let e = this.enemies.length - 1; e >= 0; e--) {
             const enemy = this.enemies[e];
             enemy.update(this);
 
             // Despawn if too far from player
-            if (Utils.dist(this.player.x, this.player.y, enemy.x, enemy.y) > 4500) {
+            if (Utils.dist(this.player.x, this.player.y, enemy.x, enemy.y) > 4500 && !enemy.isPatrolSquadMember) {
                 this.enemies.splice(e, 1);
                 continue;
             }
@@ -1153,7 +1323,7 @@ export class Game {
             const bs = this.battleships[e];
             bs.update(this);
 
-            if (Utils.dist(this.player.x, this.player.y, bs.x, bs.y) > 5000) {
+            if (Utils.dist(this.player.x, this.player.y, bs.x, bs.y) > 5000 && !bs.isPatrolSquadMember) {
                 this.battleships.splice(e, 1);
                 continue;
             }
@@ -1182,7 +1352,7 @@ export class Game {
             const dn = this.dreadnoughts[e];
             dn.update(this);
 
-            if (Utils.dist(this.player.x, this.player.y, dn.x, dn.y) > 6000) {
+            if (Utils.dist(this.player.x, this.player.y, dn.x, dn.y) > 6000 && !dn.isPatrolSquadMember) {
                 this.dreadnoughts.splice(e, 1);
                 continue;
             }
@@ -1800,6 +1970,37 @@ export class Game {
             type: type,
             region: this.regionManager?.currentRegion?.name
         });
+
+        const currentRegionName = this.regionManager?.currentRegion?.name;
+
+        // Squad member check
+        if (target.isPatrolSquadMember) {
+            const squad = this.activeSquads.find(s => s.id === target.squadId);
+            if (squad) {
+                // Filter out the dead ship
+                squad.ships = squad.ships.filter(s => s !== target);
+                if (squad.isDefeated()) {
+                    this.defeatedSquadIds.add(squad.id);
+                    localStorage.setItem('space_explorer_defeated_squads', JSON.stringify([...this.defeatedSquadIds]));
+                    this.activeSquads = this.activeSquads.filter(s => s !== squad);
+
+                    if (this.hud) {
+                        this.hud.showFloatingReward(`SQUAD ELIMINATED: ${squad.name.toUpperCase()}`, '#ff9500');
+                    }
+                    if (currentRegionName) {
+                        this.checkRegionConquest(currentRegionName);
+                    }
+                }
+            }
+        }
+
+        if (currentRegionName && this.conquestSessionKills[currentRegionName] && !this.conqueredRegions.has(currentRegionName)) {
+            const kills = this.conquestSessionKills[currentRegionName];
+            if (type === 'fighter') kills.fighters++;
+            else if (type === 'battleship') kills.battleships++;
+            else if (type === 'dreadnought') kills.dreadnoughts++;
+            this.checkRegionConquest(currentRegionName);
+        }
     }
 
     _onBossDestroyed(boss, index) {
@@ -1835,6 +2036,11 @@ export class Game {
         }
         obj.parasite = null;
         this.sectorManager.markCleared(obj.id);
+
+        const currentRegionName = this.regionManager?.currentRegion?.name;
+        if (currentRegionName && !this.conqueredRegions.has(currentRegionName)) {
+            this.checkRegionConquest(currentRegionName);
+        }
 
         // Trigger Liberation Hail! (Only for planets and stations)
         if (obj.type === 'planet' || obj.type === 'station') {
@@ -1977,6 +2183,9 @@ export class Game {
         if (this.regionManager) {
             this.regionManager.draw(this.ctx, this.camera);
         }
+
+        this.nebulas.forEach(n => n.draw(this.ctx, this.camera));
+        this.largeAsteroids.forEach(la => la.draw(this.ctx, this.camera));
 
         this.sectorManager.draw(this.ctx, this.camera, this.player);
         this.gems.forEach(g => g.draw(this.ctx, this.camera));
@@ -2192,6 +2401,90 @@ export class Game {
             const wy = (this.waypoint.y / 1000).toFixed(1);
             drawHint(this.waypoint.x, this.waypoint.y, `NAV WAYPOINT (${wx} : ${wy})`, '🎯', '#00ffcc');
         }
+    }
+
+    spawnSquadsForRegion(regionName) {
+        this.despawnSquadsForRegion(regionName);
+
+        const region = REGIONS.find(r => r.name === regionName);
+        if (!region) return;
+
+        const squadConfigs = SQUAD_DEFINITIONS[regionName] || [];
+        for (const config of squadConfigs) {
+            if (!this.defeatedSquadIds.has(config.id)) {
+                const squad = new Squad(config, region);
+                squad.spawn(this);
+                this.activeSquads.push(squad);
+            }
+        }
+    }
+
+    despawnSquadsForRegion(regionName) {
+        const toDespawn = this.activeSquads.filter(s => s.region.name === regionName);
+        for (const squad of toDespawn) {
+            squad.despawn(this);
+        }
+        this.activeSquads = this.activeSquads.filter(s => s.region.name !== regionName);
+    }
+
+    checkRegionConquest(regionName) {
+        if (this.conqueredRegions.has(regionName)) return true;
+
+        const region = REGIONS.find(r => r.name === regionName);
+        if (!region || !region.conquest) return false;
+
+        const kills = this.conquestSessionKills[regionName];
+        if (!kills) return false;
+
+        const req = region.conquest;
+        if (kills.fighters < req.fighters || kills.battleships < req.battleships || (req.dreadnoughts && kills.dreadnoughts < req.dreadnoughts)) {
+            return false;
+        }
+
+        // Check if all region squads are defeated
+        const regionSquads = SQUAD_DEFINITIONS[regionName] || [];
+        for (const s of regionSquads) {
+            if (!this.defeatedSquadIds.has(s.id)) {
+                return false;
+            }
+        }
+
+        // Check if all enemy stations (parasites/oppressors) in the region are cleared.
+        const regionObjects = this.sectorManager.objects.filter(obj => {
+            const cx = obj.x / 1000;
+            const cy = -obj.y / 1000;
+            return region.test(cx, cy);
+        });
+
+        const enemyStations = regionObjects.filter(obj => obj.initialParasite);
+
+        for (const station of enemyStations) {
+            if (!this.sectorManager.clearedIds.has(station.id)) {
+                return false;
+            }
+        }
+
+        // Met all requirements! Conquer region
+        this.conqueredRegions.add(regionName);
+        localStorage.setItem('space_explorer_conquered_regions', JSON.stringify([...this.conqueredRegions]));
+        
+        if (this.hud) {
+            this.hud.showFloatingReward(`REGION CONQUERED: ${regionName.toUpperCase()}`, '#00ffcc');
+            this.hud.showDiscoveryPopup({
+                name: regionName,
+                type: 'region_conquest',
+                description: `You have successfully liberated ${regionName} from hostile forces! It is now permanently secure.`,
+                gemReward: region.gemReward || 100,
+                sciReward: 50
+            });
+        }
+        
+        this.player.gems += region.gemReward || 100;
+        this.player.gemVault += region.gemReward || 100;
+        this.player.totalGemsCollected += region.gemReward || 100;
+        this.player.addScience(50);
+        this.player.save();
+        return true;
     }
 
     triggerGameOver() {

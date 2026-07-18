@@ -11,7 +11,13 @@ export class StellarObject {
         this.x = data.worldX;
         this.y = data.worldY;
         this.radius = data.radius;
-        this.dockRadius = data.dockRadius || 100;
+        if (this.type === 'planet') {
+            this.radius *= 2;
+            this.dockRadius = data.dockRadius ? data.dockRadius * 2 : 200;
+            this.orbitLineRadius = this.radius * 1.25;
+        } else {
+            this.dockRadius = data.dockRadius || 100;
+        }
         this.dockEffect = data.dockEffect || 'gems';
         this.color = data.color;
         this.description = data.description;
@@ -132,6 +138,16 @@ export class StellarObject {
 
     _drawPlanet(ctx) {
         const r = this.radius * 0.5;
+
+        // Draw dotted orbit line
+        ctx.save();
+        ctx.strokeStyle = this.color + '66';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 2.5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
 
         // Optional Rings (Back half)
         if (this.hasRings) {

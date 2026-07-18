@@ -55,7 +55,14 @@ export class RegionManager {
                 this._lastExitTimes.set(this._prevRegion.name, Date.now());
             }
 
+            // Clear exit time of the region we just entered
+            this._lastExitTimes.delete(newRegion.name);
+
             this._prevRegion = newRegion;
+
+            if (game?.spawnSquadsForRegion) {
+                game.spawnSquadsForRegion(newRegion.name);
+            }
 
             if (game?.questManager) {
                 game.questManager.notify('reach', { region: newRegion.name });
