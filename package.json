@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "description": "2D top-down space explorer game",
     "scripts": {
-        "start": "npx -y serve ."
+        "start": "npx -y serve .",
+        "editor": "node editor-server.js"
     }
 }
