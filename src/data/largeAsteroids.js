@@ -2,8 +2,8 @@ export const LARGE_ASTEROID_DEFINITIONS = [
     {
         "id": "large_ast_1",
         "name": "Goliath Prime",
-        "worldX": -156,
-        "worldY": -2466,
+        "worldX": 2064,
+        "worldY": 1146,
         "radius": 720
     },
     {
