@@ -15,6 +15,11 @@ let selectedEntity = null;
 let currentTab = 'list-tab';
 let filterType = 'all';
 
+// Undo Stack State
+const undoStack = [];
+let formEditingStateSaved = false;
+let dragStateSaved = false;
+
 // Drag & Drop State
 let dragTarget = null; // { type, ref, handle }
 let isPanning = false;
@@ -95,6 +100,7 @@ function init() {
 
     // Save & Export
     document.getElementById('btn-save').onclick = saveToFiles;
+    document.getElementById('btn-undo').onclick = undo;
     document.getElementById('btn-export-all').onclick = exportAllFiles;
 
     // Creation buttons
@@ -135,6 +141,64 @@ function screenToWorld(sx, sy) {
     const wy = (sy - canvas.height / 2) / camera.zoom + camera.y;
     return { x: wx, y: wy };
 }
+
+// Undo System Functions
+function saveState() {
+    const state = {
+        stellarObjects: JSON.parse(JSON.stringify(stellarObjects)),
+        regions: JSON.parse(JSON.stringify(regions)),
+        asteroids: JSON.parse(JSON.stringify(asteroids)),
+        nebulas: JSON.parse(JSON.stringify(nebulas))
+    };
+    undoStack.push(state);
+    if (undoStack.length > 50) {
+        undoStack.shift();
+    }
+    updateUndoButtonState();
+}
+
+function undo() {
+    if (undoStack.length === 0) return;
+    const previousState = undoStack.pop();
+
+    stellarObjects = previousState.stellarObjects;
+    regions = previousState.regions;
+    asteroids = previousState.asteroids;
+    nebulas = previousState.nebulas;
+
+    if (selectedEntity) {
+        const ref = selectedEntity.ref;
+        let found = null;
+        if (selectedEntity.type === 'stellar') {
+            found = stellarObjects.find(s => s.id === ref.id);
+        } else if (selectedEntity.type === 'region') {
+            found = regions.find(r => r.name === ref.name);
+        } else if (selectedEntity.type === 'asteroids') {
+            found = asteroids.find(a => a.id === ref.id);
+        } else if (selectedEntity.type === 'nebulas') {
+            found = nebulas.find(n => n.name === ref.name);
+        }
+
+        if (found) {
+            selectedEntity.ref = found;
+            updateInspectorInputs();
+        } else {
+            selectEntity(null);
+        }
+    }
+
+    renderList();
+    updateUndoButtonState();
+    requestAnimationFrame(draw);
+}
+
+function updateUndoButtonState() {
+    const btn = document.getElementById('btn-undo');
+    if (btn) {
+        btn.disabled = undoStack.length === 0;
+    }
+}
+
 
 // Drawing Functions
 function draw() {
@@ -414,6 +478,7 @@ function varColor(varName) {
 
 // Selection & Inspection Logic
 function selectEntity(entity, type) {
+    formEditingStateSaved = false;
     if (!entity) {
         selectedEntity = null;
         inspectorForm.classList.add('hidden');
@@ -640,6 +705,11 @@ function selectEntity(entity, type) {
 function updateEntityFromForm() {
     if (!selectedEntity) return;
 
+    if (!formEditingStateSaved) {
+        saveState();
+        formEditingStateSaved = true;
+    }
+
     const entity = selectedEntity.ref;
     const type = selectedEntity.type;
 
@@ -796,6 +866,7 @@ function renderList() {
 
 // Drag & Drop Mechanics & Canvas Handlers
 function onMouseDown(e) {
+    dragStateSaved = false;
     const screenPos = { x: e.clientX - canvas.getBoundingClientRect().left, y: e.clientY - canvas.getBoundingClientRect().top };
     const worldPos = screenToWorld(screenPos.x, screenPos.y);
 
@@ -896,6 +967,10 @@ function onMouseMove(e) {
     }
 
     if (dragTarget) {
+        if (!dragStateSaved) {
+            saveState();
+            dragStateSaved = true;
+        }
         const cx = worldPos.x / 1000;
         const cy = -worldPos.y / 1000;
 
@@ -1017,6 +1092,7 @@ function updateInspectorInputs() {
 
 // Add / Delete Entities
 function createNewEntity() {
+    saveState();
     const createType = document.getElementById('create-type').value;
     const centerWorld = { x: Math.round(camera.x), y: Math.round(camera.y) };
     const centerCoord = { x: parseFloat((camera.x / 1000).toFixed(1)), y: parseFloat((-camera.y / 1000).toFixed(1)) };
@@ -1107,6 +1183,7 @@ function deleteSelectedEntity() {
     const confirmDel = confirm(`Are you sure you want to delete "${selectedEntity.ref.name || 'this object'}"?`);
     if (!confirmDel) return;
 
+    saveState();
     const ref = selectedEntity.ref;
     if (selectedEntity.type === 'stellar') {
         stellarObjects = stellarObjects.filter(obj => obj !== ref);
