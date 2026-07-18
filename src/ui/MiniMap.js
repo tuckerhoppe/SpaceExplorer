@@ -61,6 +61,9 @@ export class MiniMap {
         // Trade Routes
         this.drawTradeRoutes(ctx, player);
 
+        // Nebulas
+        this.drawNebulas(ctx, player);
+
         // Stellar Objects
         this.drawStellarObjects(ctx, player);
 
@@ -419,6 +422,33 @@ export class MiniMap {
             }
             
             ctx.restore();
+        });
+    }
+
+    drawNebulas(ctx, player) {
+        if (!this.game.nebulas) return;
+        this.game.nebulas.forEach(n => {
+            n.blobs.forEach(blob => {
+                const bx = n.x + blob.dx;
+                const by = n.y + blob.dy;
+                
+                const ox = bx - player.x;
+                const oy = by - player.y;
+                
+                // Don't draw if way out of bounds
+                if (Math.abs(ox) > 8000 || Math.abs(oy) > 8000) return;
+                
+                ctx.save();
+                ctx.translate(ox, oy);
+                
+                // Draw a faint colored blob on the minimap
+                ctx.beginPath();
+                ctx.arc(0, 0, blob.r * 1.08, 0, Math.PI * 2);
+                ctx.fillStyle = n.color + '1c'; // very soft opacity (approx 11% opacity on map)
+                ctx.fill();
+                
+                ctx.restore();
+            });
         });
     }
 }

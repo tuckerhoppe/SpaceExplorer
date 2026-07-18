@@ -766,13 +766,13 @@ export class HUD {
             const totalSquadsCount = req.squads || 0;
             const defeatedSquadsCount = regionSquads.filter(s => game.defeatedSquadIds.has(s.id)).length;
 
-            let statusText = 'INCOMPLETE';
+            let statusText = 'OCCUPIED';
             let statusColor = '#ff3c3c';
             if (isConquered) {
-                statusText = 'CONQUERED ✓';
+                statusText = 'LIBERATED ✓';
                 statusColor = '#50dc78';
             } else if (isCurrentRegion) {
-                statusText = 'IN PROGRESS';
+                statusText = 'LIBERATING';
                 statusColor = '#ff9500';
             }
 
@@ -1006,6 +1006,32 @@ export class HUD {
                     ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
                 }
             }
+        }
+        
+        // Draw Large Hazard Nebulas on the fullscreen map
+        if (this.game.nebulas) {
+            this.game.nebulas.forEach(n => {
+                n.blobs.forEach(blob => {
+                    const bx = n.x + blob.dx;
+                    const by = n.y + blob.dy;
+                    
+                    const mapX = (bx / 1000) * GRID_SIZE;
+                    const mapY = (by / 1000) * GRID_SIZE;
+                    const mapRadius = (blob.r * 1.08 / 1000) * GRID_SIZE;
+                    
+                    ctx.save();
+                    const grad = ctx.createRadialGradient(mapX, mapY, 0, mapX, mapY, mapRadius);
+                    grad.addColorStop(0, n.color + '44'); // 26% opacity inside
+                    grad.addColorStop(0.7, n.color + '1c'); // fading
+                    grad.addColorStop(1, 'transparent');
+                    
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(mapX, mapY, mapRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                });
+            });
         }
 
         // Grid lines (faint)
@@ -1309,9 +1335,9 @@ export class HUD {
                     const isConquered = this.game.conqueredRegions.has(region.name);
                     
                     if (isConquered) {
-                        conquestFill.style.width = '100%';
-                        conquestFill.style.background = '#50dc78';
-                        conquestText.innerHTML = `<span style="color: #50dc78; font-weight: bold;">CONQUERED ✓</span>`;
+                        conquestFill.style.width = '0%';
+                        conquestFill.style.background = '#ff3c3c';
+                        conquestText.innerHTML = `<span style="color: #50dc78; font-weight: bold; font-size: 0.65rem; letter-spacing: 0.5px;">REGION LIBERATED!</span>`;
                     } else {
                         const kills = this.game.conquestSessionKills[region.name] || { fighters: 0, battleships: 0, dreadnoughts: 0 };
                         const req = region.conquest;
@@ -1332,18 +1358,26 @@ export class HUD {
                         const totalRequired = req.fighters + req.battleships + (req.dreadnoughts || 0) + totalStationsCount + totalSquadsCount;
                         const totalCleared = Math.min(req.fighters, kills.fighters) + Math.min(req.battleships, kills.battleships) + (req.dreadnoughts ? Math.min(req.dreadnoughts, kills.dreadnoughts) : 0) + clearedStationsCount + defeatedSquadsCount;
                         
-                        const pct = totalRequired > 0 ? (totalCleared / totalRequired) * 100 : 100;
-                        conquestFill.style.width = `${pct}%`;
-                        conquestFill.style.background = ''; // use CSS default gradient
+                        const remaining = Math.max(0, totalRequired - totalCleared);
+                        const pct = totalRequired > 0 ? (remaining / totalRequired) * 100 : 0;
                         
-                        let progressParts = [];
-                        progressParts.push(`Fighters: ${kills.fighters}/${req.fighters}`);
-                        if (req.battleships > 0) progressParts.push(`Battleships: ${kills.battleships}/${req.battleships}`);
-                        if (req.dreadnoughts > 0) progressParts.push(`Dreadnoughts: ${kills.dreadnoughts}/${req.dreadnoughts}`);
-                        if (totalStationsCount > 0) progressParts.push(`Stations: ${clearedStationsCount}/${totalStationsCount}`);
-                        if (totalSquadsCount > 0) progressParts.push(`Squads: ${defeatedSquadsCount}/${totalSquadsCount}`);
-                        
-                        conquestText.innerHTML = `Conquest: ${Math.round(pct)}%<br/><span style="font-size: 0.52rem; opacity: 0.7;">${progressParts.join(' | ')}</span>`;
+                        if (remaining === 0) {
+                            conquestFill.style.width = '0%';
+                            conquestFill.style.background = '#ff3c3c';
+                            conquestText.innerHTML = `<span style="color: #50dc78; font-weight: bold; font-size: 0.65rem; letter-spacing: 0.5px;">REGION LIBERATED!</span>`;
+                        } else {
+                            conquestFill.style.width = `${pct}%`;
+                            conquestFill.style.background = '#cc2200'; // Red color representing enemy strength
+                            
+                            let progressParts = [];
+                            progressParts.push(`Fighters: ${kills.fighters}/${req.fighters}`);
+                            if (req.battleships > 0) progressParts.push(`Battleships: ${kills.battleships}/${req.battleships}`);
+                            if (req.dreadnoughts > 0) progressParts.push(`Dreadnoughts: ${kills.dreadnoughts}/${req.dreadnoughts}`);
+                            if (totalStationsCount > 0) progressParts.push(`Stations: ${clearedStationsCount}/${totalStationsCount}`);
+                            if (totalSquadsCount > 0) progressParts.push(`Squads: ${defeatedSquadsCount}/${totalSquadsCount}`);
+                            
+                            conquestText.innerHTML = `Enemy Strength: ${Math.round(pct)}%<br/><span style="font-size: 0.52rem; opacity: 0.7;">${progressParts.join(' | ')}</span>`;
+                        }
                     }
                 }
             }

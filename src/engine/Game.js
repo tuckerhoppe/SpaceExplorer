@@ -32,6 +32,8 @@ import { CargoTrain } from '../entities/CargoTrain.js';
 import { Comet } from '../entities/Comet.js';
 import { SQUAD_DEFINITIONS } from '../data/patrols.js';
 import { Squad } from '../entities/Squad.js';
+import { NEBULA_DEFINITIONS } from '../data/nebulas.js';
+import { Nebula } from '../entities/Nebula.js';
 
 export class Game {
     constructor() {
@@ -62,6 +64,7 @@ export class Game {
         this.dreadnoughts = [];
         this.bosses = [];
         this.megaLandmarks = MEGA_LANDMARKS.map(lm => new MegaLandmark(lm));
+        this.nebulas = NEBULA_DEFINITIONS.map(def => new Nebula(def));
         this._ambushSpawned = false;
         this.waypoint = null;
 
@@ -2091,6 +2094,8 @@ export class Game {
         if (this.regionManager) {
             this.regionManager.draw(this.ctx, this.camera);
         }
+
+        this.nebulas.forEach(n => n.draw(this.ctx, this.camera));
 
         this.sectorManager.draw(this.ctx, this.camera, this.player);
         this.gems.forEach(g => g.draw(this.ctx, this.camera));

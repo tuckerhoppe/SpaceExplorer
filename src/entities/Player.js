@@ -229,6 +229,9 @@ export class Player {
         if (this.tradeRouteSpeedBoostValue > 1.0) {
             baseMax *= this.tradeRouteSpeedBoostValue;
         }
+        if (this.inNebula) {
+            baseMax *= 0.25; // 75% speed reduction
+        }
         return baseMax;
     }
 
@@ -236,6 +239,9 @@ export class Player {
         let baseAccel = this.engineMode === 'boost' ? this.boostAccel : this.thrusterAccel;
         if (this.tradeRouteSpeedBoostValue > 1.0) {
             baseAccel *= this.tradeRouteSpeedBoostValue;
+        }
+        if (this.inNebula) {
+            baseAccel *= 0.25; // 75% speed reduction
         }
         return baseAccel;
     }
@@ -257,6 +263,31 @@ export class Player {
 
     update(game) {
         if (this.health <= 0) return;
+
+        // Check if player is inside any large hazard nebula
+        this.inNebula = false;
+        let activeNebulaColor = '#00f0ff';
+        if (game.nebulas) {
+            for (const nebula of game.nebulas) {
+                if (nebula.contains(this.x, this.y)) {
+                    this.inNebula = true;
+                    activeNebulaColor = nebula.color;
+                    break;
+                }
+            }
+        }
+
+        // Spawn gas particles around ship when inside nebula
+        if (this.inNebula && Math.random() < 0.25) {
+            game.particles.push(Particle.get(
+                this.x + Utils.rand(-this.radius * 2, this.radius * 2),
+                this.y + Utils.rand(-this.radius * 2, this.radius * 2),
+                this.vx * 0.5 + Utils.rand(-0.3, 0.3),
+                this.vy * 0.5 + Utils.rand(-0.3, 0.3),
+                activeNebulaColor,
+                Utils.randInt(15, 35)
+            ));
+        }
 
         // Boost: slower turning — you commit to a direction before the surge
         const turnRate = this.engineMode === 'boost' ? 0.03 : 0.08;
