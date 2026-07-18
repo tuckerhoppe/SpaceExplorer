@@ -27,6 +27,20 @@
                 </div>
             </div>
 
+            <!-- Visibility checklist -->
+            <div class="vis-section">
+                <h3>👁️ Visibility</h3>
+                <div class="vis-grid">
+                    <label><input type="checkbox" id="vis-regions" checked> Regions</label>
+                    <label><input type="checkbox" id="vis-planets" checked> Planets</label>
+                    <label><input type="checkbox" id="vis-stations" checked> Stations</label>
+                    <label><input type="checkbox" id="vis-stars" checked> Stars</label>
+                    <label><input type="checkbox" id="vis-asteroids" checked> Asteroids</label>
+                    <label><input type="checkbox" id="vis-nebulas" checked> Nebulas</label>
+                    <label><input type="checkbox" id="vis-routes" checked> Routes</label>
+                </div>
+            </div>
+
             <!-- Tabs for Object lists & addition -->
             <div class="tabs">
                 <button class="tab-btn active" data-tab="list-tab">Entities</button>
@@ -44,6 +58,7 @@
                         <option value="regions">Regions</option>
                         <option value="asteroids">Large Asteroids</option>
                         <option value="nebulas">Nebulas</option>
+                        <option value="routes">Trade Routes</option>
                     </select>
                 </div>
                 <div class="list-container" id="entities-list">
@@ -78,8 +93,13 @@
                         <option value="asteroid">Large Asteroid</option>
                         <option value="nebula">Nebula Field</option>
                     </select>
-                </div>
                 <button id="btn-create-init" class="btn primary-btn">➕ Add to Map Center</button>
+
+                <div class="route-creator-box" style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                    <h3>Link Trade Route</h3>
+                    <p class="subtitle" style="margin-bottom: 10px;">Select exactly two stellar objects on the map first.</p>
+                    <button id="btn-create-route" class="btn secondary-btn" style="width: 100%;">🔗 Create Trade Route</button>
+                </div>
             </div>
 
             <footer class="sidebar-footer">

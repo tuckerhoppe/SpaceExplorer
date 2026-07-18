@@ -398,3 +398,42 @@ input:focus, select:focus, textarea:focus {
 .hidden {
     display: none !important;
 }
+
+/* Visibility Checklist Section */
+.vis-section {
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.vis-section h3 {
+    font-family: var(--font-header);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.vis-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 12px;
+}
+
+.vis-grid label {
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+.vis-grid input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--accent-blue);
+    margin: 0;
+    width: 14px;
+    height: 14px;
+}
+

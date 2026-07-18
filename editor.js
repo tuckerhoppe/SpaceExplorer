@@ -10,10 +10,32 @@ let regions = [...REGIONS];
 let defaultRegion = { ...DEFAULT_REGION };
 let asteroids = [...LARGE_ASTEROID_DEFINITIONS];
 let nebulas = [...NEBULA_DEFINITIONS];
+let tradeRoutes = [...TRADE_ROUTES_CONFIG];
 
-let selectedEntity = null;
+let selectedEntity = null; // Primary selected item
+let selectedEntities = []; // Array of { type, ref }
 let currentTab = 'list-tab';
 let filterType = 'all';
+
+// Marquee Selection State
+let isSelecting = false;
+let selectStart = { x: 0, y: 0 };
+let selectEnd = { x: 0, y: 0 };
+
+// Panning State Helper
+let isSpacePressed = false;
+
+
+// Visibility Filters State
+const visibility = {
+    regions: true,
+    planets: true,
+    stations: true,
+    stars: true,
+    asteroids: true,
+    nebulas: true,
+    routes: true
+};
 
 // Undo Stack State
 const undoStack = [];
@@ -77,6 +99,21 @@ function init() {
     canvas.addEventListener('wheel', onWheel, { passive: false });
     canvas.addEventListener('contextmenu', e => e.preventDefault());
 
+    // Spacebar Panning Listeners
+    window.addEventListener('keydown', e => {
+        if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+            isSpacePressed = true;
+            canvas.style.cursor = 'grab';
+        }
+    });
+    window.addEventListener('keyup', e => {
+        if (e.code === 'Space') {
+            isSpacePressed = false;
+            canvas.style.cursor = 'default';
+        }
+    });
+
+
     // Zoom Buttons
     document.getElementById('btn-zoom-in').onclick = () => zoom(1.2);
     document.getElementById('btn-zoom-out').onclick = () => zoom(0.8);
@@ -106,8 +143,23 @@ function init() {
     // Creation buttons
     document.getElementById('btn-create-init').onclick = createNewEntity;
 
+    // Link Trade Route button
+    const trBtn = document.getElementById('btn-create-route');
+    if (trBtn) trBtn.onclick = createTradeRoute;
+
     // Delete button
     document.getElementById('btn-inspect-delete').onclick = deleteSelectedEntity;
+
+    // Visibility checkboxes
+    ['regions', 'planets', 'stations', 'stars', 'asteroids', 'nebulas', 'routes'].forEach(type => {
+        const checkbox = document.getElementById(`vis-${type}`);
+        if (checkbox) {
+            checkbox.onchange = (e) => {
+                visibility[type] = e.target.checked;
+                requestAnimationFrame(draw);
+            };
+        }
+    });
 
     renderList();
     requestAnimationFrame(draw);
@@ -208,22 +260,50 @@ function draw() {
     drawGrid();
 
     // Draw Regions (lowest layer)
-    regions.forEach(region => drawRegion(region));
+    if (visibility.regions) {
+        regions.forEach(region => drawRegion(region));
+    }
 
     // Draw Trade Routes
-    drawTradeRoutes();
+    if (visibility.routes) {
+        drawTradeRoutes();
+    }
 
     // Draw Nebulas
-    nebulas.forEach(neb => drawNebula(neb));
+    if (visibility.nebulas) {
+        nebulas.forEach(neb => drawNebula(neb));
+    }
 
     // Draw Large Asteroids
-    asteroids.forEach(ast => drawAsteroid(ast));
+    if (visibility.asteroids) {
+        asteroids.forEach(ast => drawAsteroid(ast));
+    }
 
     // Draw Stellar Objects
-    stellarObjects.forEach(obj => drawStellarObject(obj));
+    stellarObjects.forEach(obj => {
+        if (obj.type === 'planet' && !visibility.planets) return;
+        if (obj.type === 'station' && !visibility.stations) return;
+        if (obj.type === 'star' && !visibility.stars) return;
+        if (obj.type === 'nebula' && !visibility.nebulas) return;
+        if (obj.type === 'asteroid' && !visibility.asteroids) return;
+        drawStellarObject(obj);
+    });
 
-    // Draw Handles for Selected Entity (if applicable)
+    // Draw Selection Highlights
     drawSelectionHighlights();
+
+    // Draw Marquee Selection Box
+    if (isSelecting) {
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.6)';
+        ctx.fillStyle = 'rgba(0, 240, 255, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        const pStart = worldToScreen(selectStart.x, selectStart.y);
+        const pEnd = worldToScreen(selectEnd.x, selectEnd.y);
+        ctx.fillRect(pStart.x, pStart.y, pEnd.x - pStart.x, pEnd.y - pStart.y);
+        ctx.strokeRect(pStart.x, pStart.y, pEnd.x - pStart.x, pEnd.y - pStart.y);
+        ctx.setLineDash([]);
+    }
 }
 
 function drawGrid() {
@@ -319,7 +399,7 @@ function drawRegion(region) {
 
 function drawTradeRoutes() {
     ctx.lineWidth = 2;
-    TRADE_ROUTES_CONFIG.forEach(route => {
+    tradeRoutes.forEach(route => {
         const pA = stellarObjects.find(s => s.id === route.planetAId);
         const pB = stellarObjects.find(s => s.id === route.planetBId);
         if (pA && pB) {
@@ -427,49 +507,75 @@ function drawStellarObject(obj) {
 }
 
 function drawSelectionHighlights() {
-    if (!selectedEntity) return;
+    if (selectedEntities.length === 0) return;
 
     ctx.strokeStyle = varColor('--accent-blue');
     ctx.lineWidth = 2;
 
-    if (selectedEntity.type === 'region') {
-        const reg = selectedEntity.ref;
-        if (!reg.bounds) return;
+    selectedEntities.forEach(sel => {
+        if (sel.type === 'region') {
+            const reg = sel.ref;
+            if (!reg.bounds) return;
 
-        const minX = reg.bounds.minX * 1000;
-        const maxX = reg.bounds.maxX * 1000;
-        const minY = -reg.bounds.maxY * 1000;
-        const maxY = -reg.bounds.minY * 1000;
+            const minX = reg.bounds.minX * 1000;
+            const maxX = reg.bounds.maxX * 1000;
+            const minY = -reg.bounds.maxY * 1000;
+            const maxY = -reg.bounds.minY * 1000;
 
-        const topLeft = worldToScreen(minX, minY);
-        const bottomRight = worldToScreen(maxX, maxY);
+            const topLeft = worldToScreen(minX, minY);
+            const bottomRight = worldToScreen(maxX, maxY);
 
-        // Draw handles at 4 corners
-        const handles = [
-            topLeft, // TL
-            { x: bottomRight.x, y: topLeft.y }, // TR
-            bottomRight, // BR
-            { x: topLeft.x, y: bottomRight.y } // BL
-        ];
+            const w = bottomRight.x - topLeft.x;
+            const h = bottomRight.y - topLeft.y;
+            ctx.strokeStyle = varColor('--accent-blue');
+            ctx.lineWidth = 2;
+            ctx.strokeRect(topLeft.x, topLeft.y, w, h);
 
-        ctx.fillStyle = '#fff';
-        handles.forEach(h => {
+            // Draw handles only for the primary selected region
+            if (selectedEntity && selectedEntity.ref === reg) {
+                const handles = [
+                    topLeft, // TL
+                    { x: bottomRight.x, y: topLeft.y }, // TR
+                    bottomRight, // BR
+                    { x: topLeft.x, y: bottomRight.y } // BL
+                ];
+
+                ctx.fillStyle = '#fff';
+                handles.forEach(h => {
+                    ctx.beginPath();
+                    ctx.rect(h.x - 5, h.y - 5, 10, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                });
+            }
+        } else if (sel.type === 'route') {
+            const route = sel.ref;
+            const pA = stellarObjects.find(s => s.id === route.planetAId);
+            const pB = stellarObjects.find(s => s.id === route.planetBId);
+            if (pA && pB) {
+                const screenA = worldToScreen(pA.worldX, pA.worldY);
+                const screenB = worldToScreen(pB.worldX, pB.worldY);
+                ctx.save();
+                ctx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.moveTo(screenA.x, screenA.y);
+                ctx.lineTo(screenB.x, screenB.y);
+                ctx.stroke();
+                ctx.restore();
+            }
+        } else {
+            const item = sel.ref;
+            const screen = worldToScreen(item.worldX, item.worldY);
+            const size = Math.max(15, (item.radius || item.baseRadius || 500) * camera.zoom + 5);
+
+            ctx.setLineDash([4, 4]);
             ctx.beginPath();
-            ctx.rect(h.x - 5, h.y - 5, 10, 10);
-            ctx.fill();
+            ctx.arc(screen.x, screen.y, size, 0, Math.PI * 2);
             ctx.stroke();
-        });
-    } else {
-        const item = selectedEntity.ref;
-        const screen = worldToScreen(item.worldX, item.worldY);
-        const size = Math.max(15, (item.radius || item.baseRadius || 500) * camera.zoom + 5);
-
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.arc(screen.x, screen.y, size, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-    }
+            ctx.setLineDash([]);
+        }
+    });
 }
 
 function varColor(varName) {
@@ -477,10 +583,11 @@ function varColor(varName) {
 }
 
 // Selection & Inspection Logic
-function selectEntity(entity, type) {
+function selectEntity(entity, type, keepMulti = false) {
     formEditingStateSaved = false;
     if (!entity) {
         selectedEntity = null;
+        selectedEntities = [];
         inspectorForm.classList.add('hidden');
         inspectorEmpty.classList.remove('hidden');
         renderList();
@@ -489,8 +596,25 @@ function selectEntity(entity, type) {
     }
 
     selectedEntity = { type, ref: entity };
+    if (!keepMulti) {
+        selectedEntities = [{ type, ref: entity }];
+    }
+
     inspectorEmpty.classList.add('hidden');
     inspectorForm.classList.remove('hidden');
+
+    if (selectedEntities.length > 1) {
+        inspectorTitle.innerText = `Multiple Selected (${selectedEntities.length})`;
+        inspectorFields.innerHTML = `
+            <div class="info-message" style="padding: 10px 0; text-align: left; color: var(--accent-blue);">
+                🚀 Selected <strong>${selectedEntities.length}</strong> items. Drag them on the map to move them together.
+            </div>
+        `;
+        renderList();
+        requestAnimationFrame(draw);
+        switchTab('inspector-tab');
+        return;
+    }
 
     inspectorTitle.innerText = `Edit ${entity.name || 'Unnamed'}`;
 
@@ -687,6 +811,29 @@ function selectEntity(entity, type) {
                 <input type="number" id="edit-blobs" value="${entity.blobCount || 10}">
             </div>
         `;
+    } else if (type === 'route') {
+        inspectorTitle.innerText = `Edit Trade Route`;
+        html = `
+            <input type="hidden" id="edit-id" value="${entity.id}">
+            <div class="form-group">
+                <label for="edit-route-id">Route ID</label>
+                <input type="text" id="edit-route-id" value="${entity.id}" readonly style="opacity: 0.6;">
+            </div>
+            <div class="form-group">
+                <label for="edit-color">Color Hex</label>
+                <input type="color" id="edit-color" value="${entity.color || '#00ffaa'}">
+            </div>
+            <div class="form-group-row">
+                <div class="form-group">
+                    <label for="edit-width">Width (World Px)</label>
+                    <input type="number" id="edit-width" value="${entity.width || 250}">
+                </div>
+                <div class="form-group">
+                    <label for="edit-speed">Speed Multiplier</label>
+                    <input type="number" step="0.1" id="edit-speed" value="${entity.speedMultiplier || 2.5}">
+                </div>
+            </div>
+        `;
     }
 
     inspectorFields.innerHTML = html;
@@ -801,6 +948,12 @@ function updateEntityFromForm() {
 
         const blobsVal = parseInt(document.getElementById('edit-blobs')?.value || 0);
         if (blobsVal !== undefined) entity.blobCount = blobsVal;
+    } else if (type === 'route') {
+        const widthVal = parseInt(document.getElementById('edit-width')?.value || 250);
+        if (!isNaN(widthVal)) entity.width = widthVal;
+
+        const speedVal = parseFloat(document.getElementById('edit-speed')?.value || 2.5);
+        if (!isNaN(speedVal)) entity.speedMultiplier = speedVal;
     }
 
     renderList();
@@ -827,6 +980,15 @@ function renderList() {
     }
     if (filterType === 'all' || filterType === 'nebulas') {
         nebulas.forEach(neb => list.push({ item: neb, type: 'nebulas', label: neb.name, subtitle: 'Nebula', cx: neb.worldX / 1000, cy: -neb.worldY / 1000 }));
+    }
+    if (filterType === 'all' || filterType === 'routes') {
+        tradeRoutes.forEach(route => {
+            const pA = stellarObjects.find(s => s.id === route.planetAId);
+            const pB = stellarObjects.find(s => s.id === route.planetBId);
+            const cx = pA && pB ? ((pA.coordX + pB.coordX) / 2) : 0;
+            const cy = pA && pB ? ((pA.coordY + pB.coordY) / 2) : 0;
+            list.push({ item: route, type: 'route', label: route.id, subtitle: 'Trade Route', cx, cy });
+        });
     }
 
     // Sort by name
@@ -856,6 +1018,13 @@ function renderList() {
             } else if (entry.item.bounds) {
                 camera.x = ((entry.item.bounds.minX + entry.item.bounds.maxX) / 2) * 1000;
                 camera.y = -((entry.item.bounds.minY + entry.item.bounds.maxY) / 2) * 1000;
+            } else if (entry.type === 'route') {
+                const pA = stellarObjects.find(s => s.id === entry.item.planetAId);
+                const pB = stellarObjects.find(s => s.id === entry.item.planetBId);
+                if (pA && pB) {
+                    camera.x = (pA.worldX + pB.worldX) / 2;
+                    camera.y = (pA.worldY + pB.worldY) / 2;
+                }
             }
             requestAnimationFrame(draw);
         };
@@ -864,21 +1033,64 @@ function renderList() {
     });
 }
 
+function getDistanceToSegment(p, v, w) {
+    const l2 = Math.hypot(v.x - w.x, v.y - w.y) ** 2;
+    if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+    let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+}
+
 // Drag & Drop Mechanics & Canvas Handlers
 function onMouseDown(e) {
     dragStateSaved = false;
     const screenPos = { x: e.clientX - canvas.getBoundingClientRect().left, y: e.clientY - canvas.getBoundingClientRect().top };
     const worldPos = screenToWorld(screenPos.x, screenPos.y);
 
-    if (e.button === 2 || e.button === 1 || e.shiftKey) {
-        // Right Click/Middle Click or Shift+Click is panning
+    if (e.button === 2 || e.button === 1) {
+        // Right Click/Middle Click is panning
         isPanning = true;
         panStart = { x: e.clientX, y: e.clientY };
         return;
     }
 
+    const isMultiSelectKey = e.shiftKey || e.ctrlKey || e.metaKey;
+
+    function handleSelection(item, type) {
+        if (isMultiSelectKey) {
+            const index = selectedEntities.findIndex(sel => sel.ref === item);
+            if (index !== -1) {
+                selectedEntities.splice(index, 1);
+                if (selectedEntity && selectedEntity.ref === item) {
+                    selectedEntity = selectedEntities[0] || null;
+                }
+            } else {
+                selectedEntities.push({ type, ref: item });
+                selectedEntity = { type, ref: item };
+            }
+            selectEntity(selectedEntity ? selectedEntity.ref : null, selectedEntity ? selectedEntity.type : null, true);
+        } else {
+            const exists = selectedEntities.some(sel => sel.ref === item);
+            if (!exists) {
+                selectedEntities = [{ type, ref: item }];
+                selectedEntity = { type, ref: item };
+            }
+            selectEntity(selectedEntity.ref, selectedEntity.type, true);
+        }
+
+        // Cache initial positions for multi dragging
+        selectedEntities.forEach(sel => {
+            if (sel.type === 'stellar' || sel.type === 'asteroids' || sel.type === 'nebulas') {
+                sel.startWorldX = sel.ref.worldX;
+                sel.startWorldY = sel.ref.worldY;
+            } else if (sel.type === 'region' && sel.ref.bounds) {
+                sel.startBounds = { ...sel.ref.bounds };
+            }
+        });
+    }
+
     // Check for Region Resizing Handles
-    if (selectedEntity && selectedEntity.type === 'region' && selectedEntity.ref.bounds) {
+    if (selectedEntity && selectedEntity.type === 'region' && selectedEntity.ref.bounds && selectedEntities.length === 1) {
         const reg = selectedEntity.ref;
         const minX = reg.bounds.minX * 1000;
         const maxX = reg.bounds.maxX * 1000;
@@ -902,51 +1114,88 @@ function onMouseDown(e) {
         }
     }
 
-    // Check other objects (prioritize smaller sizes)
     // Stellar Objects
-    for (const obj of stellarObjects) {
-        const dist = Math.hypot(worldPos.x - obj.worldX, worldPos.y - obj.worldY);
-        if (dist < Math.max(400, obj.radius || 300)) {
-            dragTarget = { type: 'stellar', ref: obj };
-            selectEntity(obj, 'stellar');
-            return;
+    if (visibility.planets || visibility.stations || visibility.stars || visibility.asteroids || visibility.nebulas) {
+        for (const obj of stellarObjects) {
+            if (obj.type === 'planet' && !visibility.planets) continue;
+            if (obj.type === 'station' && !visibility.stations) continue;
+            if (obj.type === 'star' && !visibility.stars) continue;
+            if (obj.type === 'nebula' && !visibility.nebulas) continue;
+            if (obj.type === 'asteroid' && !visibility.asteroids) continue;
+
+            const dist = Math.hypot(worldPos.x - obj.worldX, worldPos.y - obj.worldY);
+            if (dist < Math.max(400, obj.radius || 300)) {
+                handleSelection(obj, 'stellar');
+                dragTarget = { type: 'stellar', ref: obj, startWorld: { ...worldPos } };
+                return;
+            }
         }
     }
 
     // Asteroids
-    for (const ast of asteroids) {
-        const dist = Math.hypot(worldPos.x - ast.worldX, worldPos.y - ast.worldY);
-        if (dist < Math.max(400, ast.radius || 300)) {
-            dragTarget = { type: 'asteroids', ref: ast };
-            selectEntity(ast, 'asteroids');
-            return;
+    if (visibility.asteroids) {
+        for (const ast of asteroids) {
+            const dist = Math.hypot(worldPos.x - ast.worldX, worldPos.y - ast.worldY);
+            if (dist < Math.max(400, ast.radius || 300)) {
+                handleSelection(ast, 'asteroids');
+                dragTarget = { type: 'asteroids', ref: ast, startWorld: { ...worldPos } };
+                return;
+            }
         }
     }
 
     // Nebulas
-    for (const neb of nebulas) {
-        const dist = Math.hypot(worldPos.x - neb.worldX, worldPos.y - neb.worldY);
-        if (dist < Math.max(500, neb.baseRadius || 400)) {
-            dragTarget = { type: 'nebulas', ref: neb };
-            selectEntity(neb, 'nebulas');
-            return;
+    if (visibility.nebulas) {
+        for (const neb of nebulas) {
+            const dist = Math.hypot(worldPos.x - neb.worldX, worldPos.y - neb.worldY);
+            if (dist < Math.max(500, neb.baseRadius || 400)) {
+                handleSelection(neb, 'nebulas');
+                dragTarget = { type: 'nebulas', ref: neb, startWorld: { ...worldPos } };
+                return;
+            }
         }
     }
 
     // Regions Click (inside region box)
-    for (const reg of regions) {
-        if (!reg.bounds) continue;
-        const cx = worldPos.x / 1000;
-        const cy = -worldPos.y / 1000;
-        if (cx >= reg.bounds.minX && cx <= reg.bounds.maxX && cy >= reg.bounds.minY && cy <= reg.bounds.maxY) {
-            dragTarget = { type: 'region-drag', ref: reg, startWorld: { ...worldPos }, startBounds: { ...reg.bounds } };
-            selectEntity(reg, 'region');
-            return;
+    if (visibility.regions) {
+        for (const reg of regions) {
+            if (!reg.bounds) continue;
+            const cx = worldPos.x / 1000;
+            const cy = -worldPos.y / 1000;
+            if (cx >= reg.bounds.minX && cx <= reg.bounds.maxX && cy >= reg.bounds.minY && cy <= reg.bounds.maxY) {
+                handleSelection(reg, 'region');
+                dragTarget = { type: 'region-drag', ref: reg, startWorld: { ...worldPos }, startBounds: { ...reg.bounds } };
+                return;
+            }
         }
     }
 
-    // Clicked empty space: deselect
+    // Trade Routes Click
+    if (visibility.routes) {
+        for (const route of tradeRoutes) {
+            const pA = stellarObjects.find(s => s.id === route.planetAId);
+            const pB = stellarObjects.find(s => s.id === route.planetBId);
+            if (pA && pB) {
+                const dist = getDistanceToSegment(worldPos, { x: pA.worldX, y: pA.worldY }, { x: pB.worldX, y: pB.worldY });
+                if (dist < Math.max(200, (route.width || 250) / 2)) {
+                    handleSelection(route, 'route');
+                    return;
+                }
+            }
+        }
+    }
+
+    // Clicked empty space: Pan if Shift or Space is held, otherwise start marquee select
+    if (isMultiSelectKey || isSpacePressed) {
+        isPanning = true;
+        panStart = { x: e.clientX, y: e.clientY };
+        return;
+    }
+
     selectEntity(null);
+    isSelecting = true;
+    selectStart = { ...worldPos };
+    selectEnd = { ...worldPos };
 }
 
 function onMouseMove(e) {
@@ -966,32 +1215,22 @@ function onMouseMove(e) {
         return;
     }
 
+    if (isSelecting) {
+        selectEnd = { ...worldPos };
+        requestAnimationFrame(draw);
+        return;
+    }
+
     if (dragTarget) {
         if (!dragStateSaved) {
             saveState();
             dragStateSaved = true;
         }
+
         const cx = worldPos.x / 1000;
         const cy = -worldPos.y / 1000;
 
-        if (dragTarget.type === 'stellar') {
-            const obj = dragTarget.ref;
-            obj.worldX = Math.round(worldPos.x);
-            obj.worldY = Math.round(worldPos.y);
-            obj.coordX = parseFloat((worldPos.x / 1000).toFixed(2));
-            obj.coordY = parseFloat((-worldPos.y / 1000).toFixed(2));
-            updateInspectorInputs();
-        } else if (dragTarget.type === 'asteroids') {
-            const ast = dragTarget.ref;
-            ast.worldX = Math.round(worldPos.x);
-            ast.worldY = Math.round(worldPos.y);
-            updateInspectorInputs();
-        } else if (dragTarget.type === 'nebulas') {
-            const neb = dragTarget.ref;
-            neb.worldX = Math.round(worldPos.x);
-            neb.worldY = Math.round(worldPos.y);
-            updateInspectorInputs();
-        } else if (dragTarget.type === 'region-handle') {
+        if (dragTarget.type === 'region-handle') {
             const reg = dragTarget.ref;
             const stepVal = e.shiftKey ? 0.1 : 0.5; // Snap options
             const snappedX = Math.round(cx / stepVal) * stepVal;
@@ -1015,24 +1254,45 @@ function onMouseMove(e) {
                 worldY: -((reg.bounds.minY + reg.bounds.maxY) / 2) * 1000
             };
             updateInspectorInputs();
-        } else if (dragTarget.type === 'region-drag') {
-            const reg = dragTarget.ref;
-            const dx = cx - dragTarget.startWorld.x / 1000;
-            const dy = cy - (-dragTarget.startWorld.y / 1000);
-            
-            const stepVal = e.shiftKey ? 0.1 : 0.5;
-            const snappedDx = Math.round(dx / stepVal) * stepVal;
-            const snappedDy = Math.round(dy / stepVal) * stepVal;
+        } else {
+            // Multi drag offset
+            const dx = worldPos.x - dragTarget.startWorld.x;
+            const dy = worldPos.y - dragTarget.startWorld.y;
 
-            reg.bounds.minX = dragTarget.startBounds.minX + snappedDx;
-            reg.bounds.maxX = dragTarget.startBounds.maxX + snappedDx;
-            reg.bounds.minY = dragTarget.startBounds.minY + snappedDy;
-            reg.bounds.maxY = dragTarget.startBounds.maxY + snappedDy;
+            selectedEntities.forEach(sel => {
+                if (sel.type === 'stellar') {
+                    const obj = sel.ref;
+                    obj.worldX = Math.round(sel.startWorldX + dx);
+                    obj.worldY = Math.round(sel.startWorldY + dy);
+                    obj.coordX = parseFloat((obj.worldX / 1000).toFixed(2));
+                    obj.coordY = parseFloat((-obj.worldY / 1000).toFixed(2));
+                } else if (sel.type === 'asteroids') {
+                    const ast = sel.ref;
+                    ast.worldX = Math.round(sel.startWorldX + dx);
+                    ast.worldY = Math.round(sel.startWorldY + dy);
+                } else if (sel.type === 'nebulas') {
+                    const neb = sel.ref;
+                    neb.worldX = Math.round(sel.startWorldX + dx);
+                    neb.worldY = Math.round(sel.startWorldY + dy);
+                } else if (sel.type === 'region') {
+                    const reg = sel.ref;
+                    if (reg.bounds) {
+                        const stepVal = e.shiftKey ? 0.1 : 0.5;
+                        const snappedDx = Math.round((dx / 1000) / stepVal) * stepVal;
+                        const snappedDy = Math.round((-dy / 1000) / stepVal) * stepVal;
 
-            reg.center = {
-                worldX: ((reg.bounds.minX + reg.bounds.maxX) / 2) * 1000,
-                worldY: -((reg.bounds.minY + reg.bounds.maxY) / 2) * 1000
-            };
+                        reg.bounds.minX = sel.startBounds.minX + snappedDx;
+                        reg.bounds.maxX = sel.startBounds.maxX + snappedDx;
+                        reg.bounds.minY = sel.startBounds.minY + snappedDy;
+                        reg.bounds.maxY = sel.startBounds.maxY + snappedDy;
+
+                        reg.center = {
+                            worldX: ((reg.bounds.minX + reg.bounds.maxX) / 2) * 1000,
+                            worldY: -((reg.bounds.minY + reg.bounds.maxY) / 2) * 1000
+                        };
+                    }
+                }
+            });
             updateInspectorInputs();
         }
 
@@ -1040,9 +1300,80 @@ function onMouseMove(e) {
     }
 }
 
-function onMouseUp() {
+function onMouseUp(e) {
     dragTarget = null;
     isPanning = false;
+
+    if (isSelecting) {
+        isSelecting = false;
+        
+        const dx = Math.abs(selectEnd.x - selectStart.x);
+        const dy = Math.abs(selectEnd.y - selectStart.y);
+
+        if (dx > 50 || dy > 50) { // Require a small threshold to start marquee
+            const minX = Math.min(selectStart.x, selectEnd.x);
+            const maxX = Math.max(selectStart.x, selectEnd.x);
+            const minY = Math.min(selectStart.y, selectEnd.y);
+            const maxY = Math.max(selectStart.y, selectEnd.y);
+
+            function isInside(wx, wy) {
+                return wx >= minX && wx <= maxX && wy >= minY && wy <= maxY;
+            }
+
+            const newSelections = [];
+
+            // Stellar Objects
+            stellarObjects.forEach(obj => {
+                if (obj.type === 'planet' && !visibility.planets) return;
+                if (obj.type === 'station' && !visibility.stations) return;
+                if (obj.type === 'star' && !visibility.stars) return;
+                if (obj.type === 'nebula' && !visibility.nebulas) return;
+                if (obj.type === 'asteroid' && !visibility.asteroids) return;
+
+                if (isInside(obj.worldX, obj.worldY)) {
+                    newSelections.push({ type: 'stellar', ref: obj });
+                }
+            });
+
+            // Asteroids
+            if (visibility.asteroids) {
+                asteroids.forEach(ast => {
+                    if (isInside(ast.worldX, ast.worldY)) {
+                        newSelections.push({ type: 'asteroids', ref: ast });
+                    }
+                });
+            }
+
+            // Nebulas
+            if (visibility.nebulas) {
+                nebulas.forEach(neb => {
+                    if (isInside(neb.worldX, neb.worldY)) {
+                        newSelections.push({ type: 'nebulas', ref: neb });
+                    }
+                });
+            }
+
+            // Regions
+            if (visibility.regions) {
+                regions.forEach(reg => {
+                    if (reg.bounds) {
+                        const rcx = reg.center ? reg.center.worldX : ((reg.bounds.minX + reg.bounds.maxX) / 2) * 1000;
+                        const rcy = reg.center ? reg.center.worldY : -((reg.bounds.minY + reg.bounds.maxY) / 2) * 1000;
+                        if (isInside(rcx, rcy)) {
+                            newSelections.push({ type: 'region', ref: reg });
+                        }
+                    }
+                });
+            }
+
+            if (newSelections.length > 0) {
+                selectedEntities = newSelections;
+                selectedEntity = newSelections[0];
+                selectEntity(selectedEntity.ref, selectedEntity.type, true);
+            }
+        }
+        requestAnimationFrame(draw);
+    }
 }
 
 function onWheel(e) {
@@ -1180,7 +1511,8 @@ function createNewEntity() {
 function deleteSelectedEntity() {
     if (!selectedEntity) return;
 
-    const confirmDel = confirm(`Are you sure you want to delete "${selectedEntity.ref.name || 'this object'}"?`);
+    const label = selectedEntity.ref.name || selectedEntity.ref.id || 'this object';
+    const confirmDel = confirm(`Are you sure you want to delete "${label}"?`);
     if (!confirmDel) return;
 
     saveState();
@@ -1193,6 +1525,8 @@ function deleteSelectedEntity() {
         asteroids = asteroids.filter(ast => ast !== ref);
     } else if (selectedEntity.type === 'nebulas') {
         nebulas = nebulas.filter(neb => neb !== ref);
+    } else if (selectedEntity.type === 'route') {
+        tradeRoutes = tradeRoutes.filter(r => r !== ref);
     }
 
     selectEntity(null);
@@ -1205,12 +1539,14 @@ async function saveToFiles() {
         const astContent = serializeAsteroids();
         const nebContent = serializeNebulas();
         const regContent = serializeRegions();
+        const trContent = serializeTradeRoutes();
 
         const files = [
             { filename: 'stellarObjects.js', content: stContent },
             { filename: 'largeAsteroids.js', content: astContent },
             { filename: 'nebulas.js', content: nebContent },
-            { filename: 'regions.js', content: regContent }
+            { filename: 'regions.js', content: regContent },
+            { filename: 'tradeRoutes.js', content: trContent }
         ];
 
         for (const file of files) {
@@ -1254,6 +1590,7 @@ function exportAllFiles() {
     exportFile('largeAsteroids.js', serializeAsteroids());
     exportFile('nebulas.js', serializeNebulas());
     exportFile('regions.js', serializeRegions());
+    exportFile('tradeRoutes.js', serializeTradeRoutes());
 }
 
 // Data Serializers to reconstruct the exact clean JavaScript Code
@@ -1353,6 +1690,60 @@ function serializeRegions() {
 
     out += `export const DEFAULT_REGION = ${defaultLines.join('\n')};\n`;
 
+    return out;
+}
+
+function createTradeRoute() {
+    const stars = selectedEntities.filter(sel => sel.type === 'stellar');
+    if (stars.length !== 2 || selectedEntities.length !== 2) {
+        alert("Please select exactly two stellar objects on the map first (use Shift + Click to select multiple).");
+        return;
+    }
+
+    const pA = stars[0].ref;
+    const pB = stars[1].ref;
+
+    // Check if route already exists
+    const exists = tradeRoutes.some(r => 
+        (r.planetAId === pA.id && r.planetBId === pB.id) || 
+        (r.planetAId === pB.id && r.planetBId === pA.id)
+    );
+
+    if (exists) {
+        alert("A trade route already exists between these two objects.");
+        return;
+    }
+
+    saveState();
+
+    const cleanId = (id) => id.replace('planet_', '').replace('station_', '').replace('star_', '');
+    const newRoute = {
+        id: `${cleanId(pA.id)}_${cleanId(pB.id)}`,
+        planetAId: pA.id,
+        planetBId: pB.id,
+        color: '#00ffaa',
+        width: 250,
+        speedMultiplier: 2.5
+    };
+
+    tradeRoutes.push(newRoute);
+    
+    // Select the new route
+    selectedEntities = [{ type: 'route', ref: newRoute }];
+    selectedEntity = { type: 'route', ref: newRoute };
+    selectEntity(newRoute, 'route', true);
+
+    showStatus("Created Trade Route!");
+    renderList();
+    requestAnimationFrame(draw);
+}
+
+function serializeTradeRoutes() {
+    let out = `export const TRADE_ROUTES_CONFIG = [\n`;
+    const formatted = tradeRoutes.map(route => {
+        return '    ' + JSON.stringify(route, null, 4).replace(/\n/g, '\n    ');
+    });
+    out += formatted.join(',\n') + '\n];\n';
     return out;
 }
 
