@@ -64,6 +64,9 @@ export class MiniMap {
         // Nebulas
         this.drawNebulas(ctx, player);
 
+        // Indestructible Large Asteroids
+        this.drawIndestructibleAsteroids(ctx, player);
+
         // Stellar Objects
         this.drawStellarObjects(ctx, player);
 
@@ -449,6 +452,32 @@ export class MiniMap {
                 
                 ctx.restore();
             });
+        });
+    }
+
+    drawIndestructibleAsteroids(ctx, player) {
+        if (!this.game.largeAsteroids) return;
+        this.game.largeAsteroids.forEach(la => {
+            const ax = la.x - player.x;
+            const ay = la.y - player.y;
+
+            // Large tactical range for these massive structures
+            const tacticalRange = 8000;
+            if (Math.abs(ax) > tacticalRange || Math.abs(ay) > tacticalRange) return;
+
+            ctx.save();
+            ctx.translate(ax, ay);
+
+            // Gray solid/textured circle on minimap
+            ctx.fillStyle = 'rgba(79, 82, 87, 0.9)'; // darker stone gray
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 15;
+            ctx.beginPath();
+            ctx.arc(0, 0, la.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.restore();
         });
     }
 }

@@ -12,10 +12,10 @@ export class Player {
         this.radius = 18; // will be overwritten by updateShipRadius() after _loadProgress
 
         this.stats = { engine: 1, hull: 1, weapons: 1, magnet: 1, booster: 1, cargo: 0, healing: 0 };
-        this.tech = { 
-            biometric_filtering: false, 
-            heat_shield: false, 
-            auto_heal: false, 
+        this.tech = {
+            biometric_filtering: false,
+            heat_shield: false,
+            auto_heal: false,
             proton_torpedo: false,
             gravity_laser: false,
             evasive_maneuvers: false
@@ -427,7 +427,7 @@ export class Player {
 
             // Dash Recharge logic (3x faster: 0.004 -> 0.012)
             if (this.dashCharges < this.maxDashCharges) {
-                this.dashRechargeTimer = Math.min(1, this.dashRechargeTimer + 0.012); 
+                this.dashRechargeTimer = Math.min(1, this.dashRechargeTimer + 0.012);
                 if (this.dashRechargeTimer >= 1) {
                     this.dashCharges++;
                     this.dashRechargeTimer = (this.dashCharges < this.maxDashCharges) ? 0 : 0;
@@ -500,14 +500,14 @@ export class Player {
             ctx.save();
             ctx.beginPath();
             ctx.arc(0, 0, this.radius + 8 + intensity * 4 + Math.sin(performance.now() / 80) * 3, 0, Math.PI * 2);
-            
+
             const alphaHex = Math.round(intensity * 176).toString(16).padStart(2, '0');
             ctx.strokeStyle = this.tradeRouteColor + alphaHex;
             ctx.lineWidth = 2 + intensity * 1.5;
             ctx.shadowColor = this.tradeRouteColor;
             ctx.shadowBlur = Math.round(10 + intensity * 8);
             ctx.stroke();
-            
+
             // Faint inner speed ring
             ctx.beginPath();
             ctx.arc(0, 0, this.radius + 3 + intensity * 2, 0, Math.PI * 2);

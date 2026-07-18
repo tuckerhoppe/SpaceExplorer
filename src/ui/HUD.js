@@ -1034,6 +1034,26 @@ export class HUD {
             });
         }
 
+        // Draw Large Indestructible Asteroids on the fullscreen map
+        if (this.game.largeAsteroids) {
+            this.game.largeAsteroids.forEach(la => {
+                const mapX = (la.x / 1000) * GRID_SIZE;
+                const mapY = (la.y / 1000) * GRID_SIZE;
+                const mapRadius = (la.radius / 1000) * GRID_SIZE;
+
+                ctx.save();
+                ctx.fillStyle = 'rgba(79, 82, 87, 0.9)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.lineWidth = 1.5 / this.mapState.zoom;
+                
+                ctx.beginPath();
+                ctx.arc(mapX, mapY, mapRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            });
+        }
+
         // Grid lines (faint)
         ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
         ctx.lineWidth = 1 / this.mapState.zoom;

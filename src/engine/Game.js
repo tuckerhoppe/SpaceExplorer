@@ -34,6 +34,8 @@ import { SQUAD_DEFINITIONS } from '../data/patrols.js';
 import { Squad } from '../entities/Squad.js';
 import { NEBULA_DEFINITIONS } from '../data/nebulas.js';
 import { Nebula } from '../entities/Nebula.js';
+import { LARGE_ASTEROID_DEFINITIONS } from '../data/largeAsteroids.js';
+import { LargeAsteroid } from '../entities/LargeAsteroid.js';
 
 export class Game {
     constructor() {
@@ -65,6 +67,7 @@ export class Game {
         this.bosses = [];
         this.megaLandmarks = MEGA_LANDMARKS.map(lm => new MegaLandmark(lm));
         this.nebulas = NEBULA_DEFINITIONS.map(def => new Nebula(def));
+        this.largeAsteroids = LARGE_ASTEROID_DEFINITIONS.map(def => new LargeAsteroid(def));
         this._ambushSpawned = false;
         this.waypoint = null;
 
@@ -540,6 +543,80 @@ export class Game {
         this.player.update(this);
         this.ghost.update(this);
 
+        // --- LARGE ASTEROIDS COLLISION CHECK ---
+        if (this.largeAsteroids) {
+            this.largeAsteroids.forEach(largeAst => {
+                largeAst.update(); // Update slow rotation
+
+                // 1. Player collision
+                const distToPlayer = Utils.dist(this.player.x, this.player.y, largeAst.x, largeAst.y);
+                if (this.player.health > 0 && distToPlayer < this.player.radius + largeAst.radius) {
+                    const angle = Utils.ang(largeAst.x, largeAst.y, this.player.x, this.player.y);
+                    
+                    // Push player out to boundary
+                    this.player.x = largeAst.x + Math.cos(angle) * (this.player.radius + largeAst.radius);
+                    this.player.y = largeAst.y + Math.sin(angle) * (this.player.radius + largeAst.radius);
+
+                    // Reflect / Bounce velocity
+                    const normalX = Math.cos(angle);
+                    const normalY = Math.sin(angle);
+                    const dot = this.player.vx * normalX + this.player.vy * normalY;
+                    
+                    // Only bounce and damage if moving towards the asteroid
+                    if (dot < 0) {
+                        // Elastic bounce + extra repulsive impulse away from the rock
+                        this.player.vx = (this.player.vx - 2 * dot * normalX) * 0.85 + normalX * 2.0;
+                        this.player.vy = (this.player.vy - 2 * dot * normalY) * 0.85 + normalY * 2.0;
+                        
+                        // Inflict small damage (5 HP)
+                        this.player.health -= 5;
+                        this.hud.update(this.player);
+                        this.shakeIntensity = Math.max(this.shakeIntensity, 6);
+                        
+                        // Spawn dust/debris particles
+                        for (let i = 0; i < 6; i++) {
+                            const pAngle = angle + Utils.rand(-0.6, 0.6);
+                            const pSpeed = Utils.rand(1, 3.5);
+                            this.particles.push(Particle.get(
+                                this.player.x - Math.cos(angle) * this.player.radius,
+                                this.player.y - Math.sin(angle) * this.player.radius,
+                                Math.cos(pAngle) * pSpeed,
+                                Math.sin(pAngle) * pSpeed,
+                                '#888888',
+                                Utils.randInt(12, 24)
+                            ));
+                        }
+
+                        if (this.player.health <= 0 && !this.gameOver) {
+                            this.triggerGameOver();
+                        }
+                    }
+                }
+
+                // 2. Enemy ship collisions (fighters, battleships, dreadnoughts, neutrals)
+                const checkEnemyShipCollision = (ship) => {
+                    const dist = Utils.dist(ship.x, ship.y, largeAst.x, largeAst.y);
+                    if (dist < ship.radius + largeAst.radius) {
+                        const angle = Utils.ang(largeAst.x, largeAst.y, ship.x, ship.y);
+                        ship.x = largeAst.x + Math.cos(angle) * (ship.radius + largeAst.radius);
+                        ship.y = largeAst.y + Math.sin(angle) * (ship.radius + largeAst.radius);
+                        
+                        const normalX = Math.cos(angle);
+                        const normalY = Math.sin(angle);
+                        const dot = ship.vx * normalX + ship.vy * normalY;
+                        if (dot < 0) {
+                            ship.vx = (ship.vx - 2 * dot * normalX) * 0.4;
+                            ship.vy = (ship.vy - 2 * dot * normalY) * 0.4;
+                        }
+                    }
+                };
+                this.enemies.forEach(checkEnemyShipCollision);
+                this.battleships.forEach(checkEnemyShipCollision);
+                this.dreadnoughts.forEach(checkEnemyShipCollision);
+                this.neutralShips.forEach(checkEnemyShipCollision);
+            });
+        }
+
         if (this.tradeRouteManager) {
             this.tradeRouteManager.update(this);
         }
@@ -804,6 +881,18 @@ export class Game {
         for (let a = this.asteroids.length - 1; a >= 0; a--) {
             let ast = this.asteroids[a];
             ast.update();
+
+            // Check collision with large asteroids (shatter small asteroid)
+            let shattered = false;
+            for (const largeAst of this.largeAsteroids) {
+                if (Utils.dist(ast.x, ast.y, largeAst.x, largeAst.y) < ast.radius + largeAst.radius) {
+                    this.spawnExplosion(ast.x, ast.y, Math.floor(ast.radius * 0.75), '#aaa');
+                    this.asteroids.splice(a, 1);
+                    shattered = true;
+                    break;
+                }
+            }
+            if (shattered) continue;
 
             if (Utils.dist(this.player.x, this.player.y, ast.x, ast.y) > 4000) {
                 this.asteroids.splice(a, 1);
@@ -2096,6 +2185,7 @@ export class Game {
         }
 
         this.nebulas.forEach(n => n.draw(this.ctx, this.camera));
+        this.largeAsteroids.forEach(la => la.draw(this.ctx, this.camera));
 
         this.sectorManager.draw(this.ctx, this.camera, this.player);
         this.gems.forEach(g => g.draw(this.ctx, this.camera));
