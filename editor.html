@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Explorer - Galaxy Map Editor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+    <div id="editor-container">
+        <!-- Sidebar Controls -->
+        <aside id="sidebar">
+            <header>
+                <h1>🌌 Map Editor</h1>
+                <p class="subtitle">Drag to move, click to inspect & edit</p>
+            </header>
+
+            <div class="actions-group">
+                <button id="btn-save" class="btn primary-btn">💾 Save to Files</button>
+                <div class="btn-row">
+                    <button id="btn-export-all" class="btn secondary-btn">📥 Export All</button>
+                    <button id="btn-center-map" class="btn secondary-btn">🎯 Center Map</button>
+                </div>
+            </div>
+
+            <!-- Tabs for Object lists & addition -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="list-tab">Entities</button>
+                <button class="tab-btn" data-tab="inspector-tab">Inspector</button>
+                <button class="tab-btn" data-tab="create-tab">Add New</button>
+            </div>
+
+            <!-- Tab content: Lists -->
+            <div id="list-tab" class="tab-content active">
+                <div class="filter-group">
+                    <label for="filter-type">Filter type:</label>
+                    <select id="filter-type">
+                        <option value="all">All Entities</option>
+                        <option value="stellar">Stellar Objects</option>
+                        <option value="regions">Regions</option>
+                        <option value="asteroids">Large Asteroids</option>
+                        <option value="nebulas">Nebulas</option>
+                    </select>
+                </div>
+                <div class="list-container" id="entities-list">
+                    <!-- Dynamic List -->
+                </div>
+            </div>
+
+            <!-- Tab content: Inspector -->
+            <div id="inspector-tab" class="tab-content">
+                <div id="inspector-empty" class="info-message">
+                    Select an object on the map or in the list to inspect and edit.
+                </div>
+                <form id="inspector-form" class="hidden">
+                    <h3 id="inspector-title">Edit Entity</h3>
+                    <div id="inspector-fields">
+                        <!-- Dynamic fields inserted here -->
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="btn-inspect-delete" class="btn delete-btn">🗑 Delete Entity</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tab content: Create New -->
+            <div id="create-tab" class="tab-content">
+                <h3>Create New Element</h3>
+                <div class="form-group">
+                    <label for="create-type">Type of Element</label>
+                    <select id="create-type">
+                        <option value="stellar">Stellar Object (Planet, Star, Station...)</option>
+                        <option value="region">Region Boundary</option>
+                        <option value="asteroid">Large Asteroid</option>
+                        <option value="nebula">Nebula Field</option>
+                    </select>
+                </div>
+                <button id="btn-create-init" class="btn primary-btn">➕ Add to Map Center</button>
+            </div>
+
+            <footer class="sidebar-footer">
+                <p>Grid scale: 1 unit = 1000 world px</p>
+                <p id="cursor-coords">Cursor: 0.0, 0.0</p>
+            </footer>
+        </aside>
+
+        <!-- Map View Canvas -->
+        <main id="canvas-wrapper">
+            <canvas id="editorCanvas"></canvas>
+            
+            <div id="map-controls">
+                <button id="btn-zoom-in" title="Zoom In">➕</button>
+                <button id="btn-zoom-reset" title="Reset Zoom">🔄</button>
+                <button id="btn-zoom-out" title="Zoom Out">➖</button>
+            </div>
+
+            <div id="status-overlay" class="hidden">Saved changes!</div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="editor.js"></script>
+</body>
+</html>
