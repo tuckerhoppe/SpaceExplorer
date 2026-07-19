@@ -733,9 +733,9 @@ export class Game {
 
         // Before region is conquered, scale up hostile spawn limits
         if (currentRegion.conquest && !this.conqueredRegions.has(currentRegion.name)) {
-            if (caps.fighters > 0) caps.fighters = Math.floor(caps.fighters * 2.5);
-            if (caps.battleships > 0) caps.battleships = Math.floor(caps.battleships * 2.0);
-            if (caps.dreadnoughts > 0) caps.dreadnoughts = Math.floor(caps.dreadnoughts * 2.0);
+            if (caps.fighters > 0) caps.fighters = Math.floor(caps.fighters * 4.0);
+            if (caps.battleships > 0) caps.battleships = Math.floor(caps.battleships * 4.0);
+            if (caps.dreadnoughts > 0) caps.dreadnoughts = Math.floor(caps.dreadnoughts * 4.0);
         }
 
         // Ambient Particles management

@@ -14,7 +14,7 @@ export class HUD {
         this.objectivesPanel = document.getElementById('objectives-panel');
         this._lastObjectivesHtml = '';
         this._lastQuestIds = '';
-        this.mapState = { offsetX: 0, offsetY: 0, zoom: 1, isDragging: false, lastMouse: {x: 0, y: 0}, hoverObj: null, maxZoom: 3, minZoom: 0.5 };
+        this.mapState = { offsetX: 0, offsetY: 0, zoom: 1, isDragging: false, lastMouse: {x: 0, y: 0}, hoverObj: null, maxZoom: 3, minZoom: 0.25 };
         this.miniMap = new MiniMap(game);
         
         // --- Station Panel Elements ---
@@ -974,7 +974,7 @@ export class HUD {
         const sm = this.game.sectorManager;
         const rm = this.game.regionManager;
 
-        const MAP_RADIUS = 25; // 25 unit radius covers most of the 20 unit generation bounds
+        const MAP_RADIUS = 46; // Covers the new 45 unit void boundaries
         const GRID_SIZE = 10; 
 
         canvas.width = 600; 
