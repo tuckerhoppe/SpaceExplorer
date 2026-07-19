@@ -6,7 +6,7 @@ export const REGIONS = [
         "name": "The Void",
         "icon": "🌌",
         "color": "#00f0ff",
-        "test": (cx, cy) => Math.abs(cx) > 30 || Math.abs(cy) > 30,
+        "test": (cx, cy) => Math.abs(cx) > 45 || Math.abs(cy) > 45,
         "description": "You have strayed too far from the galactic core. The void awaits.",
         "center": {
             "worldX": 0,
@@ -33,18 +33,18 @@ export const REGIONS = [
         "name": "The Badlands",
         "icon": "💀",
         "color": "#ff6a00",
-        "test": (cx, cy) => cx >= -14 && cx <= -3 && cy >= -11 && cy <= -3,
+        "test": (cx, cy) => cx >= -10 && cx <= 2 && cy >= -10 && cy <= -2.5,
         "description": "A lawless expanse of dense asteroid belts and desperate scavengers.",
         "gemReward": 100,
         "bounds": {
-            "minX": -14,
-            "maxX": -3,
-            "minY": -11,
-            "maxY": -3
+            "minX": -10,
+            "maxX": 2,
+            "minY": -10,
+            "maxY": -2.5
     },
         "center": {
-            "worldX": -8000,
-            "worldY": 8000
+            "worldX": -4000,
+            "worldY": 6250
     },
         "difficulty": 2,
         "bgColor": "#150a00",
@@ -70,14 +70,14 @@ export const REGIONS = [
         "description": "Mysterious and dangerous species known as the Blobs inhabit this region.",
         "gemReward": 150,
         "bounds": {
-            "minX": 4,
-            "maxX": 20,
-            "minY": -25,
-            "maxY": -10
+            "minX": 27.5,
+            "maxX": 43.5,
+            "minY": -38,
+            "maxY": -23
     },
         "center": {
-            "worldX": 8000,
-            "worldY": 14000
+            "worldX": 35500,
+            "worldY": 30500
     },
         "difficulty": 5,
         "bgColor": "#001505",
@@ -99,18 +99,18 @@ export const REGIONS = [
         "name": "Star Empire",
         "icon": "⚔️",
         "color": "#ff2244",
-        "test": (cx, cy) => cx >= -25 && cx <= -18 && cy >= 18 && cy <= 25,
+        "test": (cx, cy) => cx >= -41 && cx <= -34 && cy >= 29 && cy <= 36,
         "description": "Imperial warships patrol these contested star lanes. Trespassers are destroyed on sight.",
         "gemReward": 150,
         "bounds": {
-            "minX": -25,
-            "maxX": -18,
-            "minY": 18,
-            "maxY": 25
+            "minX": -41,
+            "maxX": -34,
+            "minY": 29,
+            "maxY": 36
     },
         "center": {
-            "worldX": -21500,
-            "worldY": -21500
+            "worldX": -37500,
+            "worldY": -32500
     },
         "difficulty": 12,
         "bgColor": "rgba(28, 0, 0, 1)",
@@ -132,18 +132,18 @@ export const REGIONS = [
         "name": "Uncharted Space",
         "icon": "☄️",
         "color": "#ff00ee",
-        "test": (cx, cy) => cx >= 14 && cx <= 30 && cy >= 17 && cy <= 30,
+        "test": (cx, cy) => cx >= 24.5 && cx <= 40.5 && cy >= 24 && cy <= 37,
         "description": "Mysterious discoveries await in this region.",
         "gemReward": 150,
         "bounds": {
-            "minX": 14,
-            "maxX": 30,
-            "minY": 17,
-            "maxY": 30
+            "minX": 24.5,
+            "maxX": 40.5,
+            "minY": 24,
+            "maxY": 37
     },
         "center": {
-            "worldX": 22000,
-            "worldY": -23500
+            "worldX": 32500,
+            "worldY": -30500
     },
         "difficulty": 7,
         "bgColor": "#1a001a",
@@ -165,14 +165,14 @@ export const REGIONS = [
         "name": "Home Region",
         "icon": "🏠",
         "color": "#ffdd00",
-        "test": (cx, cy) => cx >= -8 && cx <= -4 && cy >= -1 && cy <= 4,
+        "test": (cx, cy) => cx >= -10 && cx <= -2 && cy >= -2.5 && cy <= 5.5,
         "description": "Your home sector. It seems surprisingly quiet... or is it?",
         "gemReward": 0,
         "bounds": {
-            "minX": -8,
-            "maxX": -4,
-            "minY": -1,
-            "maxY": 4
+            "minX": -10,
+            "maxX": -2,
+            "minY": -2.5,
+            "maxY": 5.5
     },
         "center": {
             "worldX": -6000,
@@ -202,14 +202,14 @@ export const REGIONS = [
         "description": "A sector dominated by automated drones and robotic outposts.",
         "gemReward": 200,
         "bounds": {
-            "minX": -20,
-            "maxX": -6,
-            "minY": -25,
-            "maxY": -10
+            "minX": -47.5,
+            "maxX": -33.5,
+            "minY": -36,
+            "maxY": -21
     },
         "center": {
-            "worldX": -10000,
-            "worldY": 15000
+            "worldX": -40500,
+            "worldY": 28500
     },
         "difficulty": 9,
         "bgColor": "#000810",
@@ -235,14 +235,14 @@ export const REGIONS = [
         "description": "An extremely dense field of ancient debris and unstable nebulas. Navigation is treacherous.",
         "gemReward": 250,
         "bounds": {
-            "minX": -3,
-            "maxX": 3,
-            "minY": -20,
-            "maxY": -10
+            "minX": -33.5,
+            "maxX": -27.5,
+            "minY": -26,
+            "maxY": -16
     },
         "center": {
-            "worldX": 0,
-            "worldY": 15000
+            "worldX": -30500,
+            "worldY": 21000
     },
         "difficulty": 7,
         "bgColor": "#0a0500",
@@ -264,18 +264,18 @@ export const REGIONS = [
         "name": "The Ionized Shallows",
         "icon": "⚡",
         "color": "#a022ff",
-        "test": (cx, cy) => cx >= -3 && cx <= 4 && cy >= -10 && cy <= -5,
+        "test": (cx, cy) => cx >= -40.5 && cx <= -33.5 && cy >= -21 && cy <= -16,
         "description": "A region of high electrical activity and shimmering ion clouds. Sensors are often scrambled.",
         "gemReward": 150,
         "bounds": {
-            "minX": -3,
-            "maxX": 4,
-            "minY": -10,
-            "maxY": -5
+            "minX": -40.5,
+            "maxX": -33.5,
+            "minY": -21,
+            "maxY": -16
     },
         "center": {
-            "worldX": 500,
-            "worldY": 7500
+            "worldX": -37000,
+            "worldY": 18500
     },
         "difficulty": 4,
         "bgColor": "#050015",
@@ -297,18 +297,18 @@ export const REGIONS = [
         "name": "The Rust Belt",
         "icon": "⚙️",
         "color": "#cc6600",
-        "test": (cx, cy) => cx >= 4 && cx <= 10 && cy >= -8 && cy <= -3,
+        "test": (cx, cy) => cx >= 21.5 && cx <= 27.5 && cy >= -24.5 && cy <= -17,
         "description": "A graveyard of ancient industry. Rust-colored dust and derelict stations float in the void.",
         "gemReward": 200,
         "bounds": {
-            "minX": 4,
-            "maxX": 10,
-            "minY": -8,
-            "maxY": -3
+            "minX": 21.5,
+            "maxX": 27.5,
+            "minY": -24.5,
+            "maxY": -17
     },
         "center": {
-            "worldX": 7000,
-            "worldY": 5500
+            "worldX": 24500,
+            "worldY": 20750
     },
         "difficulty": 6,
         "bgColor": "#100800",
@@ -330,18 +330,18 @@ export const REGIONS = [
         "name": "The Verdant Reach",
         "icon": "🌿",
         "color": "#00cc66",
-        "test": (cx, cy) => cx >= 5 && cx <= 15 && cy >= -3 && cy <= 2,
+        "test": (cx, cy) => cx >= 2 && cx <= 13 && cy >= -7 && cy <= 2,
         "description": "A surprisingly lush sector where bioluminescent flora-like organisms drift through space.",
         "gemReward": 200,
         "bounds": {
-            "minX": 5,
-            "maxX": 15,
-            "minY": -3,
+            "minX": 2,
+            "maxX": 13,
+            "minY": -7,
             "maxY": 2
     },
         "center": {
-            "worldX": 10000,
-            "worldY": -500
+            "worldX": 7500,
+            "worldY": 2500
     },
         "difficulty": 2,
         "bgColor": "#000a05",
@@ -363,18 +363,18 @@ export const REGIONS = [
         "name": "Trade Federation",
         "icon": "💵",
         "color": "#4db8ff",
-        "test": (cx, cy) => cx >= 12 && cx <= 20 && cy >= 11 && cy <= 17,
+        "test": (cx, cy) => cx >= 22.5 && cx <= 30.5 && cy >= 18 && cy <= 24,
         "description": "The commercial heart of the galaxy. Trade lanes are heavily patrolled by Federation escorts.",
         "gemReward": 150,
         "bounds": {
-            "minX": 12,
-            "maxX": 20,
-            "minY": 11,
-            "maxY": 17
+            "minX": 22.5,
+            "maxX": 30.5,
+            "minY": 18,
+            "maxY": 24
     },
         "center": {
-            "worldX": 16000,
-            "worldY": -14000
+            "worldX": 26500,
+            "worldY": -21000
     },
         "difficulty": 6,
         "bgColor": "#00081a",
@@ -396,18 +396,18 @@ export const REGIONS = [
         "name": "Spectral Graveyard",
         "icon": "👻",
         "color": "#ffffff",
-        "test": (cx, cy) => cx >= 0 && cx <= 5 && cy >= 20 && cy <= 25,
+        "test": (cx, cy) => cx >= 10.5 && cx <= 16.5 && cy >= 27 && cy <= 32,
         "description": "An eerily quiet expanse where the remnants of a lost fleet drift. Spooky whispers echo through the void.",
         "gemReward": 300,
         "bounds": {
-            "minX": 0,
-            "maxX": 5,
-            "minY": 20,
-            "maxY": 25
+            "minX": 10.5,
+            "maxX": 16.5,
+            "minY": 27,
+            "maxY": 32
     },
         "center": {
-            "worldX": 2500,
-            "worldY": -22500
+            "worldX": 13500,
+            "worldY": -29500
     },
         "difficulty": 5,
         "bgColor": "#101010",
@@ -429,18 +429,18 @@ export const REGIONS = [
         "name": "Imperial Shipyards",
         "icon": "🏗️",
         "color": "#ffd700",
-        "test": (cx, cy) => cx >= -18 && cx <= -14 && cy >= 18 && cy <= 25,
+        "test": (cx, cy) => cx >= -34 && cx <= -30 && cy >= 29 && cy <= 36,
         "description": "A massive industrial zone where the Star Empire constructs its largest warships. Extreme danger.",
         "gemReward": 300,
         "bounds": {
-            "minX": -18,
-            "maxX": -14,
-            "minY": 18,
-            "maxY": 25
+            "minX": -34,
+            "maxX": -30,
+            "minY": 29,
+            "maxY": 36
     },
         "center": {
-            "worldX": -16000,
-            "worldY": -21500
+            "worldX": -32000,
+            "worldY": -32500
     },
         "difficulty": 12,
         "bgColor": "#100000",
@@ -462,18 +462,18 @@ export const REGIONS = [
         "name": "The Frozen Expanse",
         "icon": "🧊",
         "color": "#aaddff",
-        "test": (cx, cy) => cx >= -7 && cx <= 0 && cy >= 9 && cy <= 15,
+        "test": (cx, cy) => cx >= -23 && cx <= -16 && cy >= 20 && cy <= 26,
         "description": "A frigid, desolate region of space filled with ice-coated debris and pale blue light.",
         "gemReward": 200,
         "bounds": {
-            "minX": -7,
-            "maxX": 0,
-            "minY": 9,
-            "maxY": 15
+            "minX": -23,
+            "maxX": -16,
+            "minY": 20,
+            "maxY": 26
     },
         "center": {
-            "worldX": -3500,
-            "worldY": -12000
+            "worldX": -19500,
+            "worldY": -23000
     },
         "difficulty": 7,
         "bgColor": "#000a15",
@@ -495,18 +495,18 @@ export const REGIONS = [
         "name": "The Crimson Veil",
         "icon": "🏮",
         "color": "#ff0000",
-        "test": (cx, cy) => cx >= -25 && cx <= -17 && cy >= 9 && cy <= 14,
+        "test": (cx, cy) => cx >= -41 && cx <= -33 && cy >= 20 && cy <= 25,
         "description": "A thick, red-tinted nebula where visibility is low and sensors struggle to penetrate the veil.",
         "gemReward": 200,
         "bounds": {
-            "minX": -25,
-            "maxX": -17,
-            "minY": 9,
-            "maxY": 14
+            "minX": -41,
+            "maxX": -33,
+            "minY": 20,
+            "maxY": 25
     },
         "center": {
-            "worldX": -21000,
-            "worldY": -11500
+            "worldX": -37000,
+            "worldY": -22500
     },
         "difficulty": 10,
         "bgColor": "#150000",
@@ -528,18 +528,18 @@ export const REGIONS = [
         "name": "The Obsidian Marches",
         "icon": "🖤",
         "color": "#aaaaaa",
-        "test": (cx, cy) => cx >= -13 && cx <= -7 && cy >= 9 && cy <= 18,
+        "test": (cx, cy) => cx >= -29 && cx <= -23 && cy >= 20 && cy <= 29,
         "description": "A desolate, shadow-drenched corridor between the Badlands and the Crimson Veil.",
         "gemReward": 200,
         "bounds": {
-            "minX": -13,
-            "maxX": -7,
-            "minY": 9,
-            "maxY": 18
+            "minX": -29,
+            "maxX": -23,
+            "minY": 20,
+            "maxY": 29
     },
         "center": {
-            "worldX": -10000,
-            "worldY": -13500
+            "worldX": -26000,
+            "worldY": -24500
     },
         "difficulty": 8,
         "bgColor": "#050505",
@@ -561,18 +561,18 @@ export const REGIONS = [
         "name": "Imperial Proving Grounds",
         "icon": "🎯",
         "color": "#ffaa00",
-        "test": (cx, cy) => cx >= -14 && cx <= -7 && cy >= 18 && cy <= 25,
+        "test": (cx, cy) => cx >= -30 && cx <= -23 && cy >= 29 && cy <= 36,
         "description": "Elite imperial pilots conduct live-fire drills in this heavily monitored sector.",
         "gemReward": 200,
         "bounds": {
-            "minX": -14,
-            "maxX": -7,
-            "minY": 18,
-            "maxY": 25
+            "minX": -30,
+            "maxX": -23,
+            "minY": 29,
+            "maxY": 36
     },
         "center": {
-            "worldX": -10500,
-            "worldY": -21500
+            "worldX": -26500,
+            "worldY": -32500
     },
         "difficulty": 10,
         "bgColor": "#1a0a00",
@@ -594,18 +594,18 @@ export const REGIONS = [
         "name": "The Northern Gate",
         "icon": "⛩️",
         "color": "#4db8ff",
-        "test": (cx, cy) => cx >= -7 && cx <= 0 && cy >= 15 && cy <= 25,
+        "test": (cx, cy) => cx >= -23 && cx <= -16 && cy >= 26 && cy <= 36,
         "description": "A major thoroughfare for trade fleets bypassing the core systems.",
         "gemReward": 150,
         "bounds": {
-            "minX": -7,
-            "maxX": 0,
-            "minY": 15,
-            "maxY": 25
+            "minX": -23,
+            "maxX": -16,
+            "minY": 26,
+            "maxY": 36
     },
         "center": {
-            "worldX": -3500,
-            "worldY": -20000
+            "worldX": -19500,
+            "worldY": -31000
     },
         "difficulty": 7,
         "bgColor": "#000a1a",
@@ -627,18 +627,18 @@ export const REGIONS = [
         "name": "The Obsidian Approach",
         "icon": "🌑",
         "color": "#555555",
-        "test": (cx, cy) => cx >= -19 && cx <= -13 && cy >= 14 && cy <= 18,
+        "test": (cx, cy) => cx >= -35 && cx <= -29 && cy >= 25 && cy <= 29,
         "description": "The lighting dims as the space becomes choked with dark obsidian dust.",
         "gemReward": 200,
         "bounds": {
-            "minX": -19,
-            "maxX": -13,
-            "minY": 14,
-            "maxY": 18
+            "minX": -35,
+            "maxX": -29,
+            "minY": 25,
+            "maxY": 29
     },
         "center": {
-            "worldX": -16000,
-            "worldY": -16000
+            "worldX": -32000,
+            "worldY": -27000
     },
         "difficulty": 9,
         "bgColor": "#050505",
@@ -660,18 +660,18 @@ export const REGIONS = [
         "name": "The Shadow Reach",
         "icon": "🦇",
         "color": "#aa22ff",
-        "test": (cx, cy) => cx >= -25 && cx <= -19 && cy >= 14 && cy <= 18,
+        "test": (cx, cy) => cx >= -41 && cx <= -35 && cy >= 25 && cy <= 29,
         "description": "Strange energy rifts bridge the gap between the Crimson Veil and the Star Empire.",
         "gemReward": 250,
         "bounds": {
-            "minX": -25,
-            "maxX": -19,
-            "minY": 14,
-            "maxY": 18
+            "minX": -41,
+            "maxX": -35,
+            "minY": 25,
+            "maxY": 29
     },
         "center": {
-            "worldX": -22000,
-            "worldY": -16000
+            "worldX": -38000,
+            "worldY": -27000
     },
         "difficulty": 11,
         "bgColor": "#0a0015",
@@ -693,18 +693,18 @@ export const REGIONS = [
         "name": "The Slate Spires",
         "icon": "⛰️",
         "color": "#778899",
-        "test": (cx, cy) => cx >= -16 && cx <= -10 && cy >= 4 && cy <= 9,
+        "test": (cx, cy) => cx >= -32 && cx <= -26 && cy >= 15 && cy <= 20,
         "description": "Jagged monoliths of dark rock drift through this cold, shadow-covered sector.",
         "gemReward": 150,
         "bounds": {
-            "minX": -16,
-            "maxX": -10,
-            "minY": 4,
-            "maxY": 9
+            "minX": -32,
+            "maxX": -26,
+            "minY": 15,
+            "maxY": 20
     },
         "center": {
-            "worldX": -13000,
-            "worldY": -6500
+            "worldX": -29000,
+            "worldY": -17500
     },
         "difficulty": 6,
         "bgColor": "#0a0a0a",
@@ -726,18 +726,18 @@ export const REGIONS = [
         "name": "The Glacial Outwash",
         "icon": "❄️",
         "color": "#b0e0e6",
-        "test": (cx, cy) => cx >= -25 && cx <= -16 && cy >= 4 && cy <= 9,
+        "test": (cx, cy) => cx >= -41 && cx <= -32 && cy >= 15 && cy <= 20,
         "description": "Frigid winds and ice crystals flow out from the Frozen Expanse into this transition zone.",
         "gemReward": 150,
         "bounds": {
-            "minX": -25,
-            "maxX": -16,
-            "minY": 4,
-            "maxY": 9
+            "minX": -41,
+            "maxX": -32,
+            "minY": 15,
+            "maxY": 20
     },
         "center": {
-            "worldX": -20500,
-            "worldY": -6500
+            "worldX": -36500,
+            "worldY": -17500
     },
         "difficulty": 7,
         "bgColor": "#00080f",
@@ -759,18 +759,18 @@ export const REGIONS = [
         "name": "The Dusty Corridor",
         "icon": "🌫️",
         "color": "#d2b48c",
-        "test": (cx, cy) => cx >= -10 && cx <= -3 && cy >= 4 && cy <= 9,
+        "test": (cx, cy) => cx >= -26 && cx <= -19 && cy >= 15 && cy <= 20,
         "description": "A low-visibility passage choked with fine metallic dust and ancient industrial debris.",
         "gemReward": 100,
         "bounds": {
-            "minX": -10,
-            "maxX": -3,
-            "minY": 4,
-            "maxY": 9
+            "minX": -26,
+            "maxX": -19,
+            "minY": 15,
+            "maxY": 20
     },
         "center": {
-            "worldX": -6500,
-            "worldY": -6500
+            "worldX": -22500,
+            "worldY": -17500
     },
         "difficulty": 5,
         "bgColor": "#0f0a05",
@@ -792,18 +792,18 @@ export const REGIONS = [
         "name": "The Tranquil Gap",
         "icon": "🕊️",
         "color": "#f0fff0",
-        "test": (cx, cy) => cx >= -3 && cx <= 3 && cy >= 4 && cy <= 9,
+        "test": (cx, cy) => cx >= -19 && cx <= -13 && cy >= 15 && cy <= 20,
         "description": "A surprisingly calm and clear sector on the edge of the deeper reaches.",
         "gemReward": 50,
         "bounds": {
-            "minX": -3,
-            "maxX": 3,
-            "minY": 4,
-            "maxY": 9
+            "minX": -19,
+            "maxX": -13,
+            "minY": 15,
+            "maxY": 20
     },
         "center": {
-            "worldX": 0,
-            "worldY": -6500
+            "worldX": -16000,
+            "worldY": -17500
     },
         "difficulty": 2,
         "bgColor": "#050a05",
@@ -825,18 +825,18 @@ export const REGIONS = [
         "name": "The Aurora Belt",
         "icon": "🌌",
         "color": "#ff88ff",
-        "test": (cx, cy) => cx >= 6 && cx <= 14 && cy >= 17 && cy <= 25,
+        "test": (cx, cy) => cx >= 16.5 && cx <= 24.5 && cy >= 24 && cy <= 32,
         "description": "A shimmering curtain of light dances across the void, marking the edge of the Uncharted mapping zone.",
         "gemReward": 150,
         "bounds": {
-            "minX": 6,
-            "maxX": 14,
-            "minY": 17,
-            "maxY": 25
+            "minX": 16.5,
+            "maxX": 24.5,
+            "minY": 24,
+            "maxY": 32
     },
         "center": {
-            "worldX": 10000,
-            "worldY": -21000
+            "worldX": 20500,
+            "worldY": -28000
     },
         "difficulty": 6,
         "bgColor": "#100010",
@@ -858,18 +858,18 @@ export const REGIONS = [
         "name": "Merchant's Way",
         "icon": "🛒",
         "color": "#ffd700",
-        "test": (cx, cy) => cx >= 6 && cx <= 12 && cy >= 12 && cy <= 17,
+        "test": (cx, cy) => cx >= 16.5 && cx <= 22.4 && cy >= 19 && cy <= 23.9,
         "description": "A prosperous trade route where merchant fleets carry goods between the core systems.",
         "gemReward": 100,
         "bounds": {
-            "minX": 6,
-            "maxX": 12,
-            "minY": 12,
-            "maxY": 17
+            "minX": 16.5,
+            "maxX": 22.4,
+            "minY": 19,
+            "maxY": 23.9
     },
         "center": {
-            "worldX": 9000,
-            "worldY": -14500
+            "worldX": 19450,
+            "worldY": -21450
     },
         "difficulty": 5,
         "bgColor": "#0a0a00",
@@ -891,18 +891,18 @@ export const REGIONS = [
         "name": "The Quiet Reach",
         "icon": "🤫",
         "color": "#88aaff",
-        "test": (cx, cy) => cx >= 0 && cx <= 6 && cy >= 14 && cy <= 20,
+        "test": (cx, cy) => cx >= 10.5 && cx <= 16.5 && cy >= 21 && cy <= 27,
         "description": "A vast, empty sector known for its unnerving stillness and lack of chatter.",
         "gemReward": 100,
         "bounds": {
-            "minX": 0,
-            "maxX": 6,
-            "minY": 14,
-            "maxY": 20
+            "minX": 10.5,
+            "maxX": 16.5,
+            "minY": 21,
+            "maxY": 27
     },
         "center": {
-            "worldX": 3000,
-            "worldY": -17000
+            "worldX": 13500,
+            "worldY": -24000
     },
         "difficulty": 4,
         "bgColor": "#00000a",
@@ -924,18 +924,18 @@ export const REGIONS = [
         "name": "The Gilded Path",
         "icon": "✨",
         "color": "#ffffff",
-        "test": (cx, cy) => cx >= 0 && cx <= 6 && cy >= 9 && cy <= 14,
+        "test": (cx, cy) => cx >= 10.5 && cx <= 16.5 && cy >= 16 && cy <= 21,
         "description": "A safe and well-traveled lane illuminated by the light of distant star clusters.",
         "gemReward": 100,
         "bounds": {
-            "minX": 0,
-            "maxX": 6,
-            "minY": 9,
-            "maxY": 14
+            "minX": 10.5,
+            "maxX": 16.5,
+            "minY": 16,
+            "maxY": 21
     },
         "center": {
-            "worldX": 3000,
-            "worldY": -11500
+            "worldX": 13500,
+            "worldY": -18500
     },
         "difficulty": 3,
         "bgColor": "#0a0a0a",
@@ -957,18 +957,18 @@ export const REGIONS = [
         "name": "The Sentinel's Post",
         "icon": "⚔️",
         "color": "#ff4444",
-        "test": (cx, cy) => cx >= 3 && cx <= 7 && cy >= 6 && cy <= 9,
+        "test": (cx, cy) => cx >= -4 && cx <= 0 && cy >= 30 && cy <= 33,
         "description": "A fortified imperial sector guarded by an elite commander. Entry is considered a hostile act.",
         "gemReward": 300,
         "bounds": {
-            "minX": 3,
-            "maxX": 7,
-            "minY": 6,
-            "maxY": 9
+            "minX": -4,
+            "maxX": 0,
+            "minY": 30,
+            "maxY": 33
     },
         "center": {
-            "worldX": 5000,
-            "worldY": -7500
+            "worldX": -2000,
+            "worldY": -31500
     },
         "difficulty": 3,
         "bgColor": "#1a0000",
@@ -990,18 +990,18 @@ export const REGIONS = [
         "name": "The Sunlit Plains",
         "icon": "☀️",
         "color": "#fff5d0",
-        "test": (cx, cy) => cx >= 3 && cx <= 9 && cy >= 0 && cy <= 6,
+        "test": (cx, cy) => cx >= -2 && cx <= 10 && cy >= 2 && cy <= 7,
         "description": "A bright and open sector where the light of the galactic core shines clearly.",
         "gemReward": 100,
         "bounds": {
-            "minX": 3,
-            "maxX": 9,
-            "minY": 0,
-            "maxY": 6
+            "minX": -2,
+            "maxX": 10,
+            "minY": 2,
+            "maxY": 7
     },
         "center": {
-            "worldX": 6000,
-            "worldY": -3000
+            "worldX": 4000,
+            "worldY": -4500
     },
         "difficulty": 2,
         "bgColor": "#0f0f00",
@@ -1023,18 +1023,18 @@ export const REGIONS = [
         "name": "The Jovian Graveyard",
         "icon": "🪦",
         "color": "#a9a9a9",
-        "test": (cx, cy) => cx >= 6 && cx <= 12 && cy >= 6 && cy <= 12,
+        "test": (cx, cy) => cx >= 23 && cx <= 29 && cy >= 6.5 && cy <= 12.5,
         "description": "The shattered remains of ancient moons and gas-giant debris drift silently here.",
         "gemReward": 200,
         "bounds": {
-            "minX": 6,
-            "maxX": 12,
-            "minY": 6,
-            "maxY": 12
+            "minX": 23,
+            "maxX": 29,
+            "minY": 6.5,
+            "maxY": 12.5
     },
         "center": {
-            "worldX": 9000,
-            "worldY": -9000
+            "worldX": 26000,
+            "worldY": -9500
     },
         "difficulty": 4,
         "bgColor": "#0a0a0a",
@@ -1056,18 +1056,18 @@ export const REGIONS = [
         "name": "The Sunken Reach",
         "icon": "⚓",
         "color": "#4682b4",
-        "test": (cx, cy) => cx >= 9 && cx <= 15 && cy >= 0 && cy <= 6,
+        "test": (cx, cy) => cx >= 27.5 && cx <= 33.5 && cy >= -23 && cy <= -17,
         "description": "A deep, heavy sector where space feels thick with metallic dust and magnetic anomalies.",
         "gemReward": 250,
         "bounds": {
-            "minX": 9,
-            "maxX": 15,
-            "minY": 0,
-            "maxY": 6
+            "minX": 27.5,
+            "maxX": 33.5,
+            "minY": -23,
+            "maxY": -17
     },
         "center": {
-            "worldX": 12000,
-            "worldY": -3000
+            "worldX": 30500,
+            "worldY": 20000
     },
         "difficulty": 5,
         "bgColor": "#00050f",
@@ -1089,18 +1089,18 @@ export const REGIONS = [
         "name": "The Trade Outskirts",
         "icon": "🚚",
         "color": "#daa520",
-        "test": (cx, cy) => cx >= 15 && cx <= 20 && cy >= 0 && cy <= 6,
+        "test": (cx, cy) => cx >= 16.5 && cx <= 22.5 && cy >= 13 && cy <= 19,
         "description": "A secondary trade corridor frequented by independent haulers and fringe merchants.",
         "gemReward": 150,
         "bounds": {
-            "minX": 15,
-            "maxX": 20,
-            "minY": 0,
-            "maxY": 6
+            "minX": 16.5,
+            "maxX": 22.5,
+            "minY": 13,
+            "maxY": 19
     },
         "center": {
-            "worldX": 17500,
-            "worldY": -3000
+            "worldX": 19500,
+            "worldY": -16000
     },
         "difficulty": 4,
         "bgColor": "#0a0500",
@@ -1122,18 +1122,18 @@ export const REGIONS = [
         "name": "Federation Approach",
         "icon": "🛂",
         "color": "#0f5922ff",
-        "test": (cx, cy) => cx >= 12 && cx <= 20 && cy >= 6 && cy <= 11,
+        "test": (cx, cy) => cx >= 22.5 && cx <= 30.5 && cy >= 13 && cy <= 18,
         "description": "A strictly patrolled sector serving as the primary gateway to the Trade Federation Hub.",
         "gemReward": 200,
         "bounds": {
-            "minX": 12,
-            "maxX": 20,
-            "minY": 6,
-            "maxY": 11
+            "minX": 22.5,
+            "maxX": 30.5,
+            "minY": 13,
+            "maxY": 18
     },
         "center": {
-            "worldX": 16000,
-            "worldY": -8500
+            "worldX": 26500,
+            "worldY": -15500
     },
         "difficulty": 5,
         "bgColor": "#00081a",
@@ -1155,18 +1155,18 @@ export const REGIONS = [
         "name": "The Corsair Coast",
         "icon": "🏴‍☠️",
         "color": "#ffaa00",
-        "test": (cx, cy) => cx >= 20 && cx <= 30 && cy >= 13 && cy <= 17,
+        "test": (cx, cy) => cx >= 30.5 && cx <= 40.5 && cy >= 20 && cy <= 24,
         "description": "A lawless expanse ruled by scavenger fleets and notorious pirate lords.",
         "gemReward": 350,
         "bounds": {
-            "minX": 20,
-            "maxX": 30,
-            "minY": 13,
-            "maxY": 17
+            "minX": 30.5,
+            "maxX": 40.5,
+            "minY": 20,
+            "maxY": 24
     },
         "center": {
-            "worldX": 25000,
-            "worldY": -15000
+            "worldX": 35500,
+            "worldY": -22000
     },
         "difficulty": 6,
         "bgColor": "#1a0d00",
@@ -1188,18 +1188,18 @@ export const REGIONS = [
         "name": "Orbit Test Sector",
         "icon": "💫",
         "color": "#ff8000",
-        "test": (cx, cy) => cx >= 14.5 && cx <= 23.5 && cy >= -9 && cy <= 0,
+        "test": (cx, cy) => cx >= 26.5 && cx <= 35.5 && cy >= -11 && cy <= -2,
         "description": "A specialized testing ground containing a star system with structured planetary orbits.",
         "gemReward": 100,
         "bounds": {
-            "minX": 14.5,
-            "maxX": 23.5,
-            "minY": -9,
-            "maxY": 0
+            "minX": 26.5,
+            "maxX": 35.5,
+            "minY": -11,
+            "maxY": -2
     },
         "center": {
-            "worldX": 19000,
-            "worldY": 4500
+            "worldX": 31000,
+            "worldY": 6500
     },
         "difficulty": 4,
         "bgColor": "#080400",
@@ -1212,6 +1212,39 @@ export const REGIONS = [
             "derelicts": 4,
             "asteroids": 20,
             "fighters": 2,
+            "battleships": 0,
+            "neutrals": 4,
+            "dreadnoughts": 0
+    }
+    },
+    {
+        "name": "Ranger Headquarters",
+        "icon": "🚀",
+        "color": "#00ffaa",
+        "test": (cx, cy) => cx >= -2 && cx <= 2 && cy >= -2.5 && cy <= 2,
+        "description": "HeadQuarters of the space ranger corps",
+        "gemReward": 0,
+        "bounds": {
+            "minX": -2,
+            "maxX": 2,
+            "minY": -2.5,
+            "maxY": 2
+    },
+        "center": {
+            "worldX": 0,
+            "worldY": 250
+    },
+        "difficulty": 1,
+        "bgColor": "#000805",
+        "particleType": "none",
+        "caps": {
+            "gravityWells": 1,
+            "comets": 1,
+            "cargoTrains": 0,
+            "mines": 2,
+            "derelicts": 4,
+            "asteroids": 30,
+            "fighters": 4,
             "battleships": 0,
             "neutrals": 4,
             "dreadnoughts": 0

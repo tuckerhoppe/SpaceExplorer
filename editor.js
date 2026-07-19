@@ -194,19 +194,47 @@ function screenToWorld(sx, sy) {
     return { x: wx, y: wy };
 }
 
-// Undo System Functions
+// Undo System Functions & Unsaved State
+let hasUnsavedChanges = false;
+
+function setUnsavedChanges(value) {
+    hasUnsavedChanges = value;
+    const dot = document.getElementById('save-status-dot');
+    const text = document.getElementById('save-status-text');
+    if (dot && text) {
+        if (value) {
+            dot.style.backgroundColor = '#ff9900';
+            text.innerText = 'Unsaved changes';
+            text.style.color = '#ff9900';
+        } else {
+            dot.style.backgroundColor = '#50dc78';
+            text.innerText = 'All changes saved';
+            text.style.color = '#a0a5b5';
+        }
+    }
+}
+
+window.addEventListener('beforeunload', (e) => {
+    if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
 function saveState() {
     const state = {
         stellarObjects: JSON.parse(JSON.stringify(stellarObjects)),
         regions: JSON.parse(JSON.stringify(regions)),
         asteroids: JSON.parse(JSON.stringify(asteroids)),
-        nebulas: JSON.parse(JSON.stringify(nebulas))
+        nebulas: JSON.parse(JSON.stringify(nebulas)),
+        tradeRoutes: JSON.parse(JSON.stringify(tradeRoutes))
     };
     undoStack.push(state);
     if (undoStack.length > 50) {
         undoStack.shift();
     }
     updateUndoButtonState();
+    setUnsavedChanges(true);
 }
 
 function undo() {
@@ -217,6 +245,7 @@ function undo() {
     regions = previousState.regions;
     asteroids = previousState.asteroids;
     nebulas = previousState.nebulas;
+    tradeRoutes = previousState.tradeRoutes || [];
 
     if (selectedEntity) {
         const ref = selectedEntity.ref;
@@ -229,6 +258,8 @@ function undo() {
             found = asteroids.find(a => a.id === ref.id);
         } else if (selectedEntity.type === 'nebulas') {
             found = nebulas.find(n => n.name === ref.name);
+        } else if (selectedEntity.type === 'route') {
+            found = tradeRoutes.find(r => r.id === ref.id);
         }
 
         if (found) {
@@ -241,6 +272,7 @@ function undo() {
 
     renderList();
     updateUndoButtonState();
+    setUnsavedChanges(true);
     requestAnimationFrame(draw);
 }
 
@@ -582,6 +614,19 @@ function varColor(varName) {
     return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
 }
 
+function colorToHex(color) {
+    if (!color) return '#000000';
+    if (color.startsWith('#')) return color;
+    const match = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)$/);
+    if (match) {
+        const r = parseInt(match[1]).toString(16).padStart(2, '0');
+        const g = parseInt(match[2]).toString(16).padStart(2, '0');
+        const b = parseInt(match[3]).toString(16).padStart(2, '0');
+        return `#${r}${g}${b}`;
+    }
+    return '#000000';
+}
+
 // Selection & Inspection Logic
 function selectEntity(entity, type, keepMulti = false) {
     formEditingStateSaved = false;
@@ -687,6 +732,20 @@ function selectEntity(entity, type, keepMulti = false) {
                 <label for="edit-desc">Description</label>
                 <textarea id="edit-desc" rows="3">${entity.description || ''}</textarea>
             </div>
+            <div class="form-group-row" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+                <div class="form-group">
+                    <label for="edit-parasite-type">Parasite Type</label>
+                    <select id="edit-parasite-type">
+                        <option value="none" ${!entity.parasite ? 'selected' : ''}>None</option>
+                        <option value="blob" ${entity.parasite && entity.parasite.type === 'blob' ? 'selected' : ''}>Blob</option>
+                        <option value="oppressor" ${entity.parasite && entity.parasite.type === 'oppressor' ? 'selected' : ''}>Oppressor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-parasite-guards">Guards Count</label>
+                    <input type="number" id="edit-parasite-guards" value="${entity.parasite ? entity.parasite.guards : 4}" ${!entity.parasite ? 'disabled' : ''}>
+                </div>
+            </div>
         `;
     } else if (type === 'region') {
         html = `
@@ -720,7 +779,10 @@ function selectEntity(entity, type, keepMulti = false) {
             </div>
             <div class="form-group">
                 <label for="edit-bg">BG Color</label>
-                <input type="text" id="edit-bg" value="${entity.bgColor || '#000000'}">
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="edit-bg" value="${entity.bgColor || '#000000'}" style="flex: 1;">
+                    <input type="color" id="edit-bg-picker" value="${colorToHex(entity.bgColor)}" style="width: 45px; padding: 0; height: 38px; cursor: pointer; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; background: none;">
+                </div>
             </div>
             <div class="form-group">
                 <label for="edit-particles">Particles</label>
@@ -731,6 +793,59 @@ function selectEntity(entity, type, keepMulti = false) {
                     <option value="ember" ${entity.particleType === 'ember' ? 'selected' : ''}>Ember</option>
                 </select>
             </div>
+            ${entity.caps ? `
+            <h4 style="margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px;">Spawn Caps</h4>
+            <div class="form-group-row">
+                <div class="form-group">
+                    <label for="cap-gravityWells">Gravity Wells</label>
+                    <input type="number" id="cap-gravityWells" value="${entity.caps.gravityWells || 0}">
+                </div>
+                <div class="form-group">
+                    <label for="cap-comets">Comets</label>
+                    <input type="number" id="cap-comets" value="${entity.caps.comets || 0}">
+                </div>
+            </div>
+            <div class="form-group-row">
+                <div class="form-group">
+                    <label for="cap-cargoTrains">Cargo Trains</label>
+                    <input type="number" id="cap-cargoTrains" value="${entity.caps.cargoTrains || 0}">
+                </div>
+                <div class="form-group">
+                    <label for="cap-mines">Space Mines</label>
+                    <input type="number" id="cap-mines" value="${entity.caps.mines || 0}">
+                </div>
+            </div>
+            <div class="form-group-row">
+                <div class="form-group">
+                    <label for="cap-derelicts">Derelicts</label>
+                    <input type="number" id="cap-derelicts" value="${entity.caps.derelicts || 0}">
+                </div>
+                <div class="form-group">
+                    <label for="cap-asteroids">Asteroids</label>
+                    <input type="number" id="cap-asteroids" value="${entity.caps.asteroids || 0}">
+                </div>
+            </div>
+            <div class="form-group-row">
+                <div class="form-group">
+                    <label for="cap-fighters">Fighters</label>
+                    <input type="number" id="cap-fighters" value="${entity.caps.fighters || 0}">
+                </div>
+                <div class="form-group">
+                    <label for="cap-battleships">Battleships</label>
+                    <input type="number" id="cap-battleships" value="${entity.caps.battleships || 0}">
+                </div>
+            </div>
+            <div class="form-group-row">
+                <div class="form-group">
+                    <label for="cap-neutrals">Neutrals</label>
+                    <input type="number" id="cap-neutrals" value="${entity.caps.neutrals || 0}">
+                </div>
+                <div class="form-group">
+                    <label for="cap-dreadnoughts">Dreadnoughts</label>
+                    <input type="number" id="cap-dreadnoughts" value="${entity.caps.dreadnoughts || 0}">
+                </div>
+            </div>
+            ` : ''}
         `;
 
         if (entity.bounds) {
@@ -895,6 +1010,22 @@ function updateEntityFromForm() {
         const effectVal = document.getElementById('edit-effect')?.value;
         if (effectVal !== undefined) entity.dockEffect = effectVal;
 
+        const parasiteTypeVal = document.getElementById('edit-parasite-type')?.value;
+        const parasiteGuardsVal = parseInt(document.getElementById('edit-parasite-guards')?.value || 4);
+
+        if (parasiteTypeVal === 'none') {
+            delete entity.parasite;
+            const guardsInput = document.getElementById('edit-parasite-guards');
+            if (guardsInput) guardsInput.disabled = true;
+        } else {
+            entity.parasite = {
+                type: parasiteTypeVal,
+                guards: parasiteGuardsVal
+            };
+            const guardsInput = document.getElementById('edit-parasite-guards');
+            if (guardsInput) guardsInput.disabled = false;
+        }
+
     } else if (type === 'region') {
         const iconVal = document.getElementById('edit-icon')?.value;
         if (iconVal !== undefined) entity.icon = iconVal;
@@ -906,7 +1037,18 @@ function updateEntityFromForm() {
         if (gemRewardVal !== undefined) entity.gemReward = gemRewardVal;
 
         const bgVal = document.getElementById('edit-bg')?.value;
-        if (bgVal !== undefined) entity.bgColor = bgVal;
+        const bgPickerVal = document.getElementById('edit-bg-picker')?.value;
+        if (document.activeElement?.id === 'edit-bg-picker' && bgPickerVal) {
+            document.getElementById('edit-bg').value = bgPickerVal;
+            entity.bgColor = bgPickerVal;
+        } else if (document.activeElement?.id === 'edit-bg' && bgVal) {
+            entity.bgColor = bgVal;
+            const hex = colorToHex(bgVal);
+            const picker = document.getElementById('edit-bg-picker');
+            if (picker) picker.value = hex;
+        } else if (bgVal) {
+            entity.bgColor = bgVal;
+        }
 
         const partVal = document.getElementById('edit-particles')?.value;
         if (partVal !== undefined) entity.particleType = partVal;
@@ -927,6 +1069,19 @@ function updateEntityFromForm() {
                 worldX: ((minX + maxX) / 2) * 1000,
                 worldY: -((minY + maxY) / 2) * 1000
             };
+        }
+
+        if (entity.caps) {
+            entity.caps.gravityWells = parseInt(document.getElementById('cap-gravityWells')?.value || 0);
+            entity.caps.comets = parseInt(document.getElementById('cap-comets')?.value || 0);
+            entity.caps.cargoTrains = parseInt(document.getElementById('cap-cargoTrains')?.value || 0);
+            entity.caps.mines = parseInt(document.getElementById('cap-mines')?.value || 0);
+            entity.caps.derelicts = parseInt(document.getElementById('cap-derelicts')?.value || 0);
+            entity.caps.asteroids = parseInt(document.getElementById('cap-asteroids')?.value || 0);
+            entity.caps.fighters = parseInt(document.getElementById('cap-fighters')?.value || 0);
+            entity.caps.battleships = parseInt(document.getElementById('cap-battleships')?.value || 0);
+            entity.caps.neutrals = parseInt(document.getElementById('cap-neutrals')?.value || 0);
+            entity.caps.dreadnoughts = parseInt(document.getElementById('cap-dreadnoughts')?.value || 0);
         }
     } else if (type === 'asteroids') {
         const cxVal = parseFloat(document.getElementById('edit-cx')?.value || 0);
@@ -1560,6 +1715,7 @@ async function saveToFiles() {
         }
 
         showStatus('Changes saved to files!');
+        setUnsavedChanges(false);
     } catch (err) {
         alert('Error saving files: ' + err.message);
         console.error(err);
@@ -1637,7 +1793,7 @@ function serializeRegions() {
     const formatted = regions.map(reg => {
         let testFuncStr;
         if (reg.name === 'The Void') {
-            testFuncStr = `(cx, cy) => Math.abs(cx) > 30 || Math.abs(cy) > 30`;
+            testFuncStr = `(cx, cy) => Math.abs(cx) > 45 || Math.abs(cy) > 45`;
         } else if (reg.name === 'Blob Space') {
             testFuncStr = `(cx, cy) => cx > 4 && cy < -10`;
         } else if (reg.name === 'Robo Space') {
