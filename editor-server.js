@@ -21,7 +21,8 @@ const ALLOWED_SAVE_FILES = [
     'regions.js',
     'largeAsteroids.js',
     'nebulas.js',
-    'tradeRoutes.js'
+    'tradeRoutes.js',
+    'clusters.js'
 ];
 
 const server = http.createServer((req, res) => {

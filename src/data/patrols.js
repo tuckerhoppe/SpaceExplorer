@@ -9,6 +9,16 @@ export const SQUAD_DEFINITIONS = {
             color: '#8b0000'
         }
     ],
+    'Ranger Headquarters': [
+        {
+            id: 'ranger_hq_squad_1',
+            name: 'Ranger HQ Security Fleet',
+            formation: 'v_formation',
+            leader: 'battleship',
+            members: ['fighter', 'fighter', 'fighter', 'fighter', 'fighter', 'fighter'],
+            color: '#ff0000'
+        }
+    ],
     'The Badlands': [
         {
             id: 'badlands_squad_1',

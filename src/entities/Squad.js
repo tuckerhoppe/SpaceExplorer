@@ -91,8 +91,14 @@ export class Squad {
     }
 
     spawn(game) {
-        const startX = this.region.center.worldX;
-        const startY = this.region.center.worldY;
+        let startX = this.region.center.worldX;
+        let startY = this.region.center.worldY;
+
+        if (this.region.name === 'Ranger Headquarters' && this.region.bounds) {
+            startX = (this.region.bounds.minX + 0.5) * 1000;
+            startY = -(this.region.bounds.minY + 0.5) * 1000;
+        }
+
         this.leaderX = startX;
         this.leaderY = startY;
         this.vx = Utils.rand(-1, 1);
@@ -160,18 +166,18 @@ export class Squad {
         const distToPlayer = Utils.dist(leaderShip.x, leaderShip.y, px, py);
 
         // Determine aggro range based on leader ship characteristics
-        let aggroRange = 900;
+        let aggroRange = 1200;
         let maxSpeed = 3.5;
         let accel = 0.12;
         let turnSpeed = 0.08;
 
         if (leaderShip.radius > 40) { // Dreadnought
-            aggroRange = 1500;
+            aggroRange = 2000;
             maxSpeed = 1.0;
             accel = 0.04;
             turnSpeed = 0.025; // standard is 0.015, make it more responsive
         } else if (leaderShip.radius > 20) { // Battleship
-            aggroRange = 1200;
+            aggroRange = 1600;
             maxSpeed = 1.6;
             accel = 0.06;
             turnSpeed = 0.045; // standard is 0.03

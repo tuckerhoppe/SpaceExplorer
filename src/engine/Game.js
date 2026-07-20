@@ -36,6 +36,7 @@ import { NEBULA_DEFINITIONS } from '../data/nebulas.js';
 import { Nebula } from '../entities/Nebula.js';
 import { LARGE_ASTEROID_DEFINITIONS } from '../data/largeAsteroids.js';
 import { LargeAsteroid } from '../entities/LargeAsteroid.js';
+import { CLUSTERS } from '../data/clusters.js';
 
 export class Game {
     constructor() {
@@ -81,6 +82,7 @@ export class Game {
         this.tradeRouteManager = new TradeRouteManager();
 
         this.conquestSessionKills = {};
+        this.conquestSquadKills = {};
         for (const reg of REGIONS) {
             if (reg.name !== 'Neutral Space' && !reg.isVoid) {
                 const parasiteCount = this.sectorManager.objects.filter(obj => {
@@ -119,6 +121,13 @@ export class Game {
             this.conqueredRegions = new Set(savedConquered);
         } catch {
             this.conqueredRegions = new Set();
+        }
+
+        try {
+            const savedClusters = JSON.parse(localStorage.getItem('space_explorer_completed_clusters') || '[]');
+            this.completedClusterIds = new Set(savedClusters);
+        } catch {
+            this.completedClusterIds = new Set();
         }
 
         this.init();
@@ -683,13 +692,11 @@ export class Game {
                 if (now - exitTime > 15000) {
                     this.despawnSquadsForRegion(regionName);
                     const kills = this.conquestSessionKills[regionName];
-                    if (kills && (kills.fighters > 0 || kills.battleships > 0 || kills.dreadnoughts > 0)) {
+                    if (kills && (kills.fighters > 0 || kills.battleships > 0 || kills.dreadnoughts > 0 || (this.conquestSquadKills[regionName] || 0) > 0)) {
                         kills.fighters = 0;
                         kills.battleships = 0;
                         kills.dreadnoughts = 0;
-                        if (this.hud) {
-                            this.hud.showFloatingReward(`${regionName} progress reset (left > 15s)`, '#ff3c3c');
-                        }
+                        this.conquestSquadKills[regionName] = 0;
                     }
                     this.regionManager._lastExitTimes.delete(regionName);
                 }
@@ -1274,6 +1281,7 @@ export class Game {
         // ── Enemy update & collision ──────────────────────────────
         for (let e = this.enemies.length - 1; e >= 0; e--) {
             const enemy = this.enemies[e];
+            if (!enemy) continue;
             enemy.update(this);
 
             // Despawn if too far from player
@@ -1321,6 +1329,7 @@ export class Game {
         // ── Battleship update & collision ───────────────────────
         for (let e = this.battleships.length - 1; e >= 0; e--) {
             const bs = this.battleships[e];
+            if (!bs) continue;
             bs.update(this);
 
             if (Utils.dist(this.player.x, this.player.y, bs.x, bs.y) > 5000 && !bs.isPatrolSquadMember) {
@@ -1350,6 +1359,7 @@ export class Game {
         // ── Dreadnought update & collision ──────────────────────
         for (let e = this.dreadnoughts.length - 1; e >= 0; e--) {
             const dn = this.dreadnoughts[e];
+            if (!dn) continue;
             dn.update(this);
 
             if (Utils.dist(this.player.x, this.player.y, dn.x, dn.y) > 6000 && !dn.isPatrolSquadMember) {
@@ -1379,6 +1389,7 @@ export class Game {
         // ── Boss update & collision ──────────────────────────────
         for (let b = this.bosses.length - 1; b >= 0; b--) {
             const boss = this.bosses[b];
+            if (!boss) continue;
             boss.update(this);
 
             // Boss health bar is handled in HUD.js (we'll ensure it has access to active bosses)
@@ -1405,6 +1416,7 @@ export class Game {
         // ── Neutral ship update & collision ─────────────────────
         for (let e = this.neutralShips.length - 1; e >= 0; e--) {
             const ns = this.neutralShips[e];
+            if (!ns) continue;
             ns.update(this);
 
             if (Utils.dist(this.player.x, this.player.y, ns.x, ns.y) > 4500) {
@@ -1996,9 +2008,13 @@ export class Game {
 
         if (currentRegionName && this.conquestSessionKills[currentRegionName] && !this.conqueredRegions.has(currentRegionName)) {
             const kills = this.conquestSessionKills[currentRegionName];
-            if (type === 'fighter') kills.fighters++;
-            else if (type === 'battleship') kills.battleships++;
-            else if (type === 'dreadnought') kills.dreadnoughts++;
+            if (target.isPatrolSquadMember) {
+                this.conquestSquadKills[currentRegionName] = (this.conquestSquadKills[currentRegionName] || 0) + 1;
+            } else {
+                if (type === 'fighter') kills.fighters++;
+                else if (type === 'battleship') kills.battleships++;
+                else if (type === 'dreadnought') kills.dreadnoughts++;
+            }
             this.checkRegionConquest(currentRegionName);
         }
     }
@@ -2483,8 +2499,44 @@ export class Game {
         this.player.gemVault += region.gemReward || 100;
         this.player.totalGemsCollected += region.gemReward || 100;
         this.player.addScience(50);
+        
+        this.checkClusterCompletion();
+        
         this.player.save();
         return true;
+    }
+
+    checkClusterCompletion() {
+        for (const cluster of CLUSTERS) {
+            if (this.completedClusterIds.has(cluster.id)) continue;
+
+            const allConquered = cluster.regions.every(regName => this.conqueredRegions.has(regName));
+            if (allConquered) {
+                this.completedClusterIds.add(cluster.id);
+                localStorage.setItem('space_explorer_completed_clusters', JSON.stringify([...this.completedClusterIds]));
+
+                // Apply rewards
+                if (cluster.reward) {
+                    if (cluster.reward.gems) {
+                        this.player.gems += cluster.reward.gems;
+                        this.player.gemVault += cluster.reward.gems;
+                        this.player.totalGemsCollected += cluster.reward.gems;
+                        this.hud?.showFloatingReward(`+${cluster.reward.gems} 💎 (Cluster Bonus)`, '#00ffd0');
+                    }
+                    if (cluster.reward.science) {
+                        this.player.addScience(cluster.reward.science);
+                        this.hud?.showFloatingReward(`+${cluster.reward.science} SP (Cluster/Sector Secured)`, '#00e5ff');
+                    }
+                }
+
+                // Trigger dialogue
+                if (cluster.dialogue && this.hud) {
+                    setTimeout(() => {
+                        this.hud.triggerHail(cluster.dialogue.sender || 'NPC', cluster.dialogue);
+                    }, 2500);
+                }
+            }
+        }
     }
 
     triggerGameOver() {

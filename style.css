@@ -1775,9 +1775,23 @@ canvas {
     transition: width 0.3s ease-out;
 }
 
+/* --- Region Conquest Panel Styling on Region Header --- */
+.region-container.unconquered-threat {
+    border-color: rgba(255, 60, 60, 0.6) !important;
+    box-shadow: 0 0 15px rgba(255, 60, 60, 0.25) !important;
+    padding: 12px 24px !important;
+    min-width: 320px !important;
+    transition: all 0.4s ease-in-out;
+}
+
+.region-container.unconquered-threat .region-text {
+    color: #ff3c3c !important;
+    text-shadow: 0 0 10px rgba(255, 60, 60, 0.5) !important;
+}
+
 #objectives-panel {
     position: absolute;
-    bottom: 20px;
+    bottom: 60px;
     left: 20px;
     display: flex;
     flex-direction: column;
@@ -2329,4 +2343,11 @@ canvas {
 .conquest-card.conquered .conquest-card-bar-fill {
     background: #50dc78;
     box-shadow: 0 0 8px rgba(80, 220, 120, 0.5);
+}
+
+@keyframes clusterNotify {
+    0% { opacity: 0; transform: translate(-50%, -40%) scale(0.9); filter: blur(5px); }
+    15% { opacity: 1; transform: translate(-50%, -50%) scale(1.0); filter: blur(0px); }
+    85% { opacity: 1; transform: translate(-50%, -50%) scale(1.0); filter: blur(0px); }
+    100% { opacity: 0; transform: translate(-50%, -55%) scale(1.05); filter: blur(8px); }
 }

@@ -6,6 +6,7 @@ import { ScienceMiniGame } from './ScienceMiniGame.js';
 import { MiniMap } from './MiniMap.js';
 import { SPECIFIC_HAILS } from '../data/messages.js';
 import { NPC_ROSTER } from '../data/npcs.js';
+import { CLUSTERS } from '../data/clusters.js';
 
 export class HUD {
     constructor(game) {
@@ -16,6 +17,10 @@ export class HUD {
         this._lastQuestIds = '';
         this.mapState = { offsetX: 0, offsetY: 0, zoom: 1, isDragging: false, lastMouse: {x: 0, y: 0}, hoverObj: null, maxZoom: 3, minZoom: 0.25 };
         this.miniMap = new MiniMap(game);
+        
+        // Popup Queue
+        this.popupQueue = [];
+        this.currentPopupActive = false;
         
         // --- Station Panel Elements ---
         this.stationPanel = document.getElementById('station-panel');
@@ -1292,6 +1297,18 @@ export class HUD {
             const el = document.getElementById('region-name');
             const diffBadge = document.getElementById('region-diff-badge');
 
+            // Cluster subtitle display
+            const clusterNameEl = document.getElementById('cluster-name');
+            if (clusterNameEl) {
+                const cluster = CLUSTERS.find(c => c.regions.includes(region.name));
+                if (cluster) {
+                    clusterNameEl.textContent = cluster.name;
+                    clusterNameEl.style.display = 'block';
+                } else {
+                    clusterNameEl.style.display = 'none';
+                }
+            }
+
             if (el) {
                 el.textContent = region.name;
                 el.style.color = region.color || 'rgba(0,240,255,0.7)';
@@ -1332,32 +1349,42 @@ export class HUD {
 
             const discoveryEl = document.getElementById('region-discovery-info');
             if (discoveryEl) {
-                const progress = this.game.sectorManager.getRegionDiscoveryProgress(region.name);
-                discoveryEl.textContent = `${progress.discovered} / ${progress.total} Stellar Objects Discovered`;
-                
-                if (progress.total > 0 && progress.discovered === progress.total) {
-                    discoveryEl.classList.add('survey-complete');
-                    discoveryEl.textContent = `✅ ${region.name} 100% Discovered`;
+                const isConquered = !region.conquest || this.game.conqueredRegions.has(region.name);
+                if (isConquered) {
+                    discoveryEl.style.display = 'block';
+                    const progress = this.game.sectorManager.getRegionDiscoveryProgress(region.name);
+                    discoveryEl.textContent = `${progress.discovered} / ${progress.total} Stellar Objects Discovered`;
+                    
+                    if (progress.total > 0 && progress.discovered === progress.total) {
+                        discoveryEl.classList.add('survey-complete');
+                        discoveryEl.textContent = `✅ ${region.name} 100% Discovered`;
+                    } else {
+                        discoveryEl.classList.remove('survey-complete');
+                    }
                 } else {
-                    discoveryEl.classList.remove('survey-complete');
+                    discoveryEl.style.display = 'none';
                 }
             }
 
             const conquestContainer = document.getElementById('region-conquest-container');
             const conquestFill = document.getElementById('region-conquest-fill');
             const conquestText = document.getElementById('region-conquest-text');
+            const regionContainer = document.querySelector('.region-container');
 
             if (conquestContainer && conquestFill && conquestText) {
                 if (!region || !region.conquest) {
                     conquestContainer.classList.add('hidden');
+                    if (regionContainer) {
+                        regionContainer.classList.remove('unconquered-threat');
+                    }
                 } else {
-                    conquestContainer.classList.remove('hidden');
                     const isConquered = this.game.conqueredRegions.has(region.name);
                     
                     if (isConquered) {
-                        conquestFill.style.width = '0%';
-                        conquestFill.style.background = '#ff3c3c';
-                        conquestText.innerHTML = `<span style="color: #50dc78; font-weight: bold; font-size: 0.65rem; letter-spacing: 0.5px;">REGION LIBERATED!</span>`;
+                        conquestContainer.classList.add('hidden');
+                        if (regionContainer) {
+                            regionContainer.classList.remove('unconquered-threat');
+                        }
                     } else {
                         const kills = this.game.conquestSessionKills[region.name] || { fighters: 0, battleships: 0, dreadnoughts: 0 };
                         const req = region.conquest;
@@ -1372,31 +1399,41 @@ export class HUD {
                         const totalStationsCount = req.stations;
 
                         const regionSquads = SQUAD_DEFINITIONS[region.name] || [];
-                        const totalSquadsCount = req.squads || 0;
-                        const defeatedSquadsCount = regionSquads.filter(s => this.game.defeatedSquadIds.has(s.id)).length;
+                        let totalSquadShips = 0;
+                        regionSquads.forEach(s => {
+                            totalSquadShips += 1 + (s.members ? s.members.length : 0);
+                        });
+                        const killedSquadShips = this.game.conquestSquadKills[region.name] || 0;
 
-                        const totalRequired = req.fighters + req.battleships + (req.dreadnoughts || 0) + totalStationsCount + totalSquadsCount;
-                        const totalCleared = Math.min(req.fighters, kills.fighters) + Math.min(req.battleships, kills.battleships) + (req.dreadnoughts ? Math.min(req.dreadnoughts, kills.dreadnoughts) : 0) + clearedStationsCount + defeatedSquadsCount;
+                        const totalRequired = req.fighters + req.battleships + (req.dreadnoughts || 0) + totalStationsCount + totalSquadShips;
+                        const totalCleared = Math.min(req.fighters, kills.fighters) + Math.min(req.battleships, kills.battleships) + (req.dreadnoughts ? Math.min(req.dreadnoughts, kills.dreadnoughts) : 0) + clearedStationsCount + Math.min(totalSquadShips, killedSquadShips);
                         
                         const remaining = Math.max(0, totalRequired - totalCleared);
                         const pct = totalRequired > 0 ? (remaining / totalRequired) * 100 : 0;
                         
-                        if (remaining === 0) {
-                            conquestFill.style.width = '0%';
-                            conquestFill.style.background = '#ff3c3c';
-                            conquestText.innerHTML = `<span style="color: #50dc78; font-weight: bold; font-size: 0.65rem; letter-spacing: 0.5px;">REGION LIBERATED!</span>`;
+                        if (pct === 0 || remaining === 0) {
+                            conquestContainer.classList.add('hidden');
+                            if (regionContainer) {
+                                regionContainer.classList.remove('unconquered-threat');
+                            }
                         } else {
+                            conquestContainer.classList.remove('hidden');
+                            if (regionContainer) {
+                                regionContainer.classList.add('unconquered-threat');
+                            }
+                            
                             conquestFill.style.width = `${pct}%`;
-                            conquestFill.style.background = '#cc2200'; // Red color representing enemy strength
+                            conquestFill.style.background = 'linear-gradient(90deg, #cc2200, #ff4400)';
+                            conquestFill.style.boxShadow = '0 0 10px #ff3c3c';
                             
                             let progressParts = [];
                             progressParts.push(`Fighters: ${kills.fighters}/${req.fighters}`);
                             if (req.battleships > 0) progressParts.push(`Battleships: ${kills.battleships}/${req.battleships}`);
                             if (req.dreadnoughts > 0) progressParts.push(`Dreadnoughts: ${kills.dreadnoughts}/${req.dreadnoughts}`);
                             if (totalStationsCount > 0) progressParts.push(`Stations: ${clearedStationsCount}/${totalStationsCount}`);
-                            if (totalSquadsCount > 0) progressParts.push(`Squads: ${defeatedSquadsCount}/${totalSquadsCount}`);
+                            if (totalSquadShips > 0) progressParts.push(`Patrol: ${killedSquadShips}/${totalSquadShips}`);
                             
-                            conquestText.innerHTML = `Enemy Strength: ${Math.round(pct)}%<br/><span style="font-size: 0.52rem; opacity: 0.7;">${progressParts.join(' | ')}</span>`;
+                            conquestText.innerHTML = `Threat Level: ${Math.round(pct)}%<br/><span style="font-size: 0.5rem; opacity: 0.75; letter-spacing: 0.5px;">${progressParts.join(' | ')}</span>`;
                         }
                     }
                 }
@@ -1485,11 +1522,64 @@ export class HUD {
         el.addEventListener('animationend', () => el.remove());
     }
 
+    showClusterAnnouncement(clusterName) {
+        const el = document.createElement('div');
+        el.className = 'cluster-announcement';
+        el.innerHTML = `
+            <span style="font-size: 0.72rem; letter-spacing: 4px; opacity: 0.85; font-family: 'Orbitron', sans-serif; font-weight: bold; color: #00ffd0;">NOW ENTERING</span><br>
+            <span style="font-size: 1.8rem; letter-spacing: 6px; font-family: 'Orbitron', sans-serif; font-weight: 700; text-shadow: 0 0 20px rgba(0, 240, 255, 0.6); color: #ffffff; text-transform: uppercase;">${clusterName}</span>
+        `;
+        el.style.position = 'absolute';
+        el.style.top = '30%';
+        el.style.left = '50%';
+        el.style.transform = 'translate(-50%, -50%)';
+        el.style.textAlign = 'center';
+        el.style.pointerEvents = 'none';
+        el.style.zIndex = '999';
+        el.style.animation = 'clusterNotify 4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards';
+        document.getElementById('ui-layer').appendChild(el);
+        el.addEventListener('animationend', () => el.remove());
+    }
+
     showGameOver() {
         document.getElementById('game-over').classList.remove('hidden');
     }
 
     showDiscoveryPopup(obj) {
+        this.enqueuePopup('discovery', obj);
+    }
+
+    showRegionDiscovery(region, gems = null, sciPoints = null) {
+        this.enqueuePopup('region', { region, gems, sciPoints });
+    }
+
+    enqueuePopup(type, data) {
+        this.popupQueue.push({ type, data });
+        this.processPopupQueue();
+    }
+
+    processPopupQueue() {
+        if (this.currentPopupActive) return;
+
+        // If there's a cluster announcement on screen, delay processing
+        if (document.querySelector('.cluster-announcement')) {
+            setTimeout(() => this.processPopupQueue(), 500);
+            return;
+        }
+
+        if (this.popupQueue.length === 0) return;
+
+        this.currentPopupActive = true;
+        const next = this.popupQueue.shift();
+
+        if (next.type === 'discovery') {
+            this._renderDiscoveryPopup(next.data);
+        } else if (next.type === 'region') {
+            this._renderRegionDiscovery(next.data.region, next.data.gems, next.data.sciPoints);
+        }
+    }
+
+    _renderDiscoveryPopup(obj) {
         const TYPE_LABELS = { planet: 'Planet Discovered!', nebula: 'Nebula Charted!', star: 'Star Located!', station: 'Station Found!', artifact: 'Artifact Discovered!' };
         const TYPE_ICONS = { planet: '🪐', nebula: '🌌', star: '⭐', station: '🛸', artifact: '💠' };
 
@@ -1522,13 +1612,18 @@ export class HUD {
         popup.classList.add('active', 'popup-pinned');
         this._pauseForPopup();
 
-        popup.querySelector('.popup-close-btn').addEventListener('click', () => {
-            popup.classList.remove('active', 'popup-pinned');
-            this._resumeFromPopup();
-        });
+        const closeBtn = popup.querySelector('.popup-close-btn');
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                popup.classList.remove('active', 'popup-pinned');
+                this._resumeFromPopup();
+                this.currentPopupActive = false;
+                this.processPopupQueue();
+            };
+        }
     }
 
-    showRegionDiscovery(region, gems = null, sciPoints = null) {
+    _renderRegionDiscovery(region, gems = null, sciPoints = null) {
         const popup = document.getElementById('discovery-popup');
         const isFirstTime = gems !== null;
 
@@ -1555,16 +1650,23 @@ export class HUD {
             // Pin until dismissed, game pauses
             popup.classList.add('active', 'popup-pinned');
             this._pauseForPopup();
-            popup.querySelector('.popup-close-btn').addEventListener('click', () => {
-                popup.classList.remove('active', 'popup-pinned');
-                this._resumeFromPopup();
-            });
+            const btn = popup.querySelector('.popup-close-btn');
+            if (btn) {
+                btn.onclick = () => {
+                    popup.classList.remove('active', 'popup-pinned');
+                    this._resumeFromPopup();
+                    this.currentPopupActive = false;
+                    this.processPopupQueue();
+                };
+            }
         } else {
             // Auto-dismiss
             popup.classList.remove('popup-pinned');
             popup.classList.add('active');
             this._popupTimer = setTimeout(() => {
                 popup.classList.remove('active');
+                this.currentPopupActive = false;
+                this.processPopupQueue();
             }, 4000);
         }
     }

@@ -1,4 +1,5 @@
 import { REGIONS, DEFAULT_REGION } from '../data/regions.js';
+import { CLUSTERS } from '../data/clusters.js';
 
 const STORAGE_KEY = 'space_explorer_regions';
 
@@ -19,6 +20,7 @@ export class RegionManager {
         // Session-level flags (not persisted)
         this._hasHailedHome = false;
         this._lastExitTimes = new Map();
+        this._lastClusterExitTimes = new Map();
     }
 
     discoverAll() {
@@ -58,6 +60,58 @@ export class RegionManager {
             // Clear exit time of the region we just entered
             this._lastExitTimes.delete(newRegion.name);
 
+            // First-time discovery check
+            let isFirstTime = false;
+            let reward = 0;
+            if (newRegion !== DEFAULT_REGION && !this.discoveredRegions.has(newRegion.name)) {
+                isFirstTime = true;
+                this.discoveredRegions.add(newRegion.name);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify([...this.discoveredRegions]));
+
+                reward = newRegion.gemReward || 0;
+                if (reward > 0 && game?.player) {
+                    game.player.gems += reward;
+                    game.player.totalGemsCollected += reward;
+                }
+                if (game?.player) game.player.addScience(50);
+            }
+
+            // Check cluster transition
+            const newCluster = CLUSTERS.find(c => c.regions.includes(newRegion.name));
+            const prevCluster = this._prevRegion ? CLUSTERS.find(c => c.regions.includes(this._prevRegion.name)) : null;
+
+            // Track cluster exit
+            if (prevCluster && newCluster !== prevCluster) {
+                this._lastClusterExitTimes.set(prevCluster.id, Date.now());
+            }
+
+            let showRegionImmediately = true;
+            if (newCluster && newCluster !== prevCluster) {
+                const lastExit = this._lastClusterExitTimes.get(newCluster.id) || 0;
+                const isReturningQuickly = (Date.now() - lastExit) < 20000;
+
+                if (!isReturningQuickly) {
+                    if (game?.hud && typeof game.hud.showClusterAnnouncement === 'function') {
+                        game.hud.showClusterAnnouncement(newCluster.name);
+                        if (isFirstTime) {
+                            showRegionImmediately = false;
+                            // Delay the region discovery pop-up by 4 seconds (duration of cluster banner animation)
+                            setTimeout(() => {
+                                if (game?.hud) {
+                                    game.hud.showRegionDiscovery(newRegion, reward, 50);
+                                }
+                            }, 4000);
+                        }
+                    }
+                }
+            }
+
+            if (isFirstTime && showRegionImmediately) {
+                if (game?.hud) {
+                    game.hud.showRegionDiscovery(newRegion, reward, 50);
+                }
+            }
+
             this._prevRegion = newRegion;
 
             if (game?.spawnSquadsForRegion) {
@@ -73,30 +127,6 @@ export class RegionManager {
                 if (!game.questManager.isQuestCompletedOrActive('region_home_defense')) {
                     this._hasHailedHome = true;
                     game.hud.triggerHail('COMMODORE REED', 'home_region_ambush');
-                }
-            }
-
-            // --- VISUAL POPUP COOLDOWN LOGIC ---
-            const now = Date.now();
-            const lastExit = this._lastExitTimes.get(newRegion.name) || 0;
-            const isReturningQuickly = (now - lastExit) < 30000; // 30 second returning-too-soon window
-
-            if (newRegion !== DEFAULT_REGION && !isReturningQuickly) {
-                if (!this.discoveredRegions.has(newRegion.name)) {
-                    // First-time discovery: award gems + science and show combined popup
-                    this.discoveredRegions.add(newRegion.name);
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify([...this.discoveredRegions]));
-
-                    const reward = newRegion.gemReward || 0;
-                    if (reward > 0 && game?.player) {
-                        game.player.gems += reward;
-                        game.player.totalGemsCollected += reward;
-                    }
-                    if (game?.player) game.player.addScience(50);
-                    if (game?.hud) game.hud.showRegionDiscovery(newRegion, reward, 50);
-                } else if (game?.hud) {
-                    // Repeat entry — show informational popup only
-                    game.hud.showRegionDiscovery(newRegion);
                 }
             }
         }

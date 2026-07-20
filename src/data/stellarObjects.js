@@ -3079,6 +3079,10 @@ export const STELLAR_OBJECTS = [
         "dockEffect": "heal",
         "maxScience": 0,
         "color": "#ffffff",
-        "description": "The Birth place of the Space Ranger corps."
+        "description": "The Birth place of the Space Ranger corps.",
+        "parasite": {
+            "type": "oppressor",
+            "guards": 4
+        }
     }
 ];

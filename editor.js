@@ -3,6 +3,7 @@ import { REGIONS, DEFAULT_REGION } from './src/data/regions.js';
 import { LARGE_ASTEROID_DEFINITIONS } from './src/data/largeAsteroids.js';
 import { NEBULA_DEFINITIONS } from './src/data/nebulas.js';
 import { TRADE_ROUTES_CONFIG } from './src/data/tradeRoutes.js';
+import { CLUSTERS } from './src/data/clusters.js';
 
 // Application State
 let stellarObjects = [...STELLAR_OBJECTS];
@@ -11,6 +12,7 @@ let defaultRegion = { ...DEFAULT_REGION };
 let asteroids = [...LARGE_ASTEROID_DEFINITIONS];
 let nebulas = [...NEBULA_DEFINITIONS];
 let tradeRoutes = [...TRADE_ROUTES_CONFIG];
+let clusters = [...CLUSTERS];
 
 let selectedEntity = null; // Primary selected item
 let selectedEntities = []; // Array of { type, ref }
@@ -227,7 +229,8 @@ function saveState() {
         regions: JSON.parse(JSON.stringify(regions)),
         asteroids: JSON.parse(JSON.stringify(asteroids)),
         nebulas: JSON.parse(JSON.stringify(nebulas)),
-        tradeRoutes: JSON.parse(JSON.stringify(tradeRoutes))
+        tradeRoutes: JSON.parse(JSON.stringify(tradeRoutes)),
+        clusters: JSON.parse(JSON.stringify(clusters))
     };
     undoStack.push(state);
     if (undoStack.length > 50) {
@@ -246,6 +249,7 @@ function undo() {
     asteroids = previousState.asteroids;
     nebulas = previousState.nebulas;
     tradeRoutes = previousState.tradeRoutes || [];
+    clusters = previousState.clusters || [];
 
     if (selectedEntity) {
         const ref = selectedEntity.ref;
@@ -260,6 +264,8 @@ function undo() {
             found = nebulas.find(n => n.name === ref.name);
         } else if (selectedEntity.type === 'route') {
             found = tradeRoutes.find(r => r.id === ref.id);
+        } else if (selectedEntity.type === 'cluster') {
+            found = clusters.find(c => c.id === ref.id);
         }
 
         if (found) {
@@ -650,11 +656,31 @@ function selectEntity(entity, type, keepMulti = false) {
 
     if (selectedEntities.length > 1) {
         inspectorTitle.innerText = `Multiple Selected (${selectedEntities.length})`;
-        inspectorFields.innerHTML = `
+        let fieldsHtml = `
             <div class="info-message" style="padding: 10px 0; text-align: left; color: var(--accent-blue);">
                 🚀 Selected <strong>${selectedEntities.length}</strong> items. Drag them on the map to move them together.
             </div>
         `;
+        
+        const selectedRegions = selectedEntities.filter(sel => sel.type === 'region');
+        if (selectedRegions.length > 0 && selectedRegions.length === selectedEntities.length) {
+            fieldsHtml += `
+                <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 15px; padding-top: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: #ff9500;">Cluster Options</h4>
+                    <button type="button" id="btn-create-cluster-selected" class="btn primary-btn" style="width: 100%;">
+                        Group into New Cluster
+                    </button>
+                </div>
+            `;
+            setTimeout(() => {
+                const btn = document.getElementById('btn-create-cluster-selected');
+                if (btn) {
+                    btn.onclick = () => createClusterFromSelected(selectedRegions.map(r => r.ref.name));
+                }
+            }, 0);
+        }
+        
+        inspectorFields.innerHTML = fieldsHtml;
         renderList();
         requestAnimationFrame(draw);
         switchTab('inspector-tab');
@@ -949,6 +975,38 @@ function selectEntity(entity, type, keepMulti = false) {
                 </div>
             </div>
         `;
+    } else if (type === 'cluster') {
+        inspectorTitle.innerText = `Edit Cluster`;
+        html = `
+            <div class="form-group">
+                <label for="edit-name">Cluster Name</label>
+                <input type="text" id="edit-name" value="${entity.name || ''}">
+            </div>
+            <div class="form-group-row">
+                <div class="form-group">
+                    <label for="edit-cluster-gems">Gem Reward</label>
+                    <input type="number" id="edit-cluster-gems" value="${entity.reward ? entity.reward.gems : 0}">
+                </div>
+                <div class="form-group">
+                    <label for="edit-cluster-science">Science Reward</label>
+                    <input type="number" id="edit-cluster-science" value="${entity.reward ? entity.reward.science : 0}">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="edit-dialogue-sender">Dialogue Sender</label>
+                <input type="text" id="edit-dialogue-sender" value="${entity.dialogue ? entity.dialogue.sender : 'GHOST COMPANION'}">
+            </div>
+            <div class="form-group">
+                <label for="edit-dialogue-text">Dialogue Text</label>
+                <textarea id="edit-dialogue-text" rows="3">${entity.dialogue ? entity.dialogue.text : ''}</textarea>
+            </div>
+            <div class="form-group">
+                <label>Regions in Cluster</label>
+                <div style="font-size: 0.8rem; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 4px; color: #aaa; max-height: 80px; overflow-y: auto; line-height: 1.4;">
+                    ${entity.regions.join('<br>')}
+                </div>
+            </div>
+        `;
     }
 
     inspectorFields.innerHTML = html;
@@ -1103,12 +1161,23 @@ function updateEntityFromForm() {
 
         const blobsVal = parseInt(document.getElementById('edit-blobs')?.value || 0);
         if (blobsVal !== undefined) entity.blobCount = blobsVal;
-    } else if (type === 'route') {
-        const widthVal = parseInt(document.getElementById('edit-width')?.value || 250);
-        if (!isNaN(widthVal)) entity.width = widthVal;
+    } else if (type === 'cluster') {
+        const gemReward = parseInt(document.getElementById('edit-cluster-gems')?.value || 0);
+        const science = parseInt(document.getElementById('edit-cluster-science')?.value || 0);
+        entity.reward = { gems: gemReward, science };
 
-        const speedVal = parseFloat(document.getElementById('edit-speed')?.value || 2.5);
-        if (!isNaN(speedVal)) entity.speedMultiplier = speedVal;
+        const sender = document.getElementById('edit-dialogue-sender')?.value || 'NPC';
+        const text = document.getElementById('edit-dialogue-text')?.value || '';
+        entity.dialogue = {
+            sender,
+            text,
+            options: entity.dialogue ? entity.dialogue.options : [
+                {
+                    text: "Thank you. Let's keep moving.",
+                    reply: "Understood."
+                }
+            ]
+        };
     }
 
     renderList();
@@ -1145,6 +1214,11 @@ function renderList() {
             list.push({ item: route, type: 'route', label: route.id, subtitle: 'Trade Route', cx, cy });
         });
     }
+    if (filterType === 'all' || filterType === 'clusters') {
+        clusters.forEach(c => {
+            list.push({ item: c, type: 'cluster', label: c.name, subtitle: `Cluster (${c.regions.length} regions)`, cx: 0, cy: 0 });
+        });
+    }
 
     // Sort by name
     list.sort((a, b) => a.label.localeCompare(b.label));
@@ -1161,7 +1235,7 @@ function renderList() {
                 <div class="list-item-name">${entry.label || 'Unnamed'}</div>
                 <div class="list-item-type">${entry.subtitle}</div>
             </div>
-            <div class="list-item-coords">[${entry.cx.toFixed(1)}, ${entry.cy.toFixed(1)}]</div>
+            <div class="list-item-coords">${entry.type !== 'cluster' ? `[${entry.cx.toFixed(1)}, ${entry.cy.toFixed(1)}]` : ''}</div>
         `;
 
         itemEl.onclick = () => {
@@ -1682,6 +1756,8 @@ function deleteSelectedEntity() {
         nebulas = nebulas.filter(neb => neb !== ref);
     } else if (selectedEntity.type === 'route') {
         tradeRoutes = tradeRoutes.filter(r => r !== ref);
+    } else if (selectedEntity.type === 'cluster') {
+        clusters = clusters.filter(c => c !== ref);
     }
 
     selectEntity(null);
@@ -1695,13 +1771,15 @@ async function saveToFiles() {
         const nebContent = serializeNebulas();
         const regContent = serializeRegions();
         const trContent = serializeTradeRoutes();
+        const clContent = serializeClusters();
 
         const files = [
             { filename: 'stellarObjects.js', content: stContent },
             { filename: 'largeAsteroids.js', content: astContent },
             { filename: 'nebulas.js', content: nebContent },
             { filename: 'regions.js', content: regContent },
-            { filename: 'tradeRoutes.js', content: trContent }
+            { filename: 'tradeRoutes.js', content: trContent },
+            { filename: 'clusters.js', content: clContent }
         ];
 
         for (const file of files) {
@@ -1747,6 +1825,7 @@ function exportAllFiles() {
     exportFile('nebulas.js', serializeNebulas());
     exportFile('regions.js', serializeRegions());
     exportFile('tradeRoutes.js', serializeTradeRoutes());
+    exportFile('clusters.js', serializeClusters());
 }
 
 // Data Serializers to reconstruct the exact clean JavaScript Code
@@ -1901,6 +1980,63 @@ function serializeTradeRoutes() {
     });
     out += formatted.join(',\n') + '\n];\n';
     return out;
+}
+
+function serializeClusters() {
+    let out = `export const CLUSTERS = [\n`;
+    const formatted = clusters.map(c => {
+        return '    ' + JSON.stringify(c, null, 4).replace(/\n/g, '\n    ');
+    });
+    out += formatted.join(',\n') + '\n];\n';
+    return out;
+}
+
+function createClusterFromSelected(regionNames) {
+    const clusterName = prompt("Enter the name of the new cluster (e.g. The Frontier):");
+    if (!clusterName) return;
+
+    const clusterId = clusterName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    
+    // Check if ID already exists
+    if (clusters.some(c => c.id === clusterId)) {
+        alert("A cluster with that name/ID already exists!");
+        return;
+    }
+
+    const gemRewardStr = prompt("Enter Gem Reward amount:", "2000");
+    const gemReward = parseInt(gemRewardStr) || 0;
+
+    const scienceRewardStr = prompt("Enter Science Reward amount:", "150");
+    const science = parseInt(scienceRewardStr) || 0;
+
+    const speaker = prompt("Enter dialogue speaker:", "GHOST COMPANION");
+    const text = prompt("Enter dialogue message:", "Incredible work, Commander! We have fully secured the " + clusterName + " cluster.");
+
+    const newCluster = {
+        id: clusterId,
+        name: clusterName,
+        regions: [...regionNames],
+        reward: { gems: gemReward, science },
+        dialogue: {
+            sender: speaker || 'NPC',
+            text: text || ('You have secured ' + clusterName + '.'),
+            options: [
+                {
+                    text: "Thank you. Let's keep moving.",
+                    reply: "Understood."
+                }
+            ]
+        }
+    };
+
+    saveState();
+    clusters.push(newCluster);
+    setUnsavedChanges(true);
+    alert(`Cluster "${clusterName}" created successfully with ${regionNames.length} regions!`);
+    
+    // Switch to list tab and select it
+    selectEntity(newCluster, 'cluster');
+    renderList();
 }
 
 // Start application

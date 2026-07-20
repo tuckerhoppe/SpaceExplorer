@@ -44,8 +44,19 @@
                     </div>
                 </div>
             </div>
-            <div id="objectives-panel">
-                <!-- Objectives will be injected here by HUD.js -->
+            <div id="hud-bottom-left" style="position: absolute; bottom: 20px; left: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 100; pointer-events: none;">
+                <!-- Coords & FPS inline -->
+                <div style="display: flex; gap: 10px;">
+                    <div class="hud-item coord-container" style="padding: 4px 10px; margin: 0; pointer-events: auto; border: 1px solid var(--panel-border); background: var(--panel-bg); border-radius: 6px;">
+                        <span id="coord-text" class="hud-text coord-text" style="font-size: 0.8rem; text-shadow: none; font-weight: bold; letter-spacing: 1px;">0 : 0</span>
+                    </div>
+                    <div class="hud-item" style="padding: 4px 10px; margin: 0; pointer-events: auto; display: flex; align-items: center; justify-content: center; border: 1px solid var(--panel-border); background: var(--panel-bg); border-radius: 6px;">
+                        <span id="fps-counter" class="hud-text fps-text" style="font-size: 0.8rem; text-shadow: none; font-weight: bold; letter-spacing: 1px; color: rgba(180, 255, 180, 0.9);">-- FPS</span>
+                    </div>
+                </div>
+                <div id="objectives-panel" style="position: static; display: flex; flex-direction: column; gap: 8px; pointer-events: auto; z-index: 10;">
+                    <!-- Objectives will be injected here by HUD.js -->
+                </div>
             </div>
             <div id="hud-top-right">
                 <div class="hud-item cargo-container">
@@ -71,9 +82,6 @@
                     </div>
                     <span id="sci-progress-text" class="sci-progress-text">0 / 10 SP</span>
                 </div>
-                <div class="hud-item">
-                    <span id="fps-counter" class="hud-text fps-text">-- FPS</span>
-                </div>
             </div>
 
             <!-- Dev HUD: toggle with backtick (`) — hidden by default -->
@@ -83,21 +91,21 @@
             </div>
 
             <div id="hud-top-center">
-                <div class="hud-item coord-container">
-                    <span id="coord-text" class="hud-text coord-text">0 : 0</span>
-                </div>
+                <!-- Spacer for Grid Centering -->
+                <div style="pointer-events: none;"></div>
                 <div class="hud-item region-container">
+                    <div id="cluster-name" style="font-size: 0.52rem; letter-spacing: 2px; color: #00ffd0; text-transform: uppercase; font-family: 'Orbitron', sans-serif; font-weight: bold; margin-bottom: 3px; display: none;"></div>
                     <span id="region-name" class="hud-text region-text">Neutral Space</span>
                     <div id="region-diff-badge" class="region-diff-badge">
                         <span class="diff-level">✓ LVL 1</span>
                         <span class="diff-warn"></span>
                     </div>
                     <div id="region-discovery-info" style="font-size: 0.6rem; color: #00f0ff; opacity: 0.8; margin-top: 0;">0 / 0 Stellar Objects Discovered</div>
-                    <div id="region-conquest-container" class="conquest-container hidden">
-                        <div id="region-conquest-track" class="conquest-progress-track">
-                            <div id="region-conquest-fill" class="conquest-progress-fill"></div>
+                    <div id="region-conquest-container" class="conquest-container hidden" style="width: 100%; margin-top: 8px;">
+                        <div id="region-conquest-track" class="conquest-progress-track" style="width: 100%; height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 2px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.05); margin: 2px 0;">
+                            <div id="region-conquest-fill" class="conquest-progress-fill" style="height: 100%; width: 100%; background: linear-gradient(90deg, #cc2200, #ff4400); box-shadow: 0 0 10px #ff3c3c; transition: width 0.4s ease-out;"></div>
                         </div>
-                        <span id="region-conquest-text" class="conquest-text">Conquest: 0%</span>
+                        <span id="region-conquest-text" class="conquest-text" style="font-size: 0.52rem; font-family: 'Orbitron', sans-serif; opacity: 0.85; color: #ffffff; letter-spacing: 0.5px; text-align: center; margin-top: 2px; display: block;">Conquest: 0%</span>
                     </div>
                     <div id="region-quests-panel" style="margin-top: 2px; text-align: center; width: 100%;"></div>
                 </div>

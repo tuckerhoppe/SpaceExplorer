@@ -1249,6 +1249,39 @@ export const REGIONS = [
             "neutrals": 4,
             "dreadnoughts": 0
     }
+    },
+    {
+        "name": "Iron Foundry",
+        "icon": "🪐",
+        "color": "#00ffaa",
+        "test": (cx, cy) => cx >= -33 && cx <= -29 && cy >= 20 && cy <= 25,
+        "description": "An uncharted new boundary.",
+        "gemReward": 0,
+        "bounds": {
+            "minX": -33,
+            "maxX": -29,
+            "minY": 20,
+            "maxY": 25
+    },
+        "center": {
+            "worldX": -31000,
+            "worldY": -22500
+    },
+        "difficulty": 7,
+        "bgColor": "#000805",
+        "particleType": "none",
+        "caps": {
+            "gravityWells": 1,
+            "comets": 1,
+            "cargoTrains": 0,
+            "mines": 2,
+            "derelicts": 4,
+            "asteroids": 30,
+            "fighters": 4,
+            "battleships": 0,
+            "neutrals": 4,
+            "dreadnoughts": 0
+    }
     }
 ];
 
