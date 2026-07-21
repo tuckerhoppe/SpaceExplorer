@@ -36,6 +36,35 @@ export class LargeAsteroid {
         this.rotation += this.rotSpeed;
     }
 
+    getSurfaceRadiusAtAngle(worldAngle) {
+        if (!this.vertices || this.vertices.length === 0) return this.radius;
+
+        let localAngle = (worldAngle - this.rotation) % (Math.PI * 2);
+        if (localAngle < 0) localAngle += Math.PI * 2;
+
+        const numPts = this.vertices.length;
+        const step = (Math.PI * 2) / numPts;
+        
+        const index = Math.floor(localAngle / step);
+        const nextIndex = (index + 1) % numPts;
+        const t = (localAngle - index * step) / step;
+
+        const v1 = this.vertices[index];
+        const v2 = this.vertices[nextIndex];
+        const mult = v1 * (1 - t) + v2 * t;
+
+        return this.radius * mult;
+    }
+
+    getEdgeIndexAtAngle(worldAngle) {
+        if (!this.vertices || this.vertices.length === 0) return 0;
+        let localAngle = (worldAngle - this.rotation) % (Math.PI * 2);
+        if (localAngle < 0) localAngle += Math.PI * 2;
+        const numPts = this.vertices.length;
+        const step = (Math.PI * 2) / numPts;
+        return Math.floor(localAngle / step) % numPts;
+    }
+
     draw(ctx, camera) {
         // Viewport cull
         if (this.x + this.radius < camera.x || this.x - this.radius > camera.x + camera.viewW / camera.zoom ||

@@ -373,31 +373,33 @@ export class Player {
             this._autoHealTimer = 0;
         }
 
-        if (Input.mouse.left && performance.now() - this.lastFireTime > this.fireRate) {
-            this.lastFireTime = performance.now();
-            const aimAngle = Utils.ang(this.x, this.y, Input.mouse.worldX, Input.mouse.worldY);
-            game.projectiles.push(new Projectile(
-                this.x + Math.cos(aimAngle) * this.radius,
-                this.y + Math.sin(aimAngle) * this.radius,
-                aimAngle, 12, this.damage
-            ));
-            this.vx -= Math.cos(aimAngle) * 0.5;
-            this.vy -= Math.sin(aimAngle) * 0.5;
-        }
+        if (!game.buildMode) {
+            if (Input.mouse.left && performance.now() - this.lastFireTime > this.fireRate) {
+                this.lastFireTime = performance.now();
+                const aimAngle = Utils.ang(this.x, this.y, Input.mouse.worldX, Input.mouse.worldY);
+                game.projectiles.push(new Projectile(
+                    this.x + Math.cos(aimAngle) * this.radius,
+                    this.y + Math.sin(aimAngle) * this.radius,
+                    aimAngle, 12, this.damage
+                ));
+                this.vx -= Math.cos(aimAngle) * 0.5;
+                this.vy -= Math.sin(aimAngle) * 0.5;
+            }
 
-        // Proton Torpedo Fire (Right-Click)
-        if (Input.mouse.right && this.tech.proton_torpedo && performance.now() - this.lastTorpedoTime > this.torpedoCooldown) {
-            this.lastTorpedoTime = performance.now();
-            const torpAngle = Utils.ang(this.x, this.y, Input.mouse.worldX, Input.mouse.worldY);
-            // Torpedo fires towards the mouse click
-            game.projectiles.push(new Projectile(
-                this.x + Math.cos(torpAngle) * (this.radius + 10),
-                this.y + Math.sin(torpAngle) * (this.radius + 10),
-                torpAngle, 10, 600, undefined, true
-            ));
-            // Visual kickback effect (opposite to shot direction)
-            this.vx -= Math.cos(torpAngle) * 4;
-            this.vy -= Math.sin(torpAngle) * 4;
+            // Proton Torpedo Fire (Right-Click)
+            if (Input.mouse.right && this.tech.proton_torpedo && performance.now() - this.lastTorpedoTime > this.torpedoCooldown) {
+                this.lastTorpedoTime = performance.now();
+                const torpAngle = Utils.ang(this.x, this.y, Input.mouse.worldX, Input.mouse.worldY);
+                // Torpedo fires towards the mouse click
+                game.projectiles.push(new Projectile(
+                    this.x + Math.cos(torpAngle) * (this.radius + 10),
+                    this.y + Math.sin(torpAngle) * (this.radius + 10),
+                    torpAngle, 10, 600, undefined, true
+                ));
+                // Visual kickback effect (opposite to shot direction)
+                this.vx -= Math.cos(torpAngle) * 4;
+                this.vy -= Math.sin(torpAngle) * 4;
+            }
         }
 
         // Dash logic (Arrow Keys) - Trigger an impulse

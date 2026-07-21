@@ -77,12 +77,14 @@ canvas {
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    pointer-events: none; /* Let clicks pass to the region container specifically */
+    pointer-events: none;
+    /* Let clicks pass to the region container specifically */
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: flex-start;
     gap: 15px;
-    width: 90%; /* allow wide layout */
+    width: 90%;
+    /* allow wide layout */
     max-width: 1200px;
 }
 
@@ -166,8 +168,15 @@ canvas {
 }
 
 @keyframes warnPulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.5; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
 }
 
 .gem-icon {
@@ -244,8 +253,15 @@ canvas {
 }
 
 @keyframes cargoPulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.55; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.55;
+    }
 }
 
 /* ─── Gem Vault HUD ──────────────────────────────── */
@@ -1744,8 +1760,15 @@ canvas {
 }
 
 @keyframes bossPanelFadeIn {
-    from { opacity: 0; transform: translate(-50%, -20px); }
-    to { opacity: 1; transform: translate(-50%, 0); }
+    from {
+        opacity: 0;
+        transform: translate(-50%, -20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
 }
 
 .boss-health-header {
@@ -1958,7 +1981,8 @@ canvas {
 /* ─── Station Panel ───────────────────────────────── */
 #station-panel {
     position: absolute;
-    bottom: 280px; /* Above the mini-map */
+    bottom: 280px;
+    /* Above the mini-map */
     right: 20px;
     flex-direction: column;
     align-items: flex-start;
@@ -2191,8 +2215,15 @@ canvas {
 }
 
 @keyframes blink {
-    from, to { opacity: 1; }
-    50% { opacity: 0; }
+
+    from,
+    to {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
 }
 
 .terminal-skip {
@@ -2216,6 +2247,7 @@ canvas {
     opacity: 1;
     transform: translateY(0);
 }
+
 .terminal-skip.hidden {
     display: none !important;
 }
@@ -2346,8 +2378,27 @@ canvas {
 }
 
 @keyframes clusterNotify {
-    0% { opacity: 0; transform: translate(-50%, -40%) scale(0.9); filter: blur(5px); }
-    15% { opacity: 1; transform: translate(-50%, -50%) scale(1.0); filter: blur(0px); }
-    85% { opacity: 1; transform: translate(-50%, -50%) scale(1.0); filter: blur(0px); }
-    100% { opacity: 0; transform: translate(-50%, -55%) scale(1.05); filter: blur(8px); }
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -40%) scale(0.9);
+        filter: blur(5px);
+    }
+
+    15% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.0);
+        filter: blur(0px);
+    }
+
+    85% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.0);
+        filter: blur(0px);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -55%) scale(1.05);
+        filter: blur(8px);
+    }
 }

@@ -15,19 +15,19 @@ export class HUD {
         this.objectivesPanel = document.getElementById('objectives-panel');
         this._lastObjectivesHtml = '';
         this._lastQuestIds = '';
-        this.mapState = { offsetX: 0, offsetY: 0, zoom: 1, isDragging: false, lastMouse: {x: 0, y: 0}, hoverObj: null, maxZoom: 3, minZoom: 0.25 };
+        this.mapState = { offsetX: 0, offsetY: 0, zoom: 1, isDragging: false, lastMouse: { x: 0, y: 0 }, hoverObj: null, maxZoom: 3, minZoom: 0.25 };
         this.miniMap = new MiniMap(game);
-        
+
         // Popup Queue
         this.popupQueue = [];
         this.currentPopupActive = false;
-        
+
         // --- Station Panel Elements ---
         this.stationPanel = document.getElementById('station-panel');
         this.stationNameEl = document.getElementById('station-panel-name');
         this.stationSpawnBtn = document.getElementById('station-spawn-btn');
         this.stationCrewListEl = document.getElementById('station-crew-list');
-        
+
         this._lastStationId = null;
         this._lastStationSpawn = null;
 
@@ -46,7 +46,15 @@ export class HUD {
 
         window.__hudKeydownHandler = (e) => {
             if (e.key === 'Escape' && !this.game.gameOver) {
-                this.game.toggleUpgrades();
+                if (this.game.buildMode || this.game.buildMenuOpen) {
+                    this.game.toggleBuildMenu();
+                } else {
+                    this.game.toggleUpgrades();
+                }
+            }
+            if ((e.key === 'b' || e.key === 'B') && !this.game.gameOver) {
+                e.preventDefault();
+                this.game.toggleBuildMenu();
             }
             if (e.key === '`') {
                 this.toggleDevHud();
@@ -182,7 +190,7 @@ export class HUD {
 
         // Dev: reset all saved progress and reload
         this.bindButton('dev-reset-btn', () => {
-            if (!confirm('Reset ALL progress? This clears discoveries, regions, quests, and settings.')) return;
+            if (!confirm('Reset ALL progress? This clears discoveries, regions, quests, structures, and settings.')) return;
 
             const keysToRemove = [
                 'space_explorer_discovered',
@@ -194,6 +202,7 @@ export class HUD {
                 'space_explorer_cleared',
                 'space_explorer_conquered_regions',
                 'space_explorer_defeated_squads',
+                'space_explorer_structures',
                 'setting_dynamic_zoom',
                 'setting_nav_hints',
                 'setting_show_stats',
@@ -203,6 +212,7 @@ export class HUD {
             ];
 
             keysToRemove.forEach(k => localStorage.removeItem(k));
+            if (this.game) this.game.structures = [];
             location.reload();
         });
 
@@ -211,6 +221,34 @@ export class HUD {
             this.game.player.toggleEngine();
             this._refreshEngineModeUI();
         });
+
+        this.bindButton('build-toggle-btn', (e) => {
+            this.game.toggleBuildMenu();
+        });
+
+        const miningBtn = document.getElementById('build-option-mining_station');
+        if (miningBtn) {
+            miningBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.game.startBuildPlacement('mining_station');
+            });
+        }
+
+        const scienceBtn = document.getElementById('build-option-science_station');
+        if (scienceBtn) {
+            scienceBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.game.startBuildPlacement('science_station');
+            });
+        }
+
+        const shipyardBtn = document.getElementById('build-option-shipyard');
+        if (shipyardBtn) {
+            shipyardBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.game.startBuildPlacement('shipyard');
+            });
+        }
 
         // Hail alert bindings
         this.bindButton('hail-done-btn', () => {
@@ -288,7 +326,7 @@ export class HUD {
                 }
             });
         }
-        
+
         const ghostDialogueCheckbox = document.getElementById('setting-ghost-dialogue');
         if (ghostDialogueCheckbox) {
             const savedSetting = localStorage.getItem('setting_ghost_dialogue');
@@ -342,7 +380,7 @@ export class HUD {
             const savedShowStats = localStorage.getItem('setting_show_stats');
             const isEnabled = savedShowStats === 'true'; // Default to OFF
             showStatsCheckbox.checked = isEnabled;
-            
+
             const statsPanel = document.getElementById('stats-panel');
             if (statsPanel) {
                 statsPanel.classList.toggle('hidden', !isEnabled);
@@ -361,7 +399,7 @@ export class HUD {
             const savedShowNavLog = localStorage.getItem('setting_show_nav_log');
             const isEnabled = savedShowNavLog === 'true'; // Default to OFF
             showNavLogCheckbox.checked = isEnabled;
-            
+
             const navLogPanel = document.getElementById('nav-log-panel');
             if (navLogPanel) {
                 navLogPanel.classList.toggle('hidden', !isEnabled);
@@ -464,7 +502,7 @@ export class HUD {
     refreshUpgrades() {
         const list = document.getElementById('upgrade-list');
         const sciLevel = this.game.player.scienceLevel;
-        
+
         this._updateUpgradeGemCount();
 
         UPGRADES.forEach((u, index) => {
@@ -636,7 +674,7 @@ export class HUD {
                 const id = e.target.dataset.id;
                 const def = TECH_UPGRADES.find(x => x.id === id);
                 if (this.game.player.tech[id]) return; // Already owned
-                
+
                 const sciOk = this.game.player.scienceLevel >= (def.sciLevel || 0);
                 if (sciOk && this.game.player.gems >= def.cost) {
                     this.game.player.gems -= def.cost;
@@ -689,13 +727,13 @@ export class HUD {
     refreshCodex() {
         const list = document.getElementById('codex-list');
         if (!list) return;
-        
+
         const sm = this.game.sectorManager;
         const player = this.game.player;
         if (!sm || !player) return;
 
         const discovered = sm.objects.filter(obj => sm.discoveredIds.has(obj.id));
-        
+
         if (discovered.length === 0) {
             list.innerHTML = '<div class="nav-log-empty" style="padding: 20px; text-align: center;">No scientific data collected yet. Explore the galaxy to populate the Codex.</div>';
             return;
@@ -706,9 +744,9 @@ export class HUD {
         list.innerHTML = discovered.map(obj => {
             const sciEarned = player.scienceEarned[obj.id] || 0;
             const isFullyCharted = obj.maxScience > 0 && sciEarned >= obj.maxScience;
-            const statusHtml = isFullyCharted 
-                ? '<div class="codex-status">✅ DATA COMPLETE</div>' 
-                : obj.maxScience > 0 
+            const statusHtml = isFullyCharted
+                ? '<div class="codex-status">✅ DATA COMPLETE</div>'
+                : obj.maxScience > 0
                     ? `<div class="codex-status" style="color:#aaa;">📡 SURVEY IN PROGRESS (${sciEarned}/${obj.maxScience} SP)</div>`
                     : '';
 
@@ -788,7 +826,7 @@ export class HUD {
             };
 
             let reqsHtml = '';
-            
+
             const fighterMet = kills.fighters >= req.fighters;
             reqsHtml += `
                 <div class="conquest-requirement-row ${fighterMet || isConquered ? 'met' : ''}">
@@ -858,7 +896,7 @@ export class HUD {
             this.refreshUpgrades();
             this.refreshShips();
             this.refreshTechUpgrades();
-            
+
             const tabObjectives = document.getElementById('tab-objectives');
             const tabConquest = document.getElementById('tab-conquest');
             if (tabObjectives && tabObjectives.classList.contains('active')) {
@@ -886,7 +924,7 @@ export class HUD {
         if (isHidden) {
             mapModal.classList.remove('hidden');
             mapModal.classList.add('active');
-            
+
             // Re-center on player when opening
             const pGridX = this.game.player.x / 1000;
             const pGridY = this.game.player.y / 1000;
@@ -908,12 +946,12 @@ export class HUD {
 
     _handleMapHover(canvasX, canvasY, clientX, clientY) {
         if (!this.game.sectorManager) return;
-        
+
         const MAP_RADIUS = 25;
         const GRID_SIZE = 10;
-        const midX = 300; 
+        const midX = 300;
         const midY = 300;
-        
+
         // Convert screen-space mouse to map-space logic coords
         const logicX = (canvasX - midX) / this.mapState.zoom - this.mapState.offsetX;
         const logicY = (canvasY - midY) / this.mapState.zoom - this.mapState.offsetY;
@@ -922,26 +960,26 @@ export class HUD {
         for (const obj of this.game.sectorManager.objects) {
             // Only show discovered objects
             if (!this.game.sectorManager.discoveredIds.has(obj.id)) continue;
-            
+
             const px = (obj.coordX * GRID_SIZE);
             const py = (-obj.coordY * GRID_SIZE);
-            
+
             // Check distance in map units
             const dist = Math.hypot(logicX - px, logicY - py);
-            if (dist < 10 / this.mapState.zoom) { 
+            if (dist < 10 / this.mapState.zoom) {
                 foundObj = obj;
                 break;
             }
         }
-        
+
         const tooltip = document.getElementById('map-tooltip');
         const container = document.getElementById('map-container');
         if (!tooltip || !container) return;
-        
+
         if (foundObj) {
             this.mapState.hoverObj = foundObj;
             tooltip.innerHTML = `<strong>${foundObj.name}</strong><br/>Type: ${foundObj.type}<br/>Coords: ${foundObj.coordX} : ${-foundObj.coordY}`;
-            
+
             const containerRect = container.getBoundingClientRect();
             tooltip.style.left = (clientX - containerRect.left + 15) + 'px';
             tooltip.style.top = (clientY - containerRect.top + 15) + 'px';
@@ -950,7 +988,7 @@ export class HUD {
             this.mapState.hoverObj = null;
             tooltip.style.opacity = '0';
         }
-        
+
         // Re-render to show hover highlight if any
         this.renderMap();
     }
@@ -980,10 +1018,10 @@ export class HUD {
         const rm = this.game.regionManager;
 
         const MAP_RADIUS = 46; // Covers the new 45 unit void boundaries
-        const GRID_SIZE = 10; 
+        const GRID_SIZE = 10;
 
-        canvas.width = 600; 
-        canvas.height = 600; 
+        canvas.width = 600;
+        canvas.height = 600;
 
         const midX = canvas.width / 2;
         const midY = canvas.height / 2;
@@ -1007,29 +1045,29 @@ export class HUD {
                     }
                 }
                 if (foundRegion !== DEFAULT_REGION && rm.discoveredRegions.has(foundRegion.name)) {
-                    ctx.fillStyle = foundRegion.color + '44'; 
+                    ctx.fillStyle = foundRegion.color + '44';
                     ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
                 }
             }
         }
-        
+
         // Draw Large Hazard Nebulas on the fullscreen map
         if (this.game.nebulas) {
             this.game.nebulas.forEach(n => {
                 n.blobs.forEach(blob => {
                     const bx = n.x + blob.dx;
                     const by = n.y + blob.dy;
-                    
+
                     const mapX = (bx / 1000) * GRID_SIZE;
                     const mapY = (by / 1000) * GRID_SIZE;
                     const mapRadius = (blob.r * 1.08 / 1000) * GRID_SIZE;
-                    
+
                     ctx.save();
                     const grad = ctx.createRadialGradient(mapX, mapY, 0, mapX, mapY, mapRadius);
                     grad.addColorStop(0, n.color + '44'); // 26% opacity inside
                     grad.addColorStop(0.7, n.color + '1c'); // fading
                     grad.addColorStop(1, 'transparent');
-                    
+
                     ctx.fillStyle = grad;
                     ctx.beginPath();
                     ctx.arc(mapX, mapY, mapRadius, 0, Math.PI * 2);
@@ -1050,7 +1088,7 @@ export class HUD {
                 ctx.fillStyle = 'rgba(79, 82, 87, 0.9)';
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
                 ctx.lineWidth = 1.5 / this.mapState.zoom;
-                
+
                 ctx.beginPath();
                 ctx.arc(mapX, mapY, mapRadius, 0, Math.PI * 2);
                 ctx.fill();
@@ -1110,22 +1148,22 @@ export class HUD {
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 1 / z;
             if (type === 'planet') {
-                ctx.beginPath(); ctx.arc(px, py, 6/z, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(px, py, 6 / z, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             } else if (type === 'star') {
                 ctx.beginPath();
-                for(let i=0; i<5; i++){
-                    ctx.lineTo(px + Math.cos((18+i*72)*Math.PI/180)*6/z, py - Math.sin((18+i*72)*Math.PI/180)*6/z);
-                    ctx.lineTo(px + Math.cos((54+i*72)*Math.PI/180)*3/z, py - Math.sin((54+i*72)*Math.PI/180)*3/z);
+                for (let i = 0; i < 5; i++) {
+                    ctx.lineTo(px + Math.cos((18 + i * 72) * Math.PI / 180) * 6 / z, py - Math.sin((18 + i * 72) * Math.PI / 180) * 6 / z);
+                    ctx.lineTo(px + Math.cos((54 + i * 72) * Math.PI / 180) * 3 / z, py - Math.sin((54 + i * 72) * Math.PI / 180) * 3 / z);
                 }
                 ctx.closePath(); ctx.fill(); ctx.stroke();
             } else if (type === 'nebula') {
                 ctx.shadowBlur = 10; ctx.shadowColor = color;
-                ctx.beginPath(); ctx.arc(px, py, 8/z, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(px, py, 8 / z, 0, Math.PI * 2); ctx.fill();
                 ctx.shadowBlur = 0;
             } else if (type === 'station') {
-                ctx.fillRect(px - 5/z, py - 5/z, 10/z, 10/z); ctx.strokeRect(px - 5/z, py - 5/z, 10/z, 10/z);
+                ctx.fillRect(px - 5 / z, py - 5 / z, 10 / z, 10 / z); ctx.strokeRect(px - 5 / z, py - 5 / z, 10 / z, 10 / z);
             } else {
-                ctx.beginPath(); ctx.arc(px, py, 4/z, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(px, py, 4 / z, 0, Math.PI * 2); ctx.fill();
             }
         };
 
@@ -1161,7 +1199,7 @@ export class HUD {
             if (sm.discoveredIds.has(obj.id)) {
                 const px = (obj.coordX * GRID_SIZE);
                 const py = (-obj.coordY * GRID_SIZE);
-                
+
                 drawIcon(px, py, obj.type, obj.color);
 
                 if (this.mapState.hoverObj && this.mapState.hoverObj.id === obj.id) {
@@ -1188,7 +1226,7 @@ export class HUD {
 
             ctx.save();
             ctx.translate(wx, wy);
-            
+
             // Draw a pulsing waypoint marker
             const pulse = (Math.sin(Date.now() / 200) * 0.5 + 0.5);
             ctx.strokeStyle = '#00ffcc';
@@ -1218,14 +1256,14 @@ export class HUD {
 
         ctx.fillStyle = '#0f0';
         ctx.beginPath();
-        ctx.moveTo(playerPx, playerPy - 8/this.mapState.zoom);
-        ctx.lineTo(playerPx + 6/this.mapState.zoom, playerPy + 6/this.mapState.zoom);
-        ctx.lineTo(playerPx - 6/this.mapState.zoom, playerPy + 6/this.mapState.zoom);
+        ctx.moveTo(playerPx, playerPy - 8 / this.mapState.zoom);
+        ctx.lineTo(playerPx + 6 / this.mapState.zoom, playerPy + 6 / this.mapState.zoom);
+        ctx.lineTo(playerPx - 6 / this.mapState.zoom, playerPy + 6 / this.mapState.zoom);
         ctx.fill();
 
         ctx.fillStyle = '#0f0';
         ctx.font = `${12 / this.mapState.zoom}px Inter, sans-serif`;
-        ctx.fillText("YOU", playerPx, playerPy - (12/this.mapState.zoom));
+        ctx.fillText("YOU", playerPx, playerPy - (12 / this.mapState.zoom));
 
         ctx.restore();
     }
@@ -1234,7 +1272,7 @@ export class HUD {
         this._updateBossHealth();
         // Vault (spending pool) displayed as the main gem total
         document.getElementById('gem-count').textContent = player.gems;
-        
+
         // Keep terminal gems in sync if it is open
         const upgradeGems = document.getElementById('upgrade-gem-count');
         if (upgradeGems) upgradeGems.textContent = player.gems;
@@ -1354,7 +1392,7 @@ export class HUD {
                     discoveryEl.style.display = 'block';
                     const progress = this.game.sectorManager.getRegionDiscoveryProgress(region.name);
                     discoveryEl.textContent = `${progress.discovered} / ${progress.total} Stellar Objects Discovered`;
-                    
+
                     if (progress.total > 0 && progress.discovered === progress.total) {
                         discoveryEl.classList.add('survey-complete');
                         discoveryEl.textContent = `✅ ${region.name} 100% Discovered`;
@@ -1379,7 +1417,7 @@ export class HUD {
                     }
                 } else {
                     const isConquered = this.game.conqueredRegions.has(region.name);
-                    
+
                     if (isConquered) {
                         conquestContainer.classList.add('hidden');
                         if (regionContainer) {
@@ -1388,7 +1426,7 @@ export class HUD {
                     } else {
                         const kills = this.game.conquestSessionKills[region.name] || { fighters: 0, battleships: 0, dreadnoughts: 0 };
                         const req = region.conquest;
-                        
+
                         const regionObjects = this.game.sectorManager.objects.filter(obj => {
                             const cx = obj.x / 1000;
                             const cy = -obj.y / 1000;
@@ -1407,10 +1445,10 @@ export class HUD {
 
                         const totalRequired = req.fighters + req.battleships + (req.dreadnoughts || 0) + totalStationsCount + totalSquadShips;
                         const totalCleared = Math.min(req.fighters, kills.fighters) + Math.min(req.battleships, kills.battleships) + (req.dreadnoughts ? Math.min(req.dreadnoughts, kills.dreadnoughts) : 0) + clearedStationsCount + Math.min(totalSquadShips, killedSquadShips);
-                        
+
                         const remaining = Math.max(0, totalRequired - totalCleared);
                         const pct = totalRequired > 0 ? (remaining / totalRequired) * 100 : 0;
-                        
+
                         if (pct === 0 || remaining === 0) {
                             conquestContainer.classList.add('hidden');
                             if (regionContainer) {
@@ -1421,18 +1459,18 @@ export class HUD {
                             if (regionContainer) {
                                 regionContainer.classList.add('unconquered-threat');
                             }
-                            
+
                             conquestFill.style.width = `${pct}%`;
                             conquestFill.style.background = 'linear-gradient(90deg, #cc2200, #ff4400)';
                             conquestFill.style.boxShadow = '0 0 10px #ff3c3c';
-                            
+
                             let progressParts = [];
                             progressParts.push(`Fighters: ${kills.fighters}/${req.fighters}`);
                             if (req.battleships > 0) progressParts.push(`Battleships: ${kills.battleships}/${req.battleships}`);
                             if (req.dreadnoughts > 0) progressParts.push(`Dreadnoughts: ${kills.dreadnoughts}/${req.dreadnoughts}`);
                             if (totalStationsCount > 0) progressParts.push(`Stations: ${clearedStationsCount}/${totalStationsCount}`);
                             if (totalSquadShips > 0) progressParts.push(`Patrol: ${killedSquadShips}/${totalSquadShips}`);
-                            
+
                             conquestText.innerHTML = `Threat Level: ${Math.round(pct)}%<br/><span style="font-size: 0.5rem; opacity: 0.75; letter-spacing: 0.5px;">${progressParts.join(' | ')}</span>`;
                         }
                     }
@@ -1520,6 +1558,66 @@ export class HUD {
         document.getElementById('ui-layer').appendChild(el);
         // Remove after animation finishes
         el.addEventListener('animationend', () => el.remove());
+    }
+
+    showFloatingRewardAt(worldX, worldY, text, color) {
+        const canvas = this.game.canvas;
+        const camera = this.game.camera;
+        // Project to screen space
+        const screenX = (worldX - camera.x) * camera.zoom;
+        const screenY = (worldY - camera.y) * camera.zoom;
+        
+        // If it's off screen, don't show it
+        if (screenX < 0 || screenX > canvas.width || screenY < 0 || screenY > canvas.height) {
+            return;
+        }
+
+        const el = document.createElement('div');
+        el.className = 'floating-reward';
+        el.textContent = text;
+        el.style.color = color;
+        el.style.position = 'absolute';
+        el.style.left = `${screenX}px`;
+        el.style.top = `${screenY}px`;
+        el.style.transform = 'translate(-50%, -50%)';
+        el.style.setProperty('--jitter', `${Math.round((Math.random() - 0.5) * 40)}px`);
+        
+        document.getElementById('ui-layer').appendChild(el);
+        el.addEventListener('animationend', () => el.remove());
+    }
+
+    updateBuildModeUI(active, menuOpen) {
+        const btn = document.getElementById('build-toggle-btn');
+        const menuPanel = document.getElementById('build-menu-panel');
+        const overlay = document.getElementById('build-overlay');
+        
+        if (btn) {
+            if (active || menuOpen) {
+                btn.style.background = 'rgba(255, 153, 0, 0.2)';
+                btn.style.borderColor = '#ff9900';
+                btn.style.boxShadow = '0 0 10px rgba(255, 153, 0, 0.4)';
+            } else {
+                btn.style.background = 'rgba(255, 153, 0, 0.05)';
+                btn.style.borderColor = 'rgba(255, 153, 0, 0.3)';
+                btn.style.boxShadow = 'none';
+            }
+        }
+        
+        if (menuPanel) {
+            if (menuOpen && !active) {
+                menuPanel.classList.remove('hidden');
+            } else {
+                menuPanel.classList.add('hidden');
+            }
+        }
+
+        if (overlay) {
+            if (active) {
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
     }
 
     showClusterAnnouncement(clusterName) {
@@ -1739,7 +1837,7 @@ export class HUD {
             `;
         }
         bar.classList.add('active');
-        
+
         // Update new Station Panel
         this.updateStationPanel(obj);
     }
@@ -1757,9 +1855,9 @@ export class HUD {
 
         const player = this.game.player;
         // Strict number comparison for world coordinates
-        const isSpawn = Number(player.lastStationX) === Number(obj.x) && 
-                       Number(player.lastStationY) === Number(obj.y);
-        
+        const isSpawn = Number(player.lastStationX) === Number(obj.x) &&
+            Number(player.lastStationY) === Number(obj.y);
+
         // ONLY update if it's a DIFFERENT station, or if spawn point was changed
         if (this._lastStationId === obj.id && this._lastStationSpawn === isSpawn) {
             return;
@@ -1788,7 +1886,7 @@ export class HUD {
                 this.stationSpawnBtn.textContent = 'Set as Spawn Point';
                 this.stationSpawnBtn.classList.remove('spawn-active');
                 this.stationSpawnBtn.disabled = false;
-                
+
                 this.stationSpawnBtn.onclick = (e) => {
                     e.preventDefault();
                     player.setSpawnPoint(obj.x, obj.y);
@@ -1802,7 +1900,7 @@ export class HUD {
         if (this.stationCrewListEl) {
             const crew = Object.values(NPC_ROSTER).filter(npc => npc.locationId === obj.id);
             console.log("HUD: Crew found for station", obj.id, crew);
-            
+
             if (crew.length === 0) {
                 this.stationCrewListEl.innerHTML = '<div class="role-text" style="opacity:0.5; padding: 10px; font-size: 0.7rem;">NO CREW MEMBERS PRESENT</div>';
             } else {
@@ -1906,9 +2004,9 @@ export class HUD {
                 this.showFloatingReward(`+${gained} 🔬 ${result.toUpperCase()}!`, result === 'great' ? '#ffffff' : '#50dc78');
 
                 // Notify QuestManager of science success
-                this.game.questManager.notify('science', { 
-                    success: true, 
-                    amount: gained, 
+                this.game.questManager.notify('science', {
+                    success: true,
+                    amount: gained,
                     target: obj.id,
                     region: this.game.regionManager?.currentRegion?.name
                 });
@@ -2100,7 +2198,7 @@ export class HUD {
 
         const activeQuests = this.game.questManager.activeQuests;
         const currentRegionName = this.game.regionManager?.currentRegion?.name || '';
-        
+
         // Find the prioritized quest to show in the HUD
         // Priority: 1. Current region's quest, 2. Most recently accepted incomplete quest
         let displayQuest = activeQuests.find(q => q.category === 'region' && q.regionId === currentRegionName);
@@ -2128,18 +2226,18 @@ export class HUD {
                     <div class="objective-desc">${displayQuest.description}</div>
                     <div class="objective-progress-container">
                         ${displayQuest.objectives.map(obj => {
-                            let progressText = `${obj.current} / ${obj.count}`;
-                            if (obj.type === 'reach') {
-                                progressText = `${obj.current}/${obj.count} Discovered`;
-                            } else if (obj.type === 'collect') {
-                                progressText = `${obj.current}/${obj.count} Gems`;
-                            }
-                            return `
+                let progressText = `${obj.current} / ${obj.count}`;
+                if (obj.type === 'reach') {
+                    progressText = `${obj.current}/${obj.count} Discovered`;
+                } else if (obj.type === 'collect') {
+                    progressText = `${obj.current}/${obj.count} Gems`;
+                }
+                return `
                                 <div class="objective-progress-tag">
                                     ${progressText}
                                 </div>
                             `;
-                        }).join('')}
+            }).join('')}
                     </div>
                     <button class="see-more-btn" id="see-more-objectives">See More</button>
                 </div>
@@ -2158,7 +2256,7 @@ export class HUD {
             // Clear the old region panel as we are unifying objectives in the top bar
             const regionPanel = document.getElementById('region-quests-panel');
             if (regionPanel) regionPanel.innerHTML = '';
-            
+
             return;
         }
 
@@ -2193,7 +2291,7 @@ export class HUD {
 
         // Reuse discovery-popup structure for consistency
         const icon = quest.id.startsWith('tut_') ? '🏁' : quest.id.startsWith('story_') ? '👻' : '🏆';
-        
+
         let rewardsHtml = '';
         if (quest.rewards) {
             if (quest.rewards.gems) rewardsHtml += `<div>+${quest.rewards.gems} 💎</div>`;
@@ -2211,7 +2309,7 @@ export class HUD {
 
         // Clear any old timer so it doesn't vanish while user is reading
         clearTimeout(this._popupTimer);
-        
+
         popup.classList.add('active', 'popup-pinned');
         this._pauseForPopup();
 
@@ -2230,7 +2328,7 @@ export class HUD {
 
         const activeQuests = this.game.questManager.activeQuests;
         const completedIds = Array.from(this.game.questManager.completedQuestIds);
-        
+
         // 1. Active Quests
         const activeHtml = activeQuests.map(quest => {
             return `
@@ -2289,12 +2387,12 @@ export class HUD {
             if (dist < 4000) {
                 this.bossPanel.classList.add('active');
                 this.bossPanel.classList.remove('hidden');
-                
+
                 if (this.bossNameText) this.bossNameText.textContent = boss.name.toUpperCase();
                 if (this.bossHealthFill) {
                     const pct = Math.max(0, boss.health / boss.maxHealth) * 100;
                     this.bossHealthFill.style.width = `${pct}%`;
-                    
+
                     // Low health flashing
                     if (pct < 20) {
                         this.bossHealthFill.style.animation = 'cargoPulse 0.5s infinite';
