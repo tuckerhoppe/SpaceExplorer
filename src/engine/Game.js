@@ -37,6 +37,7 @@ import { Nebula } from '../entities/Nebula.js';
 import { LARGE_ASTEROID_DEFINITIONS } from '../data/largeAsteroids.js';
 import { LargeAsteroid } from '../entities/LargeAsteroid.js';
 import { CLUSTERS } from '../data/clusters.js';
+import { Structure } from '../entities/Structure.js';
 
 export class Game {
     constructor() {
@@ -71,6 +72,14 @@ export class Game {
         this.largeAsteroids = LARGE_ASTEROID_DEFINITIONS.map(def => new LargeAsteroid(def));
         this._ambushSpawned = false;
         this.waypoint = null;
+
+        // Build mode and structures properties
+        this.structures = [];
+        this.buildMode = false;
+        this.buildMenuOpen = false;
+        this.selectedStructureType = 'mining_station';
+        this._prevMouseLeft = false;
+        this.buildPreview = null;
 
         this.isPaused = false;
         this.gameOver = false;
@@ -128,6 +137,33 @@ export class Game {
             this.completedClusterIds = new Set(savedClusters);
         } catch {
             this.completedClusterIds = new Set();
+        }
+
+        // Load constructed structures
+        try {
+            const savedStructures = JSON.parse(localStorage.getItem('space_explorer_structures') || '[]');
+            for (const structData of savedStructures) {
+                let parent = this.sectorManager.objects.find(o => o.id === structData.parentId);
+                if (!parent) {
+                    parent = this.largeAsteroids.find(a => a.id === structData.parentId);
+                }
+                if (!parent && this.nebulas) {
+                    parent = this.nebulas.find(n => n.id === structData.parentId);
+                }
+                if (parent) {
+                    const struct = new Structure(
+                        structData.type,
+                        parent,
+                        structData.relativeAngle,
+                        structData.relativeDist,
+                        structData.locationType,
+                        structData.edgeIndex
+                    );
+                    this.structures.push(struct);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load structures', e);
         }
 
         this.init();
@@ -308,6 +344,374 @@ export class Game {
         this.hud.toggleUpgradeMenu(this.isPaused);
         // When unpausing, restart the loop (safely guarded against duplicates)
         if (!this.isPaused) this._queueLoop();
+    }
+
+    toggleBuildMenu() {
+        if (this.gameOver) return;
+        if (this.buildMode) {
+            this.buildMode = false;
+            this.buildMenuOpen = false;
+        } else {
+            this.buildMenuOpen = !this.buildMenuOpen;
+        }
+        if (this.hud && typeof this.hud.updateBuildModeUI === 'function') {
+            this.hud.updateBuildModeUI(this.buildMode, this.buildMenuOpen);
+        }
+    }
+
+    startBuildPlacement(structureType) {
+        if (this.gameOver) return;
+        this.selectedStructureType = structureType;
+        this.buildMenuOpen = false;
+        this.buildMode = true;
+        if (this.hud && typeof this.hud.updateBuildModeUI === 'function') {
+            this.hud.updateBuildModeUI(this.buildMode, this.buildMenuOpen);
+        }
+    }
+
+    toggleBuildMode() {
+        if (this.gameOver) return;
+        this.buildMode = !this.buildMode;
+        if (!this.buildMode) this.buildMenuOpen = false;
+        if (this.hud && typeof this.hud.updateBuildModeUI === 'function') {
+            this.hud.updateBuildModeUI(this.buildMode, this.buildMenuOpen);
+        }
+    }
+
+    saveStructures() {
+        const data = this.structures.map(s => ({
+            type: s.type,
+            parentId: s.parent.id,
+            relativeAngle: s.relativeAngle,
+            relativeDist: s.relativeDist,
+            locationType: s.locationType,
+            edgeIndex: s.edgeIndex
+        }));
+        localStorage.setItem('space_explorer_structures', JSON.stringify(data));
+    }
+
+    updateBuildPreview(clickedThisFrame) {
+        if (!this.buildMode) {
+            this.buildPreview = null;
+            return;
+        }
+
+        const mx = Input.mouse.worldX;
+        const my = Input.mouse.worldY;
+
+        // Check if hovering over an existing structure for demolition
+        if (this.selectedStructureType === 'deconstruct') {
+            const hoveredStruct = this.structures.find(s => Utils.dist(mx, my, s.x, s.y) <= 60);
+            if (hoveredStruct) {
+                const refund = hoveredStruct.type === 'shipyard' ? 100 : (hoveredStruct.type === 'science_station' ? 75 : 50);
+                this.buildPreview = {
+                    valid: true,
+                    demolish: true,
+                    parent: hoveredStruct.parent,
+                    structure: hoveredStruct,
+                    x: hoveredStruct.x,
+                    y: hoveredStruct.y,
+                    message: `Click to Demolish (${refund} 💎 Refund)`
+                };
+
+                if (clickedThisFrame) {
+                    this.structures = this.structures.filter(s => s !== hoveredStruct);
+                    this.saveStructures();
+                    this.player.gems += refund;
+                    this.player.save();
+                    if (this.hud) {
+                        this.hud.showFloatingReward(`+${refund} 💎`, '#00ffd0');
+                        this.hud.showFloatingRewardAt(hoveredStruct.x, hoveredStruct.y, 'STRUCTURE DECONSTRUCTED', '#ff4444');
+                    }
+                    this.toggleBuildMode();
+                }
+            } else {
+                this.buildPreview = {
+                    valid: false,
+                    demolish: true,
+                    x: mx,
+                    y: my,
+                    message: "Hover over structure to deconstruct"
+                };
+            }
+            return;
+        }
+
+        let nearestObj = null;
+        let minDist = Infinity;
+        let placementType = null;
+        
+        if (this.selectedStructureType === 'science_station') {
+            // Check planets
+            for (const obj of this.sectorManager.objects) {
+                if (obj.type === 'planet') {
+                    const d = Utils.dist(mx, my, obj.x, obj.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearestObj = obj;
+                        placementType = 'planet';
+                    }
+                }
+            }
+            // Check stars
+            for (const obj of this.sectorManager.objects) {
+                if (obj.type === 'star') {
+                    const d = Utils.dist(mx, my, obj.x, obj.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearestObj = obj;
+                        placementType = 'star';
+                    }
+                }
+            }
+            // Check Nebulas
+            if (this.nebulas) {
+                for (const neb of this.nebulas) {
+                    const d = Utils.dist(mx, my, neb.x, neb.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearestObj = neb;
+                        placementType = 'nebula';
+                    }
+                }
+            }
+        } else if (this.selectedStructureType === 'mining_station') {
+            // Check planets
+            for (const obj of this.sectorManager.objects) {
+                if (obj.type === 'planet') {
+                    const d = Utils.dist(mx, my, obj.x, obj.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearestObj = obj;
+                        placementType = 'planet';
+                    }
+                }
+            }
+            // Check stars
+            for (const obj of this.sectorManager.objects) {
+                if (obj.type === 'star') {
+                    const d = Utils.dist(mx, my, obj.x, obj.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearestObj = obj;
+                        placementType = 'star';
+                    }
+                }
+            }
+            // Check LargeAsteroids
+            if (this.largeAsteroids) {
+                for (const ast of this.largeAsteroids) {
+                    const d = Utils.dist(mx, my, ast.x, ast.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearestObj = ast;
+                        placementType = 'asteroid';
+                    }
+                }
+            }
+        } else {
+            // Default placement (e.g. shipyard)
+            for (const obj of this.sectorManager.objects) {
+                if (obj.type === 'planet') {
+                    const d = Utils.dist(mx, my, obj.x, obj.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearestObj = obj;
+                        placementType = 'planet';
+                    }
+                }
+            }
+        }
+
+        if (!nearestObj) {
+            this.buildPreview = { valid: false, message: "No build site nearby" };
+            return;
+        }
+
+        let isValid = false;
+        let snapX = mx;
+        let snapY = my;
+        let relativeAngle = 0;
+        let relativeDist = 0;
+        let message = "";
+        let edgeIndex = null;
+        let ringName = null;
+
+        if (placementType === 'planet') {
+            const planetRadius = nearestObj.radius * 0.5;
+            const orbitRadius = nearestObj.orbitLineRadius;
+            
+            if (this.selectedStructureType === 'shipyard') {
+                if (minDist <= orbitRadius + 40 && minDist >= planetRadius + 30) {
+                    isValid = true;
+                    relativeAngle = Math.atan2(my - nearestObj.y, mx - nearestObj.x);
+                    relativeDist = minDist;
+                    snapX = mx;
+                    snapY = my;
+                    message = `Drydock: ${nearestObj.name}`;
+                } else {
+                    message = "Must place within planet's orbit area";
+                }
+            } else if (minDist <= orbitRadius + 60 && minDist >= planetRadius + 30) {
+                isValid = true;
+                relativeAngle = Math.atan2(my - nearestObj.y, mx - nearestObj.x);
+                relativeDist = orbitRadius;
+                snapX = nearestObj.x + Math.cos(relativeAngle) * relativeDist;
+                snapY = nearestObj.y + Math.sin(relativeAngle) * relativeDist;
+                message = `Orbit: ${nearestObj.name}`;
+            } else {
+                message = "Must place within planet's orbit line";
+            }
+        } else if (placementType === 'asteroid') {
+            const worldAngle = Math.atan2(my - nearestObj.y, mx - nearestObj.x);
+            edgeIndex = typeof nearestObj.getEdgeIndexAtAngle === 'function' ? nearestObj.getEdgeIndexAtAngle(worldAngle) : 0;
+            
+            const surfaceRadius = typeof nearestObj.getSurfaceRadiusAtAngle === 'function'
+                ? nearestObj.getSurfaceRadiusAtAngle(worldAngle)
+                : nearestObj.radius;
+
+            if (Math.abs(minDist - surfaceRadius) <= 60) {
+                isValid = true;
+                relativeAngle = worldAngle - nearestObj.rotation;
+                relativeDist = surfaceRadius;
+                snapX = nearestObj.x + Math.cos(worldAngle) * relativeDist;
+                snapY = nearestObj.y + Math.sin(worldAngle) * relativeDist;
+            } else {
+                message = "Must place near Large Asteroid's edge";
+            }
+        } else if (placementType === 'nebula') {
+            const nebRadius = nearestObj.baseRadius || 500;
+            if (minDist <= nebRadius + 100) {
+                isValid = true;
+                relativeAngle = Math.atan2(my - nearestObj.y, mx - nearestObj.x);
+                relativeDist = minDist;
+                snapX = mx;
+                snapY = my;
+                message = `Nebula: ${nearestObj.name}`;
+            } else {
+                message = "Must place within Nebula cloud";
+            }
+        } else if (placementType === 'star') {
+            const innerR = nearestObj.orbitDiameters.inner / 2;
+            const midR = nearestObj.orbitDiameters.mid / 2;
+            const outerR = nearestObj.orbitDiameters.outer / 2;
+
+            let chosenRing = null;
+            let targetR = 0;
+
+            if (Math.abs(minDist - innerR) <= 75) {
+                chosenRing = "inner";
+                targetR = innerR;
+            } else if (Math.abs(minDist - midR) <= 75) {
+                chosenRing = "mid";
+                targetR = midR;
+            } else if (Math.abs(minDist - outerR) <= 75) {
+                chosenRing = "outer";
+                targetR = outerR;
+            }
+
+            if (chosenRing) {
+                isValid = true;
+                relativeAngle = Math.atan2(my - nearestObj.y, mx - nearestObj.x);
+                relativeDist = targetR;
+                snapX = nearestObj.x + Math.cos(relativeAngle) * relativeDist;
+                snapY = nearestObj.y + Math.sin(relativeAngle) * relativeDist;
+                ringName = chosenRing;
+            } else {
+                message = "Must place on one of Star's orbital rings";
+            }
+        }
+
+        if (isValid) {
+            if (placementType === 'asteroid') {
+                const countOnThisEdge = this.structures.filter(s => s.parent && s.parent.id === nearestObj.id && s.edgeIndex === edgeIndex).length;
+                if (countOnThisEdge >= 1) {
+                    isValid = false;
+                    message = `Edge #${edgeIndex + 1} Limit Reached (Max 1)`;
+                } else {
+                    message = `Asteroid: ${nearestObj.name} (Edge #${edgeIndex + 1}) [Slot: 0/1 Used]`;
+                }
+            } else if (placementType === 'planet') {
+                const planetCount = this.structures.filter(s => s.parent && s.parent.id === nearestObj.id).length;
+                if (planetCount >= 5) {
+                    isValid = false;
+                    message = `Planet Limit Reached [5/5 Slots Used]`;
+                } else {
+                    message = `Orbit: ${nearestObj.name} [Slots: ${planetCount}/5 Used]`;
+                }
+            } else if (placementType === 'nebula') {
+                const nebulaCount = this.structures.filter(s => s.parent && s.parent.id === nearestObj.id).length;
+                if (nebulaCount >= 3) {
+                    isValid = false;
+                    message = `Nebula Limit Reached [3/3 Slots Used]`;
+                } else {
+                    message = `Nebula: ${nearestObj.name} [Slots: ${nebulaCount}/3 Used]`;
+                }
+            } else if (placementType === 'star') {
+                const ringCount = this.structures.filter(s => s.parent && s.parent.id === nearestObj.id && s.ringName === ringName).length;
+                if (ringCount >= 1) {
+                    isValid = false;
+                    message = `Ring Limit Reached (Max 1)`;
+                } else {
+                    message = `Star: ${nearestObj.name} (${ringName} Ring) [Slot: 0/1 Used]`;
+                }
+            }
+        }
+
+        if (isValid) {
+            const region = this.getRegionAt(snapX, snapY);
+            const isLiberated = !region || !region.conquest || this.conqueredRegions.has(region.name);
+            if (!isLiberated) {
+                isValid = false;
+                message = "Region must be liberated to build!";
+            }
+        }
+
+        this.buildPreview = {
+            valid: isValid,
+            x: snapX,
+            y: snapY,
+            parent: nearestObj,
+            locationType: placementType,
+            relativeAngle: relativeAngle,
+            relativeDist: relativeDist,
+            message: message
+        };
+
+        if (clickedThisFrame) {
+            const cost = this.selectedStructureType === 'shipyard' ? 200 : (this.selectedStructureType === 'science_station' ? 150 : 100);
+            if (isValid) {
+                if (this.player.gems >= cost) {
+                    this.player.gems -= cost;
+                    this.player.save();
+                    
+                    const newStruct = new Structure(
+                        this.selectedStructureType,
+                        nearestObj,
+                        relativeAngle,
+                        relativeDist,
+                        placementType,
+                        edgeIndex,
+                        ringName
+                    );
+                    this.structures.push(newStruct);
+                    this.saveStructures();
+                    
+                    if (this.hud) {
+                        this.hud.showFloatingReward(`-${cost} 💎`, '#ff4444');
+                        this.hud.showFloatingRewardAt(snapX, snapY, `${this.selectedStructureType.toUpperCase().replace('_', ' ')} CONSTRUCTED!`, '#00ff88');
+                    }
+                    
+                    this.toggleBuildMode();
+                } else {
+                    if (this.hud) this.hud.showFloatingReward(`NEED ${cost} 💎!`, '#ff3c3c');
+                }
+            } else {
+                if (this.hud) {
+                    this.hud.showFloatingReward(message || 'INVALID PLACEMENT', '#ff3c3c');
+                }
+            }
+        }
     }
 
     resize() {
@@ -549,8 +953,20 @@ export class Game {
         Input.update(this.camera);
         if (this.isPaused) return;
 
+        const clickedThisFrame = Input.mouse.left && !this._prevMouseLeft;
+        this._prevMouseLeft = Input.mouse.left;
+
+        if (this.buildMode) {
+            this.updateBuildPreview(clickedThisFrame);
+        }
+
         this.player.update(this);
         this.ghost.update(this);
+
+        // Update structures
+        for (const s of this.structures) {
+            s.update(this);
+        }
 
         // --- LARGE ASTEROIDS COLLISION CHECK ---
         if (this.largeAsteroids) {
@@ -558,30 +974,35 @@ export class Game {
                 largeAst.update(); // Update slow rotation
 
                 // 1. Player collision
+                const angleToPlayer = Utils.ang(largeAst.x, largeAst.y, this.player.x, this.player.y);
+                const surfaceRadiusPlayer = typeof largeAst.getSurfaceRadiusAtAngle === 'function'
+                    ? largeAst.getSurfaceRadiusAtAngle(angleToPlayer)
+                    : largeAst.radius;
                 const distToPlayer = Utils.dist(this.player.x, this.player.y, largeAst.x, largeAst.y);
-                if (this.player.health > 0 && distToPlayer < this.player.radius + largeAst.radius) {
-                    const angle = Utils.ang(largeAst.x, largeAst.y, this.player.x, this.player.y);
-                    
-                    // Push player out to boundary
-                    this.player.x = largeAst.x + Math.cos(angle) * (this.player.radius + largeAst.radius);
-                    this.player.y = largeAst.y + Math.sin(angle) * (this.player.radius + largeAst.radius);
+
+                if (this.player.health > 0 && distToPlayer < this.player.radius + surfaceRadiusPlayer) {
+                    const angle = angleToPlayer;
+
+                    // Push player out to boundary of exact surface shape
+                    this.player.x = largeAst.x + Math.cos(angle) * (this.player.radius + surfaceRadiusPlayer);
+                    this.player.y = largeAst.y + Math.sin(angle) * (this.player.radius + surfaceRadiusPlayer);
 
                     // Reflect / Bounce velocity
                     const normalX = Math.cos(angle);
                     const normalY = Math.sin(angle);
                     const dot = this.player.vx * normalX + this.player.vy * normalY;
-                    
+
                     // Only bounce and damage if moving towards the asteroid
                     if (dot < 0) {
                         // Elastic bounce + extra repulsive impulse away from the rock
                         this.player.vx = (this.player.vx - 2 * dot * normalX) * 0.85 + normalX * 2.0;
                         this.player.vy = (this.player.vy - 2 * dot * normalY) * 0.85 + normalY * 2.0;
-                        
+
                         // Inflict small damage (5 HP)
                         this.player.health -= 5;
                         this.hud.update(this.player);
                         this.shakeIntensity = Math.max(this.shakeIntensity, 6);
-                        
+
                         // Spawn dust/debris particles
                         for (let i = 0; i < 6; i++) {
                             const pAngle = angle + Utils.rand(-0.6, 0.6);
@@ -604,14 +1025,18 @@ export class Game {
 
                 // 2. Enemy ship collisions (fighters, battleships, dreadnoughts, neutrals)
                 const checkEnemyShipCollision = (ship) => {
+                    const angleToShip = Utils.ang(largeAst.x, largeAst.y, ship.x, ship.y);
+                    const surfaceRadiusShip = typeof largeAst.getSurfaceRadiusAtAngle === 'function'
+                        ? largeAst.getSurfaceRadiusAtAngle(angleToShip)
+                        : largeAst.radius;
                     const dist = Utils.dist(ship.x, ship.y, largeAst.x, largeAst.y);
-                    if (dist < ship.radius + largeAst.radius) {
-                        const angle = Utils.ang(largeAst.x, largeAst.y, ship.x, ship.y);
-                        ship.x = largeAst.x + Math.cos(angle) * (ship.radius + largeAst.radius);
-                        ship.y = largeAst.y + Math.sin(angle) * (ship.radius + largeAst.radius);
-                        
-                        const normalX = Math.cos(angle);
-                        const normalY = Math.sin(angle);
+
+                    if (dist < ship.radius + surfaceRadiusShip) {
+                        ship.x = largeAst.x + Math.cos(angleToShip) * (ship.radius + surfaceRadiusShip);
+                        ship.y = largeAst.y + Math.sin(angleToShip) * (ship.radius + surfaceRadiusShip);
+
+                        const normalX = Math.cos(angleToShip);
+                        const normalY = Math.sin(angleToShip);
                         const dot = ship.vx * normalX + ship.vy * normalY;
                         if (dot < 0) {
                             ship.vx = (ship.vx - 2 * dot * normalX) * 0.4;
@@ -2204,6 +2629,10 @@ export class Game {
         this.largeAsteroids.forEach(la => la.draw(this.ctx, this.camera));
 
         this.sectorManager.draw(this.ctx, this.camera, this.player);
+        
+        // Draw structures
+        this.structures.forEach(s => s.draw(this.ctx, this.camera));
+
         this.gems.forEach(g => g.draw(this.ctx, this.camera));
         this.asteroids.forEach(a => a.draw(this.ctx, this.camera));
         this.derelicts.forEach(d => d.draw(this.ctx, this.camera));
@@ -2251,6 +2680,140 @@ export class Game {
         if (this.tutorialShip) this.tutorialShip.draw(this.ctx);
         this.ghost.draw(this.ctx, this);
         this.particles.forEach(p => p.draw(this.ctx, this.camera));
+
+        // Draw build preview
+        if (this.buildMode && this.buildPreview) {
+            const preview = this.buildPreview;
+            const ctx = this.ctx;
+            
+            // 1. Draw connecting guides/radius indicators in world space
+            ctx.save();
+            if (preview.demolish) {
+                ctx.strokeStyle = 'rgba(255, 60, 60, 0.85)';
+                ctx.lineWidth = 3.0;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.arc(preview.x, preview.y, 75, 0, Math.PI * 2);
+                ctx.stroke();
+            } else {
+                ctx.strokeStyle = preview.valid ? 'rgba(0, 255, 208, 0.6)' : 'rgba(255, 60, 60, 0.6)';
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([6, 6]);
+                ctx.beginPath();
+                ctx.arc(preview.x, preview.y, 70, 0, Math.PI * 2);
+                ctx.stroke();
+
+                if (preview.parent) {
+                    ctx.strokeStyle = preview.valid ? 'rgba(0, 255, 208, 0.2)' : 'rgba(255, 60, 60, 0.2)';
+                    ctx.setLineDash([3, 6]);
+                    ctx.beginPath();
+                    ctx.moveTo(preview.x, preview.y);
+                    ctx.lineTo(preview.parent.x, preview.parent.y);
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
+
+            // 2. Draw structure graphics (only if not demolishing)
+            if (!preview.demolish) {
+                ctx.save();
+                ctx.globalAlpha = 0.5;
+                ctx.translate(preview.x, preview.y);
+                if (this.selectedStructureType === 'shipyard') {
+                    const dockAngle = Math.atan2(preview.y - preview.parent.y, preview.x - preview.parent.x);
+                    ctx.rotate(dockAngle);
+                    ctx.strokeStyle = preview.valid ? '#00ff88' : '#ff3c3c';
+                    ctx.fillStyle = '#141c24';
+                    ctx.lineWidth = 3;
+                    ctx.fillRect(-25, -60, 50, 24);
+                    ctx.strokeRect(-25, -60, 50, 24);
+                    ctx.fillRect(-55, -60, 24, 110);
+                    ctx.strokeRect(-55, -60, 24, 110);
+                    ctx.fillRect(31, -60, 24, 110);
+                    ctx.strokeRect(31, -60, 24, 110);
+                } else if (preview.locationType === 'planet') {
+                    ctx.rotate(Date.now() / 1000);
+                    ctx.strokeStyle = preview.valid ? '#00ffd0' : '#ff3c3c';
+                    ctx.fillStyle = '#0b1d28';
+                    ctx.lineWidth = 3.5;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 42, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    for (let i = 0; i < 4; i++) {
+                        const angle = (i * Math.PI) / 2;
+                        ctx.beginPath();
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(Math.cos(angle) * 42, Math.sin(angle) * 42);
+                        ctx.stroke();
+                    }
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                } else if (preview.locationType === 'asteroid') {
+                    const surfaceAngle = Math.atan2(preview.y - preview.parent.y, preview.x - preview.parent.x);
+                    ctx.rotate(surfaceAngle);
+                    ctx.strokeStyle = preview.valid ? '#ff9900' : '#ff3c3c';
+                    ctx.fillStyle = '#1f130b';
+                    ctx.lineWidth = 3;
+                    ctx.fillRect(-6, -75, 12, 150);
+                    ctx.strokeRect(-6, -75, 12, 150);
+                    ctx.fillRect(0, -45, 70, 90);
+                    ctx.strokeRect(0, -45, 70, 90);
+                    ctx.fillRect(0, -76, 80, 28);
+                    ctx.strokeRect(0, -76, 80, 28);
+                    ctx.fillRect(70, -26, 35, 10);
+                    ctx.strokeRect(70, -26, 35, 10);
+                    ctx.fillRect(70, -5, 35, 10);
+                    ctx.strokeRect(70, -5, 35, 10);
+                    ctx.fillRect(70, 16, 35, 10);
+                    ctx.strokeRect(70, 16, 35, 10);
+                } else if (preview.locationType === 'star') {
+                    ctx.rotate(Date.now() / 1000);
+                    ctx.strokeStyle = preview.valid ? '#ffaa00' : '#ff3c3c';
+                    ctx.fillStyle = '#1b1305';
+                    ctx.lineWidth = 3.5;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 32, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillRect(-45, -6, 90, 12);
+                    ctx.strokeRect(-45, -6, 90, 12);
+                } else if (preview.locationType === 'nebula' || this.selectedStructureType === 'science_station') {
+                    ctx.rotate(Date.now() / 1000);
+                    ctx.strokeStyle = preview.valid ? '#00e5ff' : '#ff3c3c';
+                    ctx.fillStyle = '#0b1021';
+                    ctx.lineWidth = 3.5;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 40, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.beginPath();
+                    for (let s = 0; s < 8; s++) {
+                        const sAngle = (s / 8) * Math.PI * 2;
+                        const px = Math.cos(sAngle) * 20;
+                        const py = Math.sin(sAngle) * 20;
+                        if (s === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            // 3. Draw text message or demolish warning label
+            ctx.save();
+            ctx.fillStyle = preview.demolish ? '#ff3c3c' : (preview.valid ? '#00ffd0' : '#ff3c3c');
+            ctx.font = 'bold 13px Orbitron, sans-serif';
+            ctx.textAlign = 'center';
+            if (preview.demolish && preview.structure) {
+                ctx.fillText("⚠️ DEMOLISH", preview.x, preview.y - 100);
+            }
+            ctx.fillText(preview.message, preview.x, preview.y - 80);
+            ctx.restore();
+        }
 
         this.ctx.restore();
 
@@ -2483,7 +3046,7 @@ export class Game {
         // Met all requirements! Conquer region
         this.conqueredRegions.add(regionName);
         localStorage.setItem('space_explorer_conquered_regions', JSON.stringify([...this.conqueredRegions]));
-        
+
         if (this.hud) {
             this.hud.showFloatingReward(`REGION CONQUERED: ${regionName.toUpperCase()}`, '#00ffcc');
             this.hud.showDiscoveryPopup({
@@ -2494,14 +3057,14 @@ export class Game {
                 sciReward: 50
             });
         }
-        
+
         this.player.gems += region.gemReward || 100;
         this.player.gemVault += region.gemReward || 100;
         this.player.totalGemsCollected += region.gemReward || 100;
         this.player.addScience(50);
-        
+
         this.checkClusterCompletion();
-        
+
         this.player.save();
         return true;
     }

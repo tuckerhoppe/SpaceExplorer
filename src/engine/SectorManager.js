@@ -218,6 +218,26 @@ export class SectorManager {
             }
         }
 
+        if (!this.dockedAt && game.structures) {
+            for (const s of game.structures) {
+                if (s.type === 'shipyard') {
+                    const radius = s.dockRadius || 120;
+                    if (Utils.dist(player.x, player.y, s.x, s.y) < radius) {
+                        this.dockedAt = {
+                            id: s.id,
+                            name: 'Shipyard Drydock',
+                            type: 'shipyard',
+                            dockEffect: 'heal',
+                            x: s.x,
+                            y: s.y,
+                            dockRadius: radius
+                        };
+                        break;
+                    }
+                }
+            }
+        }
+
         // Stop mini-game if no longer docked at the same object
         if (game.hud.scienceMiniGame.active && (!this.dockedAt || this.dockedAt.id !== game.hud.scienceMiniGame.stellarObject?.id)) {
             game.hud.scienceMiniGame.stop();

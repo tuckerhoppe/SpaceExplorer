@@ -2,6 +2,7 @@ import { Utils } from '../utils.js';
 
 export class Nebula {
     constructor(def) {
+        this.id = def.id || ('nebula_' + def.name.replace(/\s+/g, '_').toLowerCase());
         this.name = def.name;
         this.x = def.worldX;
         this.y = def.worldY;
