@@ -250,6 +250,14 @@ export class HUD {
             });
         }
 
+        const deconstructBtn = document.getElementById('build-option-deconstruct');
+        if (deconstructBtn) {
+            deconstructBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.game.startBuildPlacement('deconstruct');
+            });
+        }
+
         // Hail alert bindings
         this.bindButton('hail-done-btn', () => {
             document.getElementById('hail-modal').classList.add('hidden');

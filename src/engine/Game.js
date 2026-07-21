@@ -399,6 +399,44 @@ export class Game {
         const mx = Input.mouse.worldX;
         const my = Input.mouse.worldY;
 
+        // Check if hovering over an existing structure for demolition
+        if (this.selectedStructureType === 'deconstruct') {
+            const hoveredStruct = this.structures.find(s => Utils.dist(mx, my, s.x, s.y) <= 60);
+            if (hoveredStruct) {
+                const refund = hoveredStruct.type === 'shipyard' ? 100 : (hoveredStruct.type === 'science_station' ? 75 : 50);
+                this.buildPreview = {
+                    valid: true,
+                    demolish: true,
+                    parent: hoveredStruct.parent,
+                    structure: hoveredStruct,
+                    x: hoveredStruct.x,
+                    y: hoveredStruct.y,
+                    message: `Click to Demolish (${refund} 💎 Refund)`
+                };
+
+                if (clickedThisFrame) {
+                    this.structures = this.structures.filter(s => s !== hoveredStruct);
+                    this.saveStructures();
+                    this.player.gems += refund;
+                    this.player.save();
+                    if (this.hud) {
+                        this.hud.showFloatingReward(`+${refund} 💎`, '#00ffd0');
+                        this.hud.showFloatingRewardAt(hoveredStruct.x, hoveredStruct.y, 'STRUCTURE DECONSTRUCTED', '#ff4444');
+                    }
+                    this.toggleBuildMode();
+                }
+            } else {
+                this.buildPreview = {
+                    valid: false,
+                    demolish: true,
+                    x: mx,
+                    y: my,
+                    message: "Hover over structure to deconstruct"
+                };
+            }
+            return;
+        }
+
         let nearestObj = null;
         let minDist = Infinity;
         let placementType = null;
@@ -2648,126 +2686,132 @@ export class Game {
             const preview = this.buildPreview;
             const ctx = this.ctx;
             
+            // 1. Draw connecting guides/radius indicators in world space
             ctx.save();
-            ctx.strokeStyle = preview.valid ? 'rgba(0, 255, 208, 0.6)' : 'rgba(255, 60, 60, 0.6)';
-            ctx.lineWidth = 2.5;
-            ctx.setLineDash([6, 6]);
-            ctx.beginPath();
-            ctx.arc(preview.x, preview.y, 70, 0, Math.PI * 2);
-            ctx.stroke();
-
-            if (preview.parent) {
-                ctx.strokeStyle = preview.valid ? 'rgba(0, 255, 208, 0.2)' : 'rgba(255, 60, 60, 0.2)';
-                ctx.setLineDash([3, 6]);
+            if (preview.demolish) {
+                ctx.strokeStyle = 'rgba(255, 60, 60, 0.85)';
+                ctx.lineWidth = 3.0;
+                ctx.setLineDash([4, 4]);
                 ctx.beginPath();
-                ctx.moveTo(preview.x, preview.y);
-                ctx.lineTo(preview.parent.x, preview.parent.y);
+                ctx.arc(preview.x, preview.y, 75, 0, Math.PI * 2);
                 ctx.stroke();
-            }
-
-            ctx.globalAlpha = 0.5;
-            ctx.translate(preview.x, preview.y);
-            if (this.selectedStructureType === 'shipyard') {
-                const dockAngle = Math.atan2(preview.y - preview.parent.y, preview.x - preview.parent.x);
-                ctx.rotate(dockAngle);
-                ctx.strokeStyle = preview.valid ? '#00ff88' : '#ff3c3c';
-                ctx.fillStyle = '#141c24';
-                ctx.lineWidth = 3;
-                // Base Spine
-                ctx.fillRect(-25, -60, 50, 24);
-                ctx.strokeRect(-25, -60, 50, 24);
-                // Drydock Gantry Arms
-                ctx.fillRect(-55, -60, 24, 110);
-                ctx.strokeRect(-55, -60, 24, 110);
-                ctx.fillRect(31, -60, 24, 110);
-                ctx.strokeRect(31, -60, 24, 110);
-            } else if (preview.locationType === 'planet') {
-                ctx.rotate(Date.now() / 1000);
-                ctx.strokeStyle = preview.valid ? '#00ffd0' : '#ff3c3c';
-                ctx.fillStyle = '#0b1d28';
-                ctx.lineWidth = 3.5;
-                // Outer ring
+            } else {
+                ctx.strokeStyle = preview.valid ? 'rgba(0, 255, 208, 0.6)' : 'rgba(255, 60, 60, 0.6)';
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([6, 6]);
                 ctx.beginPath();
-                ctx.arc(0, 0, 42, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.arc(preview.x, preview.y, 70, 0, Math.PI * 2);
                 ctx.stroke();
-                // Spokes
-                for (let i = 0; i < 4; i++) {
-                    const angle = (i * Math.PI) / 2;
+
+                if (preview.parent) {
+                    ctx.strokeStyle = preview.valid ? 'rgba(0, 255, 208, 0.2)' : 'rgba(255, 60, 60, 0.2)';
+                    ctx.setLineDash([3, 6]);
                     ctx.beginPath();
-                    ctx.moveTo(0, 0);
-                    ctx.lineTo(Math.cos(angle) * 42, Math.sin(angle) * 42);
+                    ctx.moveTo(preview.x, preview.y);
+                    ctx.lineTo(preview.parent.x, preview.parent.y);
                     ctx.stroke();
                 }
-                // Center hub
-                ctx.beginPath();
-                ctx.arc(0, 0, 18, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-            } else if (preview.locationType === 'asteroid') {
-                const surfaceAngle = Math.atan2(preview.y - preview.parent.y, preview.x - preview.parent.x);
-                ctx.rotate(surfaceAngle);
-                ctx.strokeStyle = preview.valid ? '#ff9900' : '#ff3c3c';
-                ctx.fillStyle = '#1f130b';
-                ctx.lineWidth = 3;
-                // Base Plate on X = 0 (150px wide)
-                ctx.fillRect(-6, -75, 12, 150);
-                ctx.strokeRect(-6, -75, 12, 150);
-                // Main Factory Hall
-                ctx.fillRect(0, -45, 70, 90);
-                ctx.strokeRect(0, -45, 70, 90);
-                // Processing Silo Tank
-                ctx.fillRect(0, -76, 80, 28);
-                ctx.strokeRect(0, -76, 80, 28);
-                // Smokestacks
-                ctx.fillRect(70, -26, 35, 10);
-                ctx.strokeRect(70, -26, 35, 10);
-                ctx.fillRect(70, -5, 35, 10);
-                ctx.strokeRect(70, -5, 35, 10);
-                ctx.fillRect(70, 16, 35, 10);
-                ctx.strokeRect(70, 16, 35, 10);
-            } else if (preview.locationType === 'star') {
-                ctx.rotate(Date.now() / 1000);
-                ctx.strokeStyle = preview.valid ? '#ffaa00' : '#ff3c3c';
-                ctx.fillStyle = '#1b1305';
-                ctx.lineWidth = 3.5;
-                // Solar receiver preview
-                ctx.beginPath();
-                ctx.arc(0, 0, 32, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                // Solar wings
-                ctx.fillRect(-45, -6, 90, 12);
-                ctx.strokeRect(-45, -6, 90, 12);
-            } else if (preview.locationType === 'nebula' || this.selectedStructureType === 'science_station') {
-                ctx.rotate(Date.now() / 1000);
-                ctx.strokeStyle = preview.valid ? '#00e5ff' : '#ff3c3c';
-                ctx.fillStyle = '#0b1021';
-                ctx.lineWidth = 3.5;
-                // Outer ring
-                ctx.beginPath();
-                ctx.arc(0, 0, 40, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                // Inner Octagon Core
-                ctx.beginPath();
-                for (let s = 0; s < 8; s++) {
-                    const sAngle = (s / 8) * Math.PI * 2;
-                    const px = Math.cos(sAngle) * 20;
-                    const py = Math.sin(sAngle) * 20;
-                    if (s === 0) ctx.moveTo(px, py);
-                    else ctx.lineTo(px, py);
-                }
-                ctx.closePath();
-                ctx.stroke();
             }
             ctx.restore();
 
+            // 2. Draw structure graphics (only if not demolishing)
+            if (!preview.demolish) {
+                ctx.save();
+                ctx.globalAlpha = 0.5;
+                ctx.translate(preview.x, preview.y);
+                if (this.selectedStructureType === 'shipyard') {
+                    const dockAngle = Math.atan2(preview.y - preview.parent.y, preview.x - preview.parent.x);
+                    ctx.rotate(dockAngle);
+                    ctx.strokeStyle = preview.valid ? '#00ff88' : '#ff3c3c';
+                    ctx.fillStyle = '#141c24';
+                    ctx.lineWidth = 3;
+                    ctx.fillRect(-25, -60, 50, 24);
+                    ctx.strokeRect(-25, -60, 50, 24);
+                    ctx.fillRect(-55, -60, 24, 110);
+                    ctx.strokeRect(-55, -60, 24, 110);
+                    ctx.fillRect(31, -60, 24, 110);
+                    ctx.strokeRect(31, -60, 24, 110);
+                } else if (preview.locationType === 'planet') {
+                    ctx.rotate(Date.now() / 1000);
+                    ctx.strokeStyle = preview.valid ? '#00ffd0' : '#ff3c3c';
+                    ctx.fillStyle = '#0b1d28';
+                    ctx.lineWidth = 3.5;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 42, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    for (let i = 0; i < 4; i++) {
+                        const angle = (i * Math.PI) / 2;
+                        ctx.beginPath();
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(Math.cos(angle) * 42, Math.sin(angle) * 42);
+                        ctx.stroke();
+                    }
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                } else if (preview.locationType === 'asteroid') {
+                    const surfaceAngle = Math.atan2(preview.y - preview.parent.y, preview.x - preview.parent.x);
+                    ctx.rotate(surfaceAngle);
+                    ctx.strokeStyle = preview.valid ? '#ff9900' : '#ff3c3c';
+                    ctx.fillStyle = '#1f130b';
+                    ctx.lineWidth = 3;
+                    ctx.fillRect(-6, -75, 12, 150);
+                    ctx.strokeRect(-6, -75, 12, 150);
+                    ctx.fillRect(0, -45, 70, 90);
+                    ctx.strokeRect(0, -45, 70, 90);
+                    ctx.fillRect(0, -76, 80, 28);
+                    ctx.strokeRect(0, -76, 80, 28);
+                    ctx.fillRect(70, -26, 35, 10);
+                    ctx.strokeRect(70, -26, 35, 10);
+                    ctx.fillRect(70, -5, 35, 10);
+                    ctx.strokeRect(70, -5, 35, 10);
+                    ctx.fillRect(70, 16, 35, 10);
+                    ctx.strokeRect(70, 16, 35, 10);
+                } else if (preview.locationType === 'star') {
+                    ctx.rotate(Date.now() / 1000);
+                    ctx.strokeStyle = preview.valid ? '#ffaa00' : '#ff3c3c';
+                    ctx.fillStyle = '#1b1305';
+                    ctx.lineWidth = 3.5;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 32, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillRect(-45, -6, 90, 12);
+                    ctx.strokeRect(-45, -6, 90, 12);
+                } else if (preview.locationType === 'nebula' || this.selectedStructureType === 'science_station') {
+                    ctx.rotate(Date.now() / 1000);
+                    ctx.strokeStyle = preview.valid ? '#00e5ff' : '#ff3c3c';
+                    ctx.fillStyle = '#0b1021';
+                    ctx.lineWidth = 3.5;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 40, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.beginPath();
+                    for (let s = 0; s < 8; s++) {
+                        const sAngle = (s / 8) * Math.PI * 2;
+                        const px = Math.cos(sAngle) * 20;
+                        const py = Math.sin(sAngle) * 20;
+                        if (s === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            // 3. Draw text message or demolish warning label
             ctx.save();
-            ctx.fillStyle = preview.valid ? '#00ffd0' : '#ff3c3c';
+            ctx.fillStyle = preview.demolish ? '#ff3c3c' : (preview.valid ? '#00ffd0' : '#ff3c3c');
             ctx.font = 'bold 13px Orbitron, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(preview.message, preview.x, preview.y - 85);
+            if (preview.demolish && preview.structure) {
+                ctx.fillText("⚠️ DEMOLISH", preview.x, preview.y - 100);
+            }
+            ctx.fillText(preview.message, preview.x, preview.y - 80);
             ctx.restore();
         }
 
