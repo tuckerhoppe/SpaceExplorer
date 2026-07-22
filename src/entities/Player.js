@@ -81,6 +81,7 @@ export class Player {
             this.dashRechargeTimer = data.dashRechargeTimer || 0;
             this.fleetIndices = data.fleetIndices || [];
             this.fleetEmbarked = data.fleetEmbarked !== undefined ? data.fleetEmbarked : false;
+            this.fleetFormation = data.fleetFormation || 'v_formation';
         } catch (e) {
             console.error("Failed to load player progress", e);
             this.gems = 0;
@@ -94,6 +95,7 @@ export class Player {
             this.lastStationY = null;
             this.fleetIndices = [];
             this.fleetEmbarked = false;
+            this.fleetFormation = 'v_formation';
         }
     }
 
@@ -113,7 +115,8 @@ export class Player {
                 lastStationX: this.lastStationX,
                 lastStationY: this.lastStationY,
                 fleetIndices: this.fleetIndices,
-                fleetEmbarked: this.fleetEmbarked
+                fleetEmbarked: this.fleetEmbarked,
+                fleetFormation: this.fleetFormation
             };
             localStorage.setItem('space_explorer_progress', JSON.stringify(data));
         } catch (e) {

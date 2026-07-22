@@ -975,15 +975,85 @@ export class Game {
         // Update player fleet ships
         if (this.fleetShips) {
             const headingAngle = this.player.angle;
-            const offsets = [
-                { x: -65, y: -50 }, // Slot 1: Back-left
-                { x: -65, y: 50 },  // Slot 2: Back-right
-                { x: -120, y: -90 }, // Slot 3: Far Back-left
-                { x: -120, y: 90 },  // Slot 4: Far Back-right
-                { x: -160, y: 0 }    // Slot 5: Center Back
-            ];
+            const formation = this.player.fleetFormation || 'v_formation';
+            
             this.fleetShips.forEach((ship, idx) => {
-                const offset = offsets[idx] || { x: -60 - idx * 30, y: 0 };
+                let offset = { x: 0, y: 0 };
+                
+                if (formation === 'surround') {
+                    // Concentric rings centered around the player
+                    const totalShips = this.fleetShips.length;
+                    let ringRadius = 80;
+                    let ringCount = totalShips;
+                    let slotIndex = idx;
+                    
+                    if (totalShips > 12) {
+                        if (idx < 12) {
+                            ringRadius = 80;
+                            ringCount = 12;
+                            slotIndex = idx;
+                        } else {
+                            ringRadius = 140;
+                            ringCount = totalShips - 12;
+                            slotIndex = idx - 12;
+                        }
+                    }
+                    const angle = (slotIndex * Math.PI * 2) / ringCount;
+                    offset = {
+                        x: Math.cos(angle) * ringRadius,
+                        y: Math.sin(angle) * ringRadius
+                    };
+                } else if (formation === 'diamond') {
+                    // Staggered concentric diamond layers with the player at the absolute center
+                    const size = 60;
+                    const points = [];
+                    let layer = 1;
+                    while (points.length < this.fleetShips.length) {
+                        const layerPoints = [
+                            { x: layer * size, y: 0 },
+                            { x: -layer * size, y: 0 },
+                            { x: 0, y: layer * size },
+                            { x: 0, y: -layer * size }
+                        ];
+                        for (let j = 1; j < layer; j++) {
+                            const offsetVal = j * size;
+                            const remVal = (layer - j) * size;
+                            layerPoints.push({ x: offsetVal, y: remVal });
+                            layerPoints.push({ x: offsetVal, y: -remVal });
+                            layerPoints.push({ x: -offsetVal, y: remVal });
+                            layerPoints.push({ x: -offsetVal, y: -remVal });
+                        }
+                        
+                        // Keep slots that are sufficiently spaced from player center
+                        for (const pt of layerPoints) {
+                            if (Math.hypot(pt.x, pt.y) > 30) {
+                                points.push(pt);
+                            }
+                        }
+                        layer++;
+                    }
+                    offset = points[idx] || { x: 0, y: 0 };
+                } else {
+                    // Default V-Formation: preserves original 5 hardcoded slots, expands staggered back/sides
+                    const defaultOffsets = [
+                        { x: -65, y: -50 },  // Slot 1: Back-left
+                        { x: -65, y: 50 },   // Slot 2: Back-right
+                        { x: -120, y: -90 }, // Slot 3: Far Back-left
+                        { x: -120, y: 90 },  // Slot 4: Far Back-right
+                        { x: -160, y: 0 }    // Slot 5: Center Back
+                    ];
+                    if (idx < 5) {
+                        offset = defaultOffsets[idx];
+                    } else {
+                        const row = Math.floor((idx - 5) / 2) + 3;
+                        const side = idx % 2 === 0 ? -1 : 1;
+                        offset = {
+                            x: -60 - row * 55,
+                            y: side * (row * 45 + 10)
+                        };
+                    }
+                }
+                
                 const rx = offset.x * Math.cos(headingAngle) - offset.y * Math.sin(headingAngle);
                 const ry = offset.x * Math.sin(headingAngle) + offset.y * Math.cos(headingAngle);
                 const tx = this.player.x + rx;

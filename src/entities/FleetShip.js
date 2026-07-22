@@ -91,6 +91,19 @@ export class FleetShip {
         checkEnemiesList(this.game.dreadnoughts);
         checkEnemiesList(this.game.bosses);
 
+        // Scan for active parasites/oppressors attached to stellar objects
+        if (this.game.sectorManager && this.game.sectorManager.objects) {
+            for (const obj of this.game.sectorManager.objects) {
+                if (obj.parasite && obj.parasite.health > 0) {
+                    const d = Utils.dist(this.x, this.y, obj.parasite.x, obj.parasite.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearestEnemy = obj.parasite;
+                    }
+                }
+            }
+        }
+
         if (nearestEnemy) {
             const targetAngle = Utils.ang(this.x, this.y, nearestEnemy.x, nearestEnemy.y);
             let da = targetAngle - this.angle;

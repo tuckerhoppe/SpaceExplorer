@@ -2776,6 +2776,17 @@ export class HUD {
         
         // Ensure player fleet indices array exists
         if (!player.fleetIndices) player.fleetIndices = [];
+        if (!player.fleetFormation) player.fleetFormation = 'v_formation';
+
+        // Update formation dropdown selection
+        const formationSelect = document.getElementById('shipyard-fleet-formation-select');
+        if (formationSelect) {
+            formationSelect.value = player.fleetFormation;
+            formationSelect.onchange = (e) => {
+                player.fleetFormation = e.target.value;
+                player.save();
+            };
+        }
 
         // Dynamic fleet capacity: 5 per built space_dock structure
         const maxCapacity = this.game.structures.filter(s => s.type === 'space_dock').length * 5;

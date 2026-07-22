@@ -343,6 +343,15 @@
                         <div style="flex: 1.2; background: rgba(0, 0, 0, 0.4); border: 2px dashed rgba(0, 255, 136, 0.2); border-radius: 6px; padding: 20px; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; text-align: left; max-height: 55vh;">
                             <h3 id="shipyard-fleet-status-title" style="margin-top: 0; color: #00ff88; font-family: 'Orbitron', sans-serif; font-size: 1.25rem; text-align: center;">Active Fleet (0/5)</h3>
                             
+                            <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                                <span style="font-size: 0.8rem; color: #aaa; font-family: 'Orbitron', sans-serif;">FORMATION:</span>
+                                <select id="shipyard-fleet-formation-select" style="background: #050b1e; border: 1px solid #00ff88; color: #fff; padding: 4px 8px; border-radius: 4px; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; cursor: pointer; outline: none;">
+                                    <option value="v_formation">V-Formation</option>
+                                    <option value="surround">Surround (Shield)</option>
+                                    <option value="diamond">Diamond (Centered)</option>
+                                </select>
+                            </div>
+                            
                             <div id="shipyard-fleet-active-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding-right: 5px;">
                                 <!-- List of current active fleet ships with retire option -->
                             </div>
