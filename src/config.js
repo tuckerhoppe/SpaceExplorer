@@ -15,6 +15,7 @@ export const TECH_UPGRADES = [
     { id: 'proton_torpedo', name: 'Proton Torpedoes', desc: 'Heavy secondary weapon fired with RIGHT-CLICK. Fires towards cursor with 600 DMG and 3s reload.', cost: 3500, sciLevel: 8 },
     { id: 'gravity_laser', name: 'Gravity Beam Emitter', desc: 'Continuous void beam fired with SPACE. Deals massive DPS, especially to asteroids.', cost: 5000, sciLevel: 10 },
     { id: 'evasive_maneuvers', name: 'Evasive Maneuvers', desc: 'Perform a fast dash with ARROW KEYS to evade attacks. 3 Charges, rechargeable.', cost: 2000, sciLevel: 6 },
+    { id: 'fleet_double_laser', name: 'Tactical Spread Lasers', desc: 'Upgrades all fleet escort vessels to fire double parallel laser spreads.', cost: 3000, sciLevel: 7 },
 ];
 
 export const SHIPS = [

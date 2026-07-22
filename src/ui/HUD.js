@@ -2,6 +2,7 @@ import { UPGRADES, TECH_UPGRADES, SHIPS } from '../config.js';
 import { QUESTS } from '../data/quests.js';
 import { REGIONS, DEFAULT_REGION } from '../data/regions.js';
 import { SQUAD_DEFINITIONS } from '../data/patrols.js';
+import { FleetShip } from '../entities/FleetShip.js';
 import { ScienceMiniGame } from './ScienceMiniGame.js';
 import { MiniMap } from './MiniMap.js';
 import { SPECIFIC_HAILS } from '../data/messages.js';
@@ -30,6 +31,9 @@ export class HUD {
 
         this._lastStationId = null;
         this._lastStationSpawn = null;
+
+        // Shipyard Customization State
+        this.selectedPreviewShipIndex = 0;
 
         // Boss Health UI
         this.bossPanel = document.getElementById('boss-health-panel');
@@ -263,6 +267,79 @@ export class HUD {
             document.getElementById('hail-modal').classList.add('hidden');
             this._resumeFromPopup();
         });
+
+        const shipyardCloseBtn = document.getElementById('shipyard-upgrade-close-btn');
+        if (shipyardCloseBtn) {
+            shipyardCloseBtn.addEventListener('click', () => {
+                const shipyardModal = document.getElementById('shipyard-upgrade-modal');
+                if (shipyardModal) shipyardModal.classList.add('hidden');
+                this._resumeFromPopup();
+            });
+        }
+
+        const shipyardTabVessels = document.getElementById('shipyard-tab-vessels');
+        const shipyardTabFleet = document.getElementById('shipyard-tab-fleet');
+        const shipyardContentVessels = document.getElementById('shipyard-content-vessels');
+        const shipyardContentFleet = document.getElementById('shipyard-content-fleet');
+
+        const switchShipyardTabs = (activeTab, inactiveTab, activeContent, inactiveContent) => {
+            activeTab.classList.add('active');
+            inactiveTab.classList.remove('active');
+            activeContent.classList.add('active');
+            activeContent.classList.remove('hidden');
+            inactiveContent.classList.add('hidden');
+            inactiveContent.classList.remove('active');
+        };
+
+        if (shipyardTabVessels && shipyardTabFleet && shipyardContentVessels && shipyardContentFleet) {
+            shipyardTabVessels.addEventListener('click', () => {
+                switchShipyardTabs(shipyardTabVessels, shipyardTabFleet, shipyardContentVessels, shipyardContentFleet);
+                this.refreshShipyardUpgradeMenu();
+            });
+            shipyardTabFleet.addEventListener('click', () => {
+                switchShipyardTabs(shipyardTabFleet, shipyardTabVessels, shipyardContentFleet, shipyardContentVessels);
+                this.refreshShipyardFleetMenu();
+            });
+        }
+
+        const shipyardUpgradeBtn = document.getElementById('shipyard-upgrade-btn');
+        if (shipyardUpgradeBtn) {
+            shipyardUpgradeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.selectedPreviewShipIndex = this.game.player.shipIndex;
+                const shipyardModal = document.getElementById('shipyard-upgrade-modal');
+                if (shipyardModal) {
+                    shipyardModal.classList.remove('hidden');
+                    this._pauseForPopup();
+                    
+                    if (shipyardTabVessels && shipyardTabFleet && shipyardContentVessels && shipyardContentFleet) {
+                        switchShipyardTabs(shipyardTabVessels, shipyardTabFleet, shipyardContentVessels, shipyardContentFleet);
+                    }
+                    
+                    this.refreshShipyardUpgradeMenu();
+                    this.animateShipyardPreview();
+                }
+            });
+        }
+
+        const shipyardFleetBtn = document.getElementById('shipyard-fleet-btn');
+        if (shipyardFleetBtn) {
+            shipyardFleetBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const shipyardModal = document.getElementById('shipyard-upgrade-modal');
+                if (shipyardModal) {
+                    shipyardModal.classList.remove('hidden');
+                    this._pauseForPopup();
+                    
+                    if (shipyardTabVessels && shipyardTabFleet && shipyardContentVessels && shipyardContentFleet) {
+                        switchShipyardTabs(shipyardTabFleet, shipyardTabVessels, shipyardContentFleet, shipyardContentVessels);
+                    }
+                    
+                    this.refreshShipyardFleetMenu();
+                    this.animateShipyardPreview();
+                }
+            });
+        }
 
         // Map bindings
         this.bindButton('map-close-btn', () => this.toggleMap());
@@ -1812,10 +1889,11 @@ export class HUD {
         if (!obj) {
             bar.classList.remove('active');
             this.updateStationPanel(null); // Reset cache and hide station panel
+            this.updateShipyardPanel(null);
             return;
         }
         const EFFECT_LABEL = { heal: '⚕ HULL REPAIR', gems: '💎 +GEMS' };
-        const TYPE_ICONS = { planet: '🪐', nebula: '🌌', star: '⭐', station: '🛸', artifact: '💠' };
+        const TYPE_ICONS = { planet: '🪐', nebula: '🌌', star: '⭐', station: '🛸', shipyard: '🚢', artifact: '💠' };
 
         if (obj.parasite) {
             const isOppressor = obj.parasite.type === 'oppressor';
@@ -1837,6 +1915,8 @@ export class HUD {
                 } else {
                     effectLabel = '✅ CARGO EMPTY — VAULT SAFE';
                 }
+            } else if (obj.type === 'shipyard') {
+                effectLabel = '🔧 DRYDOC SYSTEM ONLINE';
             }
             bar.innerHTML = `
                 <span class="dock-icon">${TYPE_ICONS[obj.type] || '⚓'}</span>
@@ -1846,8 +1926,9 @@ export class HUD {
         }
         bar.classList.add('active');
 
-        // Update new Station Panel
+        // Update panels
         this.updateStationPanel(obj);
+        this.updateShipyardPanel(obj);
     }
 
     /** Update the dedicated Station HUD panel for a docked station */
@@ -2415,6 +2496,350 @@ export class HUD {
         } else {
             this.bossPanel.classList.remove('active');
             this.bossPanel.classList.add('hidden');
+        }
+    }
+
+    updateShipyardPanel(obj) {
+        const shipyardPanel = document.getElementById('shipyard-panel');
+        if (!shipyardPanel) return;
+
+        if (!obj || obj.type !== 'shipyard') {
+            shipyardPanel.classList.add('hidden');
+            return;
+        }
+
+        shipyardPanel.classList.remove('hidden');
+        const nameEl = document.getElementById('shipyard-panel-name');
+        if (nameEl) nameEl.textContent = obj.name || 'Orbital Shipyard';
+    }
+
+    refreshShipyardUpgradeMenu() {
+        const list = document.getElementById('shipyard-ship-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        const player = this.game.player;
+        const sciLevel = player.scienceLevel;
+
+        const gemCountEl = document.getElementById('shipyard-gem-count');
+        if (gemCountEl) gemCountEl.textContent = player.gems;
+
+        SHIPS.forEach((s, index) => {
+            const isOwned = player.shipIndex === index;
+            const sciOk = sciLevel >= (s.sciLevel || 0);
+            const canAfford = player.gems >= s.cost;
+            
+            const card = document.createElement('div');
+            card.style.display = 'flex';
+            card.style.justifyContent = 'space-between';
+            card.style.alignItems = 'center';
+            card.style.background = isOwned ? 'rgba(0, 255, 136, 0.15)' : (index === this.selectedPreviewShipIndex ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)');
+            card.style.border = index === this.selectedPreviewShipIndex ? '1px solid #00ff88' : '1px solid rgba(255, 255, 255, 0.1)';
+            card.style.borderRadius = '4px';
+            card.style.padding = '10px 14px';
+            card.style.cursor = 'pointer';
+            card.style.transition = 'all 0.2s';
+            
+            card.addEventListener('click', () => {
+                this.selectedPreviewShipIndex = index;
+                this.refreshShipyardUpgradeMenu();
+            });
+
+            const sciTag = s.sciLevel > 0 
+                ? `<div style="font-size: 0.72rem; color: ${sciOk ? '#00ffd0' : '#ff4444'}; margin-top: 3px;">🔬 Sci Lvl ${s.sciLevel} required</div>`
+                : '';
+
+            card.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 44px; height: 44px; background: rgba(0,0,0,0.3); border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1);">
+                        <canvas id="shipyard-item-canvas-${index}" width="40" height="40"></canvas>
+                    </div>
+                    <div>
+                        <div style="font-weight: bold; color: ${isOwned ? '#00ff88' : '#fff'};">${s.name}</div>
+                        <div style="font-size: 0.75rem; color: #bbb; max-width: 250px;">${s.desc}</div>
+                        ${sciTag}
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                    <div style="color: #00ffd0; font-weight: bold; font-family: 'Orbitron', sans-serif;">${s.cost > 0 ? s.cost + ' 💎' : 'FREE'}</div>
+                    <button class="btn buy-btn" style="padding: 4px 10px; font-size: 0.75rem; background: ${isOwned ? 'rgba(0, 255, 136, 0.1)' : ''}; border-color: ${isOwned ? '#00ff88' : ''}; color: ${isOwned ? '#00ff88' : ''};" ${isOwned ? 'disabled' : ''}>
+                        ${isOwned ? 'Equipped' : 'Buy & Equip'}
+                    </button>
+                </div>
+            `;
+
+            list.appendChild(card);
+
+            // Draw the ship inside the list item canvas
+            const itemCanvas = document.getElementById(`shipyard-item-canvas-${index}`);
+            if (itemCanvas) {
+                const itemCtx = itemCanvas.getContext('2d');
+                itemCtx.save();
+                itemCtx.translate(20, 20);
+                itemCtx.rotate(-Math.PI / 4);
+                itemCtx.fillStyle = '#0a0f1e';
+                itemCtx.strokeStyle = isOwned ? '#00ff88' : '#00f0ff';
+                itemCtx.lineWidth = 1.5;
+                s.drawShape(itemCtx, 11);
+                itemCtx.restore();
+            }
+
+            // Wire up click event specifically for the buy button
+            const btn = card.querySelector('.buy-btn');
+            if (btn && !isOwned) {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!sciOk || !canAfford) {
+                        this.showFloatingReward('UNABLE TO PURCHASE', '#ff3c3c');
+                        return;
+                    }
+                    player.gems -= s.cost;
+                    player.gemVault = Math.max(0, (player.gemVault || 0) - s.cost);
+                    player.shipIndex = index;
+                    player.updateShipRadius();
+                    player.save();
+                    
+                    // Reset stats & heal player on ship swap
+                    player.health = player.maxHealth;
+                    this.update(player);
+                    this.showFloatingReward(`Vessel ${s.name.toUpperCase()} ACQUIRED!`, '#00ff88');
+                    
+                    this.refreshShipyardUpgradeMenu();
+                    this.refreshShips();
+                    this.refreshUpgrades();
+                };
+                btn.disabled = !sciOk || !canAfford;
+            }
+        });
+
+        this.updateShipyardSelectedPreview();
+    }
+
+    updateShipyardSelectedPreview() {
+        const previewName = document.getElementById('shipyard-preview-name');
+        const previewStats = document.getElementById('shipyard-preview-stats');
+        if (!previewName || !previewStats) return;
+
+        const player = this.game.player;
+        const s = SHIPS[player.shipIndex];
+        if (!s) return;
+
+        previewName.textContent = `EQUIPPED: ${s.name.toUpperCase()}`;
+
+        const bonuses = [];
+        if (s.stats.hull > 0) bonuses.push(`+${s.stats.hull * 30} Hull HP`);
+        if (s.stats.engine > 0) bonuses.push(`+${s.stats.engine * 0.5} Thruster Speed`);
+        if (s.stats.weapons > 0) bonuses.push(`+${s.stats.weapons * 5} Laser DMG`);
+        if (s.stats.magnet > 0) bonuses.push(`+${s.stats.magnet * 45} Magnet Radius`);
+
+        const statsHtml = `
+            <div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; margin-bottom: 6px; color: #00ff88; font-weight: bold;">SPECIFICATIONS</div>
+            <div style="display: flex; justify-content: space-between;"><span>Current HP:</span> <span>${Math.ceil(player.health)} / ${player.maxHealth} HP</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Cargo Capacity:</span> <span>${player.cargoCapacity} Gems</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Laser DMG:</span> <span>${player.damage} DMG</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Thruster Speed:</span> <span>${player.thrusterMaxSpeed.toFixed(1)} m/s</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Booster Speed:</span> <span>${player.boostMaxSpeed.toFixed(1)} m/s</span></div>
+            <div style="margin-top: 8px; color: #ff9900; font-weight: bold;">SHIP MODEL BONUSES</div>
+            <div style="font-size: 0.8rem; color: #ccc; line-height: 1.3;">
+                ${bonuses.length > 0 ? bonuses.map(b => `• ${b}`).join('<br>') : '• None'}
+            </div>
+        `;
+        previewStats.innerHTML = statsHtml;
+    }
+
+    renderShipyardPreview() {
+        const canvas = document.getElementById('shipyard-preview-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        
+        const player = this.game.player;
+        const shipIndex = player.shipIndex;
+        
+        // Pulsing background radar circle (always green since it's equipped!)
+        ctx.strokeStyle = 'rgba(0, 255, 136, 0.15)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, 75 + Math.sin(Date.now() / 400) * 4, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Spin angle for the ship preview
+        ctx.rotate(Date.now() / 1500);
+        
+        const ship = SHIPS[shipIndex];
+        if (ship && typeof ship.drawShape === 'function') {
+            ctx.scale(3.5, 3.5); // make it larger for preview
+            ctx.fillStyle = '#0a0f1e';
+            ctx.strokeStyle = '#00f0ff'; // Match normal blue/cyan ship model colors
+            ctx.lineWidth = 1.5;
+            ship.drawShape(ctx, 15);
+        }
+        ctx.restore();
+    }
+
+    animateShipyardPreview() {
+        const modal = document.getElementById('shipyard-upgrade-modal');
+        if (!modal || modal.classList.contains('hidden')) {
+            return;
+        }
+        this.renderShipyardPreview();
+        requestAnimationFrame(() => this.animateShipyardPreview());
+    }
+
+    refreshShipyardFleetMenu() {
+        const buyList = document.getElementById('shipyard-fleet-buy-list');
+        const activeList = document.getElementById('shipyard-fleet-active-list');
+        const statusTitle = document.getElementById('shipyard-fleet-status-title');
+        if (!buyList || !activeList || !statusTitle) return;
+
+        const player = this.game.player;
+        const sciLevel = player.scienceLevel;
+        
+        // Ensure player fleet indices array exists
+        if (!player.fleetIndices) player.fleetIndices = [];
+
+        statusTitle.textContent = `Active Fleet (${player.fleetIndices.length}/5)`;
+
+        // 1. Update gem count
+        const gemCountEl = document.getElementById('shipyard-gem-count');
+        if (gemCountEl) gemCountEl.textContent = player.gems;
+
+        // 2. Render Left Side: Commission Escorts
+        buyList.innerHTML = '';
+        SHIPS.forEach((s, index) => {
+            const sciOk = sciLevel >= (s.sciLevel || 0);
+            const canAfford = player.gems >= s.cost;
+            const fleetFull = player.fleetIndices.length >= 5;
+
+            const card = document.createElement('div');
+            card.style.display = 'flex';
+            card.style.justifyContent = 'space-between';
+            card.style.alignItems = 'center';
+            card.style.background = 'rgba(255,255,255,0.03)';
+            card.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+            card.style.borderRadius = '4px';
+            card.style.padding = '10px 14px';
+            card.style.transition = 'all 0.2s';
+
+            const sciTag = s.sciLevel > 0 
+                ? `<div style="font-size: 0.72rem; color: ${sciOk ? '#00ffd0' : '#ff4444'}; margin-top: 3px;">🔬 Sci Lvl ${s.sciLevel} required</div>`
+                : '';
+
+            card.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 44px; height: 44px; background: rgba(0,0,0,0.3); border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1);">
+                        <canvas id="shipyard-fleet-item-canvas-${index}" width="40" height="40"></canvas>
+                    </div>
+                    <div>
+                        <div style="font-weight: bold; color: #fff;">${s.name}</div>
+                        <div style="font-size: 0.75rem; color: #bbb; max-width: 250px;">${s.desc}</div>
+                        ${sciTag}
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                    <div style="color: #00ffd0; font-weight: bold; font-family: 'Orbitron', sans-serif;">${s.cost > 0 ? s.cost + ' 💎' : 'FREE'}</div>
+                    <button class="btn buy-btn" style="padding: 4px 10px; font-size: 0.75rem;" ${!sciOk || !canAfford || fleetFull ? 'disabled' : ''}>
+                        Hire Escort
+                    </button>
+                </div>
+            `;
+
+            buyList.appendChild(card);
+
+            // Draw vector ship icon
+            const itemCanvas = document.getElementById(`shipyard-fleet-item-canvas-${index}`);
+            if (itemCanvas) {
+                const itemCtx = itemCanvas.getContext('2d');
+                itemCtx.save();
+                itemCtx.translate(20, 20);
+                itemCtx.rotate(-Math.PI / 4);
+                itemCtx.fillStyle = '#0a0f1e';
+                itemCtx.strokeStyle = '#00f0ff';
+                itemCtx.lineWidth = 1.5;
+                s.drawShape(itemCtx, 11);
+                itemCtx.restore();
+            }
+
+            // Bind click
+            const btn = card.querySelector('.buy-btn');
+            if (btn) {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!sciOk || !canAfford) {
+                        this.showFloatingReward('UNABLE TO PURCHASE', '#ff3c3c');
+                        return;
+                    }
+                    if (player.fleetIndices.length >= 5) {
+                        this.showFloatingReward('FLEET AT MAX CAPACITY', '#ffaa00');
+                        return;
+                    }
+                    player.gems -= s.cost;
+                    player.gemVault = Math.max(0, (player.gemVault || 0) - s.cost);
+                    player.fleetIndices.push(index);
+                    player.save();
+
+                    // Spawn the FleetShip immediately in the active game loop
+                    if (this.game.fleetShips) {
+                        const fleetShip = new FleetShip(this.game, index, player.x, player.y);
+                        this.game.fleetShips.push(fleetShip);
+                    }
+
+                    this.showFloatingReward(`${s.name.toUpperCase()} COMMISSIONED`, '#00ff88');
+                    this.refreshShipyardFleetMenu();
+                };
+            }
+        });
+
+        // 2. Render Right Side: Current Active Fleet
+        activeList.innerHTML = '';
+        if (player.fleetIndices.length === 0) {
+            activeList.innerHTML = '<div style="color: #666; font-size: 0.85rem; text-align: center; margin-top: 40px; font-family: \'Orbitron\', sans-serif;">No active escorts commissioned.</div>';
+        } else {
+            player.fleetIndices.forEach((shipIdx, fleetIndex) => {
+                const s = SHIPS[shipIdx];
+                if (!s) return;
+
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.alignItems = 'center';
+                row.style.background = 'rgba(255,255,255,0.05)';
+                row.style.border = '1px solid rgba(255,255,255,0.1)';
+                row.style.borderRadius = '4px';
+                row.style.padding = '8px 12px';
+
+                row.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.1rem; color: #00f0ff;">🚀</span>
+                        <div style="font-weight: bold; font-size: 0.85rem; color: #fff;">${s.name}</div>
+                    </div>
+                    <button class="btn retire-btn" style="padding: 2px 8px; font-size: 0.7rem; border-color: #ff3c3c; color: #ff3c3c; background: rgba(255, 60, 60, 0.1);">Retire</button>
+                `;
+
+                activeList.appendChild(row);
+
+                // Wire up retire click
+                const retireBtn = row.querySelector('.retire-btn');
+                if (retireBtn) {
+                    retireBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        // Remove from active list
+                        player.fleetIndices.splice(fleetIndex, 1);
+                        player.save();
+
+                        // Despawn from game
+                        if (this.game.fleetShips) {
+                            this.game.fleetShips.splice(fleetIndex, 1);
+                        }
+
+                        this.showFloatingReward('Vessel retired from fleet.', '#ffaa00');
+                        this.refreshShipyardFleetMenu();
+                    };
+                }
+            });
         }
     }
 }

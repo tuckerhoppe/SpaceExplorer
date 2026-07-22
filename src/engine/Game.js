@@ -8,6 +8,7 @@ import { Battleship } from '../entities/Battleship.js';
 import { NeutralShip } from '../entities/NeutralShip.js';
 import { Gem } from '../entities/Gem.js';
 import { Particle } from '../entities/Particle.js';
+import { FleetShip } from '../entities/FleetShip.js';
 import { HUD } from '../ui/HUD.js';
 import { SectorManager } from './SectorManager.js';
 import { SHIPS } from '../config.js';
@@ -49,6 +50,7 @@ export class Game {
         this.ghost = new GhostCompanion(this.player);
         this.tutorialShip = null;
         this.projectiles = [];
+        this.fleetShips = [];
         this.asteroids = [];
         this.derelicts = [];
         this.mines = [];
@@ -234,6 +236,14 @@ export class Game {
             // Default Start: Frontier Station (0, 0)
             this.player.x = 0;
             this.player.y = 0;
+        }
+        
+        // Instantiate active fleet ships
+        this.fleetShips = [];
+        if (this.player.fleetIndices && Array.isArray(this.player.fleetIndices)) {
+            this.player.fleetIndices.forEach(idx => {
+                this.fleetShips.push(new FleetShip(this, idx, this.player.x, this.player.y));
+            });
         }
 
         this.hud.update(this.player);
@@ -961,6 +971,27 @@ export class Game {
         }
 
         this.player.update(this);
+        
+        // Update player fleet ships
+        if (this.fleetShips) {
+            const headingAngle = this.player.angle;
+            const offsets = [
+                { x: -65, y: -50 }, // Slot 1: Back-left
+                { x: -65, y: 50 },  // Slot 2: Back-right
+                { x: -120, y: -90 }, // Slot 3: Far Back-left
+                { x: -120, y: 90 },  // Slot 4: Far Back-right
+                { x: -160, y: 0 }    // Slot 5: Center Back
+            ];
+            this.fleetShips.forEach((ship, idx) => {
+                const offset = offsets[idx] || { x: -60 - idx * 30, y: 0 };
+                const rx = offset.x * Math.cos(headingAngle) - offset.y * Math.sin(headingAngle);
+                const ry = offset.x * Math.sin(headingAngle) + offset.y * Math.cos(headingAngle);
+                const tx = this.player.x + rx;
+                const ty = this.player.y + ry;
+                ship.update(this.player.x, this.player.y, tx, ty, this.player);
+            });
+        }
+
         this.ghost.update(this);
 
         // Update structures
@@ -1746,6 +1777,33 @@ export class Game {
 
                     if (this.player.health <= 0 && !this.gameOver) {
                         this.triggerGameOver();
+                    }
+                }
+            }
+        }
+
+        // ── Enemy projectile hits fleet ships ─────────────────────
+        if (this.fleetShips && this.fleetShips.length > 0) {
+            for (let sIdx = this.fleetShips.length - 1; sIdx >= 0; sIdx--) {
+                const ship = this.fleetShips[sIdx];
+                if (ship.health <= 0) continue;
+                for (let p = this.enemyProjectiles.length - 1; p >= 0; p--) {
+                    const proj = this.enemyProjectiles[p];
+                    if (Utils.dist(proj.x, proj.y, ship.x, ship.y) < ship.radius + 4) {
+                        ship.health -= proj.damage;
+                        this.enemyProjectiles.splice(p, 1);
+                        this.spawnExplosion(proj.x, proj.y, 5, '#ff9500');
+
+                        if (ship.health <= 0) {
+                            this.spawnExplosion(ship.x, ship.y, 16, '#ffaa00');
+                            this.fleetShips.splice(sIdx, 1);
+                            this.player.fleetIndices.splice(sIdx, 1);
+                            this.player.save();
+                            if (this.hud && typeof this.hud.refreshShipyardFleetMenu === 'function') {
+                                this.hud.refreshShipyardFleetMenu();
+                            }
+                            break;
+                        }
                     }
                 }
             }
@@ -2663,6 +2721,10 @@ export class Game {
         this.enemyProjectiles.forEach(p => p.draw(this.ctx, this.camera));
 
         this.drawGravityBeam();
+
+        if (this.fleetShips) {
+            this.fleetShips.forEach(ship => ship.draw(this.ctx, this.camera));
+        }
 
         this.player.draw(this.ctx);
         if (this.player.onTradeRoute && !this.player.tradeRouteCharged) {

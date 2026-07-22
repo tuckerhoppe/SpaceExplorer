@@ -286,6 +286,76 @@
                 </div>
             </div>
 
+            <!-- Ship Upgrade Menu Modal (Shipyard specific) -->
+            <div id="shipyard-upgrade-modal" class="hidden modal">
+                <div class="modal-panel" style="max-width: 900px; width: 90%;">
+                    <h2>Shipyard Terminal</h2>
+                    <div id="shipyard-vault-display"
+                        style="position: absolute; top: 20px; right: 20px; color: var(--gem-color); font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 1rem; display: flex; align-items: center; gap: 8px; background: rgba(0, 255, 136, 0.1); padding: 5px 12px; border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 20px;">
+                        <span id="shipyard-gem-count">0</span> 💎
+                    </div>
+                    
+                    <div class="modal-tabs" style="margin-bottom: 10px;">
+                        <button id="shipyard-tab-vessels" class="modal-tab active">Vessels</button>
+                        <button id="shipyard-tab-fleet" class="modal-tab">Fleet</button>
+                    </div>
+                    
+                    <!-- Vessels Tab Content -->
+                    <div id="shipyard-content-vessels" class="tab-content active" style="display: flex; gap: 24px; min-height: 450px; width: 100%;">
+                        <!-- Left: Available Ships List -->
+                        <div style="flex: 1.1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 55vh; padding-right: 8px; text-align: left;">
+                            <h3 style="font-family: 'Orbitron', sans-serif; color: #00ff88; margin-top: 0;">Available Vessels</h3>
+                            <div id="shipyard-ship-list" style="display: flex; flex-direction: column; gap: 10px;">
+                                <!-- Rendered dynamically by HUD.js -->
+                            </div>
+                        </div>
+                        
+                        <!-- Right: Preview of Current Ship / Selected Ship -->
+                        <div style="flex: 1.2; background: rgba(0, 0, 0, 0.4); border: 2px dashed rgba(0, 255, 136, 0.2); border-radius: 6px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+                            <h3 id="shipyard-preview-name" style="margin-top: 0; color: #00ff88; font-family: 'Orbitron', sans-serif; font-size: 1.25rem;">Vessel Preview</h3>
+                            
+                            <!-- Large canvas or drawing of the ship -->
+                            <div style="width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; margin: 15px 0;">
+                                <canvas id="shipyard-preview-canvas" width="220" height="220" style="background: rgba(0,20,10,0.2); border-radius: 50%; box-shadow: inset 0 0 20px rgba(0,255,136,0.15); border: 1px solid rgba(0,255,136,0.1);"></canvas>
+                            </div>
+                            
+                            <div id="shipyard-preview-stats" style="width: 100%; font-family: 'Orbitron', sans-serif; font-size: 0.85rem; color: #eee; display: flex; flex-direction: column; gap: 6px; text-align: left;">
+                                <!-- Stats table rendered dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fleet Tab Content -->
+                    <div id="shipyard-content-fleet" class="tab-content hidden" style="display: flex; gap: 24px; min-height: 450px; width: 100%;">
+                        <!-- Left: Buy Fleet Escorts List -->
+                        <div style="flex: 1.1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 55vh; padding-right: 8px; text-align: left;">
+                            <h3 style="font-family: 'Orbitron', sans-serif; color: #00ff88; margin-top: 0;">Commission Escorts</h3>
+                            <div id="shipyard-fleet-buy-list" style="display: flex; flex-direction: column; gap: 10px;">
+                                <!-- Rendered dynamically by HUD.js -->
+                            </div>
+                        </div>
+                        
+                        <!-- Right: Active Fleet Summary & Info -->
+                        <div style="flex: 1.2; background: rgba(0, 0, 0, 0.4); border: 2px dashed rgba(0, 255, 136, 0.2); border-radius: 6px; padding: 20px; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; text-align: left;">
+                            <h3 id="shipyard-fleet-status-title" style="margin-top: 0; color: #00ff88; font-family: 'Orbitron', sans-serif; font-size: 1.25rem; text-align: center;">Active Fleet (0/5)</h3>
+                            
+                            <div id="shipyard-fleet-active-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding-right: 5px;">
+                                <!-- List of current active fleet ships with retire option -->
+                            </div>
+
+                            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; color: #aaa; line-height: 1.4;">
+                                <span style="color: #ffaa00; font-weight: bold;">FLEET GUIDELINES:</span><br>
+                                • Escort vessels follow your ship in a tactical formation.<br>
+                                • They automatically engage and fire upon hostile targets.<br>
+                                • Hired vessels have independent hull health and can be destroyed.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="shipyard-upgrade-close-btn" class="btn primary-btn" style="margin-top: 20px; border-color: #ffaa00; color: #ffaa00; background: rgba(255,170,0,0.1); width: 100%;">Close Shipyard Terminal</button>
+                </div>
+            </div>
+
             <div id="game-over" class="hidden modal">
                 <div class="modal-panel">
                     <h2>Ship Destroyed</h2>
@@ -383,6 +453,16 @@
                 <div class="crew-header">Crew Members</div>
                 <div id="station-crew-list">
                     <!-- Crew items added by HUD.js -->
+                </div>
+            </div>
+
+            <!-- Shipyard Panel: shown when docked at a shipyard -->
+            <div id="shipyard-panel" class="hud-item hidden">
+                <div class="nav-log-header">🚢 Shipyard Terminal</div>
+                <div class="station-info" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div id="shipyard-panel-name">Orbital Shipyard</div>
+                    <button id="shipyard-upgrade-btn" class="btn station-btn" style="background: rgba(0, 255, 136, 0.2); border-color: #00ff88; color: #fff; width: 100%;">Ship Upgrades</button>
+                    <button id="shipyard-fleet-btn" class="btn station-btn" style="background: rgba(0, 85, 255, 0.2); border-color: #0055ff; color: #fff; width: 100%; margin-top: 4px;">Fleet Building</button>
                 </div>
             </div>
 

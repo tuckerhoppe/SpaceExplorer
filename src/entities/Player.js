@@ -79,6 +79,7 @@ export class Player {
             }
             this.dashCharges = data.dashCharges !== undefined ? data.dashCharges : 3;
             this.dashRechargeTimer = data.dashRechargeTimer || 0;
+            this.fleetIndices = data.fleetIndices || [];
         } catch (e) {
             console.error("Failed to load player progress", e);
             this.gems = 0;
@@ -90,6 +91,7 @@ export class Player {
             this.shipIndex = 0;
             this.lastStationX = null;
             this.lastStationY = null;
+            this.fleetIndices = [];
         }
     }
 
@@ -107,7 +109,8 @@ export class Player {
                 dashRechargeTimer: this.dashRechargeTimer,
                 shipIndex: this.shipIndex,
                 lastStationX: this.lastStationX,
-                lastStationY: this.lastStationY
+                lastStationY: this.lastStationY,
+                fleetIndices: this.fleetIndices
             };
             localStorage.setItem('space_explorer_progress', JSON.stringify(data));
         } catch (e) {
@@ -262,6 +265,7 @@ export class Player {
     }
 
     update(game) {
+        this.health = Math.min(this.maxHealth, this.health);
         if (this.health <= 0) return;
 
         // Check if player is inside any large hazard nebula
