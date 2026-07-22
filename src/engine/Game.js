@@ -316,7 +316,7 @@ export class Game {
     applyDevMode() {
         if (!this.player) return;
 
-        const MIN_GEMS = 5000;
+        const MIN_GEMS = 100000;
         const MIN_SCI = 1000;
 
         let changed = false;
@@ -973,27 +973,32 @@ export class Game {
         this.player.update(this);
         
         // Update player fleet ships
-        if (this.fleetShips) {
+        if (this.fleetShips && this.fleetShips.length > 0) {
             const headingAngle = this.player.angle;
             const formation = this.player.fleetFormation || 'v_formation';
             
-            this.fleetShips.forEach((ship, idx) => {
+            // Sort active fleet ships by radius so smaller ships get tight inner/close slots
+            // and larger ships get pushed to outer/further slots
+            const sortedFleet = [...this.fleetShips].sort((a, b) => a.radius - b.radius);
+            sortedFleet.forEach((ship, idx) => {
+                // Calculate a gentle linear spacing scaling factor to prevent ships from going off-screen
+                const spacingFactor = 1.0 + Math.max(0, ship.radius - 18) * 0.015;
                 let offset = { x: 0, y: 0 };
                 
                 if (formation === 'surround') {
                     // Concentric rings centered around the player
-                    const totalShips = this.fleetShips.length;
-                    let ringRadius = 80;
+                    const totalShips = sortedFleet.length;
+                    let ringRadius = 80 * spacingFactor;
                     let ringCount = totalShips;
                     let slotIndex = idx;
                     
                     if (totalShips > 12) {
                         if (idx < 12) {
-                            ringRadius = 80;
+                            ringRadius = 80 * spacingFactor;
                             ringCount = 12;
                             slotIndex = idx;
                         } else {
-                            ringRadius = 140;
+                            ringRadius = 140 * spacingFactor;
                             ringCount = totalShips - 12;
                             slotIndex = idx - 12;
                         }
@@ -1005,10 +1010,10 @@ export class Game {
                     };
                 } else if (formation === 'diamond') {
                     // Staggered concentric diamond layers with the player at the absolute center
-                    const size = 60;
+                    const size = 60 * spacingFactor;
                     const points = [];
                     let layer = 1;
-                    while (points.length < this.fleetShips.length) {
+                    while (points.length < sortedFleet.length) {
                         const layerPoints = [
                             { x: layer * size, y: 0 },
                             { x: -layer * size, y: 0 },
@@ -1026,7 +1031,7 @@ export class Game {
                         
                         // Keep slots that are sufficiently spaced from player center
                         for (const pt of layerPoints) {
-                            if (Math.hypot(pt.x, pt.y) > 30) {
+                            if (Math.hypot(pt.x, pt.y) > 30 * spacingFactor) {
                                 points.push(pt);
                             }
                         }
@@ -1043,13 +1048,16 @@ export class Game {
                         { x: -160, y: 0 }    // Slot 5: Center Back
                     ];
                     if (idx < 5) {
-                        offset = defaultOffsets[idx];
+                        offset = {
+                            x: defaultOffsets[idx].x * spacingFactor,
+                            y: defaultOffsets[idx].y * spacingFactor
+                        };
                     } else {
                         const row = Math.floor((idx - 5) / 2) + 3;
                         const side = idx % 2 === 0 ? -1 : 1;
                         offset = {
-                            x: -60 - row * 55,
-                            y: side * (row * 45 + 10)
+                            x: (-60 - row * 55) * spacingFactor,
+                            y: (side * (row * 45 + 10)) * spacingFactor
                         };
                     }
                 }

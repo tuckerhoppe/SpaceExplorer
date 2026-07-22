@@ -2799,8 +2799,9 @@ export class HUD {
         // 2. Render Left Side: Commission Escorts
         buyList.innerHTML = '';
         SHIPS.forEach((s, index) => {
+            const hireCost = index === 0 ? 1000 : (s.cost * 4);
             const sciOk = sciLevel >= (s.sciLevel || 0);
-            const canAfford = player.gems >= s.cost;
+            const canAfford = player.gems >= hireCost;
             const fleetFull = player.fleetIndices.length >= maxCapacity;
 
             const card = document.createElement('div');
@@ -2829,7 +2830,7 @@ export class HUD {
                     </div>
                 </div>
                 <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-                    <div style="color: #00ffd0; font-weight: bold; font-family: 'Orbitron', sans-serif;">${s.cost > 0 ? s.cost + ' 💎' : 'FREE'}</div>
+                    <div style="color: #00ffd0; font-weight: bold; font-family: 'Orbitron', sans-serif;">${hireCost} 💎</div>
                     <button class="btn buy-btn" style="padding: 4px 10px; font-size: 0.75rem;" ${!sciOk || !canAfford || fleetFull ? 'disabled' : ''}>
                         Hire Escort
                     </button>
@@ -2865,8 +2866,8 @@ export class HUD {
                         this.showFloatingReward('FLEET AT MAX CAPACITY', '#ffaa00');
                         return;
                     }
-                    player.gems -= s.cost;
-                    player.gemVault = Math.max(0, (player.gemVault || 0) - s.cost);
+                    player.gems -= hireCost;
+                    player.gemVault = Math.max(0, (player.gemVault || 0) - hireCost);
                     player.fleetIndices.push(index);
                     player.save();
 
