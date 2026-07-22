@@ -254,6 +254,14 @@ export class HUD {
             });
         }
 
+        const spacedockBtn = document.getElementById('build-option-space_dock');
+        if (spacedockBtn) {
+            spacedockBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.game.startBuildPlacement('space_dock');
+            });
+        }
+
         const deconstructBtn = document.getElementById('build-option-deconstruct');
         if (deconstructBtn) {
             deconstructBtn.addEventListener('click', (e) => {
@@ -338,6 +346,41 @@ export class HUD {
                     this.refreshShipyardFleetMenu();
                     this.animateShipyardPreview();
                 }
+            });
+        }
+
+        const spacedockActionBtn = document.getElementById('spacedock-action-btn');
+        if (spacedockActionBtn) {
+            spacedockActionBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const player = this.game.player;
+                if (player.fleetEmbarked) {
+                    player.fleetEmbarked = false;
+                    player.save();
+                    
+                    if (this.game.fleetShips) {
+                        this.game.fleetShips = [];
+                    }
+                    this.showFloatingReward('FLEET SECURED IN DOCK', '#ffaa00');
+                } else {
+                    player.fleetEmbarked = true;
+                    player.save();
+                    
+                    this.game.fleetShips = [];
+                    const currentDock = this.game.structures.find(s => s.type === 'space_dock' && s.playerDocked);
+                    const spawnX = currentDock ? currentDock.x : player.x;
+                    const spawnY = currentDock ? currentDock.y : player.y;
+
+                    if (player.fleetIndices && Array.isArray(player.fleetIndices)) {
+                        player.fleetIndices.forEach(idx => {
+                            this.game.fleetShips.push(new FleetShip(this.game, idx, spawnX, spawnY));
+                        });
+                    }
+                    this.showFloatingReward('FLEET DEPLOYED & EMBARKED', '#00ff88');
+                }
+                
+                const currentDock = this.game.structures.find(s => s.type === 'space_dock' && s.playerDocked);
+                this.updateSpaceDockPanel(currentDock);
             });
         }
 
@@ -1890,10 +1933,11 @@ export class HUD {
             bar.classList.remove('active');
             this.updateStationPanel(null); // Reset cache and hide station panel
             this.updateShipyardPanel(null);
+            this.updateSpaceDockPanel(null);
             return;
         }
         const EFFECT_LABEL = { heal: '⚕ HULL REPAIR', gems: '💎 +GEMS' };
-        const TYPE_ICONS = { planet: '🪐', nebula: '🌌', star: '⭐', station: '🛸', shipyard: '🚢', artifact: '💠' };
+        const TYPE_ICONS = { planet: '🪐', nebula: '🌌', star: '⭐', station: '🛸', shipyard: '🚢', space_dock: '🌌', artifact: '💠' };
 
         if (obj.parasite) {
             const isOppressor = obj.parasite.type === 'oppressor';
@@ -1917,6 +1961,8 @@ export class HUD {
                 }
             } else if (obj.type === 'shipyard') {
                 effectLabel = '🔧 DRYDOC SYSTEM ONLINE';
+            } else if (obj.type === 'space_dock') {
+                effectLabel = '🌌 FLEET STORAGE SYSTEM ONLINE';
             }
             bar.innerHTML = `
                 <span class="dock-icon">${TYPE_ICONS[obj.type] || '⚓'}</span>
@@ -1929,6 +1975,7 @@ export class HUD {
         // Update panels
         this.updateStationPanel(obj);
         this.updateShipyardPanel(obj);
+        this.updateSpaceDockPanel(obj);
     }
 
     /** Update the dedicated Station HUD panel for a docked station */
@@ -2513,6 +2560,35 @@ export class HUD {
         if (nameEl) nameEl.textContent = obj.name || 'Orbital Shipyard';
     }
 
+    updateSpaceDockPanel(obj) {
+        const spacedockPanel = document.getElementById('spacedock-panel');
+        if (!spacedockPanel) return;
+
+        if (!obj || obj.type !== 'space_dock') {
+            spacedockPanel.classList.add('hidden');
+            return;
+        }
+
+        spacedockPanel.classList.remove('hidden');
+        const nameEl = document.getElementById('spacedock-panel-name');
+        if (nameEl) nameEl.textContent = obj.name || 'Orbital Space Dock';
+
+        // Update action button text based on player's fleet state
+        const actionBtn = document.getElementById('spacedock-action-btn');
+        if (actionBtn) {
+            const player = this.game.player;
+            if (player.fleetEmbarked) {
+                actionBtn.textContent = 'Dock Fleet';
+                actionBtn.style.background = 'rgba(255, 60, 60, 0.2)';
+                actionBtn.style.borderColor = '#ff3c3c';
+            } else {
+                actionBtn.textContent = 'Embark Fleet';
+                actionBtn.style.background = 'rgba(0, 85, 255, 0.2)';
+                actionBtn.style.borderColor = '#0055ff';
+            }
+        }
+    }
+
     refreshShipyardUpgradeMenu() {
         const list = document.getElementById('shipyard-ship-list');
         if (!list) return;
@@ -2701,7 +2777,9 @@ export class HUD {
         // Ensure player fleet indices array exists
         if (!player.fleetIndices) player.fleetIndices = [];
 
-        statusTitle.textContent = `Active Fleet (${player.fleetIndices.length}/5)`;
+        // Dynamic fleet capacity: 5 per built space_dock structure
+        const maxCapacity = this.game.structures.filter(s => s.type === 'space_dock').length * 5;
+        statusTitle.textContent = `Active Fleet (${player.fleetIndices.length}/${maxCapacity})`;
 
         // 1. Update gem count
         const gemCountEl = document.getElementById('shipyard-gem-count');
@@ -2712,7 +2790,7 @@ export class HUD {
         SHIPS.forEach((s, index) => {
             const sciOk = sciLevel >= (s.sciLevel || 0);
             const canAfford = player.gems >= s.cost;
-            const fleetFull = player.fleetIndices.length >= 5;
+            const fleetFull = player.fleetIndices.length >= maxCapacity;
 
             const card = document.createElement('div');
             card.style.display = 'flex';
@@ -2772,7 +2850,7 @@ export class HUD {
                         this.showFloatingReward('UNABLE TO PURCHASE', '#ff3c3c');
                         return;
                     }
-                    if (player.fleetIndices.length >= 5) {
+                    if (player.fleetIndices.length >= maxCapacity) {
                         this.showFloatingReward('FLEET AT MAX CAPACITY', '#ffaa00');
                         return;
                     }
@@ -2781,8 +2859,8 @@ export class HUD {
                     player.fleetIndices.push(index);
                     player.save();
 
-                    // Spawn the FleetShip immediately in the active game loop
-                    if (this.game.fleetShips) {
+                    // Spawn the FleetShip immediately only if the fleet is currently embarked
+                    if (player.fleetEmbarked && this.game.fleetShips) {
                         const fleetShip = new FleetShip(this.game, index, player.x, player.y);
                         this.game.fleetShips.push(fleetShip);
                     }

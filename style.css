@@ -1979,7 +1979,7 @@ canvas {
 }
 
 /* ─── Station Panel ───────────────────────────────── */
-#station-panel, #shipyard-panel {
+#station-panel, #shipyard-panel, #spacedock-panel {
     position: absolute;
     bottom: 280px;
     /* Above the mini-map */
@@ -1995,7 +1995,7 @@ canvas {
     box-shadow: 0 0 20px rgba(0, 255, 136, 0.1);
 }
 
-#station-panel.hidden, #shipyard-panel.hidden {
+#station-panel.hidden, #shipyard-panel.hidden, #spacedock-panel.hidden {
     display: none !important;
 }
 
@@ -2004,7 +2004,7 @@ canvas {
     margin-bottom: 5px;
 }
 
-#station-panel-name, #shipyard-panel-name {
+#station-panel-name, #shipyard-panel-name, #spacedock-panel-name {
     font-family: 'Orbitron', sans-serif;
     font-size: 1.1rem;
     color: #fff;

@@ -240,7 +240,7 @@ export class Game {
         
         // Instantiate active fleet ships
         this.fleetShips = [];
-        if (this.player.fleetIndices && Array.isArray(this.player.fleetIndices)) {
+        if (this.player.fleetEmbarked && this.player.fleetIndices && Array.isArray(this.player.fleetIndices)) {
             this.player.fleetIndices.forEach(idx => {
                 this.fleetShips.push(new FleetShip(this, idx, this.player.x, this.player.y));
             });
@@ -551,14 +551,14 @@ export class Game {
             const planetRadius = nearestObj.radius * 0.5;
             const orbitRadius = nearestObj.orbitLineRadius;
             
-            if (this.selectedStructureType === 'shipyard') {
+            if (this.selectedStructureType === 'shipyard' || this.selectedStructureType === 'space_dock') {
                 if (minDist <= orbitRadius + 40 && minDist >= planetRadius + 30) {
                     isValid = true;
                     relativeAngle = Math.atan2(my - nearestObj.y, mx - nearestObj.x);
                     relativeDist = minDist;
                     snapX = mx;
                     snapY = my;
-                    message = `Drydock: ${nearestObj.name}`;
+                    message = `${this.selectedStructureType === 'space_dock' ? 'Space Dock' : 'Drydock'}: ${nearestObj.name}`;
                 } else {
                     message = "Must place within planet's orbit area";
                 }
@@ -689,7 +689,7 @@ export class Game {
         };
 
         if (clickedThisFrame) {
-            const cost = this.selectedStructureType === 'shipyard' ? 200 : (this.selectedStructureType === 'science_station' ? 150 : 100);
+            const cost = this.selectedStructureType === 'space_dock' ? 300 : (this.selectedStructureType === 'shipyard' ? 200 : (this.selectedStructureType === 'science_station' ? 150 : 100));
             if (isValid) {
                 if (this.player.gems >= cost) {
                     this.player.gems -= cost;
@@ -2793,6 +2793,19 @@ export class Game {
                     ctx.strokeRect(-55, -60, 24, 110);
                     ctx.fillRect(31, -60, 24, 110);
                     ctx.strokeRect(31, -60, 24, 110);
+                } else if (this.selectedStructureType === 'space_dock') {
+                    const dockAngle = Math.atan2(preview.y - preview.parent.y, preview.x - preview.parent.x);
+                    ctx.rotate(dockAngle);
+                    ctx.strokeStyle = preview.valid ? '#0055ff' : '#ff3c3c';
+                    ctx.fillStyle = '#141c24';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 65, 0, Math.PI * 2);
+                    ctx.stroke();
                 } else if (preview.locationType === 'planet') {
                     ctx.rotate(Date.now() / 1000);
                     ctx.strokeStyle = preview.valid ? '#00ffd0' : '#ff3c3c';
