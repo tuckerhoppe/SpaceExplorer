@@ -977,17 +977,48 @@ export class Game {
             const headingAngle = this.player.angle;
             const formation = this.player.fleetFormation || 'v_formation';
             
-            // Sort active fleet ships by radius so smaller ships get tight inner/close slots
-            // and larger ships get pushed to outer/further slots
-            const sortedFleet = [...this.fleetShips].sort((a, b) => a.radius - b.radius);
-            sortedFleet.forEach((ship, idx) => {
-                // Calculate a gentle linear spacing scaling factor to prevent ships from going off-screen
+            // Separate Battle Cruisers from other ships
+            const battleCruisers = [];
+            const regularShips = [];
+            
+            this.fleetShips.forEach(ship => {
+                if (SHIPS[ship.shipIndex]?.id === 'ship_battlecruiser') {
+                    battleCruisers.push(ship);
+                } else {
+                    regularShips.push(ship);
+                }
+            });
+            
+            // Sort regular ships by size so smaller ones are inner
+            regularShips.sort((a, b) => a.radius - b.radius);
+            
+            // 1. Process Battle Cruisers (Flanking left & right of the player)
+            battleCruisers.forEach((ship, bcIdx) => {
                 const spacingFactor = 1.0 + Math.max(0, ship.radius - 18) * 0.015;
+                const side = bcIdx % 2 === 0 ? -1 : 1; // Alternating sides
+                const row = Math.floor(bcIdx / 2);
+                
+                // Position directly on the left/right sides (slightly back for visibility)
+                const offset = {
+                    x: -15 * spacingFactor,
+                    y: side * (75 + row * 55) * spacingFactor
+                };
+                
+                const rx = offset.x * Math.cos(headingAngle) - offset.y * Math.sin(headingAngle);
+                const ry = offset.x * Math.sin(headingAngle) + offset.y * Math.cos(headingAngle);
+                const tx = this.player.x + rx;
+                const ty = this.player.y + ry;
+                ship.update(this.player.x, this.player.y, tx, ty, this.player);
+            });
+            
+            // 2. Process Regular Ships (Following the chosen formation layout)
+            regularShips.forEach((ship, idx) => {
                 let offset = { x: 0, y: 0 };
+                const spacingFactor = 1.0 + Math.max(0, ship.radius - 18) * 0.015;
                 
                 if (formation === 'surround') {
                     // Concentric rings centered around the player
-                    const totalShips = sortedFleet.length;
+                    const totalShips = regularShips.length;
                     let ringRadius = 80 * spacingFactor;
                     let ringCount = totalShips;
                     let slotIndex = idx;
@@ -1013,7 +1044,7 @@ export class Game {
                     const size = 60 * spacingFactor;
                     const points = [];
                     let layer = 1;
-                    while (points.length < sortedFleet.length) {
+                    while (points.length < regularShips.length) {
                         const layerPoints = [
                             { x: layer * size, y: 0 },
                             { x: -layer * size, y: 0 },

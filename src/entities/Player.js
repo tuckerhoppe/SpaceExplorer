@@ -246,6 +246,10 @@ export class Player {
 
     get accel() {
         let baseAccel = this.engineMode === 'boost' ? this.boostAccel : this.thrusterAccel;
+        const ship = SHIPS[this.shipIndex];
+        if (ship && ship.accelMultiplier !== undefined) {
+            baseAccel *= ship.accelMultiplier;
+        }
         if (this.tradeRouteSpeedBoostValue > 1.0) {
             baseAccel *= this.tradeRouteSpeedBoostValue;
         }
@@ -300,7 +304,9 @@ export class Player {
         }
 
         // Boost: slower turning — you commit to a direction before the surge
-        const turnRate = this.engineMode === 'boost' ? 0.03 : 0.08;
+        const ship = SHIPS[this.shipIndex];
+        const shipTurnMultiplier = (ship && ship.turnRateMultiplier !== undefined) ? ship.turnRateMultiplier : 1.0;
+        const turnRate = (this.engineMode === 'boost' ? 0.03 : 0.08) * shipTurnMultiplier;
         if (Input.keys['a']) this.angle -= turnRate;
         if (Input.keys['d']) this.angle += turnRate;
 

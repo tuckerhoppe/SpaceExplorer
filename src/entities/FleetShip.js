@@ -36,8 +36,15 @@ export class FleetShip {
         if (this.health <= 0) return;
         this._frame++;
 
+        const sConfig = SHIPS[this.shipIndex];
         const dist = Math.hypot(tx - this.x, ty - this.y);
-        const turnSpeed = 0.08;
+        
+        // If ship is far behind (catching up), temporarily bypass the sluggish physics multipliers so it doesn't get lost
+        const isCatchingUp = dist > 80;
+        const shipTurnMultiplier = (sConfig && sConfig.turnRateMultiplier !== undefined) ? (isCatchingUp ? 1.2 : sConfig.turnRateMultiplier) : 1.0;
+        const shipAccelMultiplier = (sConfig && sConfig.accelMultiplier !== undefined) ? (isCatchingUp ? 1.2 : sConfig.accelMultiplier) : 1.0;
+
+        const turnSpeed = 0.08 * shipTurnMultiplier;
         
         // Make escort max speed match player's current velocity (with a baseline of 6 so they can get in position when player is stopped)
         const player = this.game.player;
@@ -56,8 +63,8 @@ export class FleetShip {
 
             // Set velocity towards target slot
             const targetSpeed = Math.min(maxSpeed * catchUpFactor, dist * 0.08);
-            this.vx += (Math.cos(targetAngle) * targetSpeed - this.vx) * 0.15;
-            this.vy += (Math.sin(targetAngle) * targetSpeed - this.vy) * 0.15;
+            this.vx += (Math.cos(targetAngle) * targetSpeed - this.vx) * 0.15 * shipAccelMultiplier;
+            this.vy += (Math.sin(targetAngle) * targetSpeed - this.vy) * 0.15 * shipAccelMultiplier;
         } else {
             // Arrived at slot, match leader's velocity and angle smoothly
             this.angle += (leaderShip.angle - this.angle) * 0.15;
@@ -106,20 +113,55 @@ export class FleetShip {
 
         if (nearestEnemy) {
             const targetAngle = Utils.ang(this.x, this.y, nearestEnemy.x, nearestEnemy.y);
-            let da = targetAngle - this.angle;
-            while (da > Math.PI) da -= Math.PI * 2;
-            while (da < -Math.PI) da += Math.PI * 2;
+            
+            const sConfig = SHIPS[this.shipIndex];
+            const isBattleCruiser = sConfig && sConfig.id === 'ship_battlecruiser';
 
-            // Rotate towards enemy slightly while shooting
-            this.angle += Math.sign(da) * Math.min(Math.abs(da), 0.06);
+            if (!isBattleCruiser) {
+                let da = targetAngle - this.angle;
+                while (da > Math.PI) da -= Math.PI * 2;
+                while (da < -Math.PI) da += Math.PI * 2;
+
+                // Rotate towards enemy slightly while shooting
+                this.angle += Math.sign(da) * Math.min(Math.abs(da), 0.06);
+            }
 
             // Fire 360-degrees (omni-directional) when reload is ready
             if (this._frame - this.lastFireFrame > this.fireRate) {
                 this.lastFireFrame = this._frame;
                 
+                const sConfig = SHIPS[this.shipIndex];
+                const isBattleCruiser = sConfig && sConfig.id === 'ship_battlecruiser';
                 const hasDoubleLaser = player && player.tech && player.tech.fleet_double_laser;
 
-                if (hasDoubleLaser) {
+                if (isBattleCruiser) {
+                    // Battle Cruiser firing behavior:
+                    // 1. Dual auto lasers (firing parallel left/right side lasers)
+                    const leftAngle = targetAngle - Math.PI / 2;
+                    const rightAngle = targetAngle + Math.PI / 2;
+                    const laserSpread = 16;
+                    
+                    // Left laser
+                    this.game.projectiles.push(new Projectile(
+                        this.x + Math.cos(targetAngle) * this.radius + Math.cos(leftAngle) * laserSpread,
+                        this.y + Math.sin(targetAngle) * this.radius + Math.sin(leftAngle) * laserSpread,
+                        targetAngle, 12, this.damage, '#00f0ff'
+                    ));
+                    // Right laser
+                    this.game.projectiles.push(new Projectile(
+                        this.x + Math.cos(targetAngle) * this.radius + Math.cos(rightAngle) * laserSpread,
+                        this.y + Math.sin(targetAngle) * this.radius + Math.sin(rightAngle) * laserSpread,
+                        targetAngle, 12, this.damage, '#00f0ff'
+                    ));
+                    
+                    // 2. Heavy primary torpedo launcher (fires from the center)
+                    // Torpedo deals 4x normal laser damage to feel heavy and satisfying!
+                    this.game.projectiles.push(new Projectile(
+                        this.x + Math.cos(targetAngle) * (this.radius + 15),
+                        this.y + Math.sin(targetAngle) * (this.radius + 15),
+                        targetAngle, 8, this.damage * 4, '#ff9900', true
+                    ));
+                } else if (hasDoubleLaser) {
                     // Double parallel laser spread
                     const leftAngle = targetAngle - Math.PI / 2;
                     const rightAngle = targetAngle + Math.PI / 2;
