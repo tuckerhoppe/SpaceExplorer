@@ -352,7 +352,7 @@ export const SHIPS = [
         id: 'ship_battlecruiser',
         name: 'Battle Cruiser',
         desc: 'A heavy capital ship with dual automatic lasers and primary torpedo launchers.',
-        cost: 6000,
+        cost: 10000,
         sciLevel: 10,
         recommendedLevel: 12,
         shipRadius: 82,

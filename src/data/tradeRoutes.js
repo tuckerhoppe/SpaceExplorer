@@ -22,5 +22,13 @@ export const TRADE_ROUTES_CONFIG = [
         "color": "#00ffaa",
         "width": 250,
         "speedMultiplier": 2.5
+    },
+    {
+        "id": "home_region_1_the_dusty_corridor_1",
+        "planetAId": "station_home_region_1",
+        "planetBId": "station_the_dusty_corridor_1",
+        "color": "#00ffaa",
+        "width": 250,
+        "speedMultiplier": 2.5
     }
 ];

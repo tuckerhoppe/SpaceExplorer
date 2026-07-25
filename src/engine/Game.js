@@ -45,6 +45,7 @@ export class Game {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.camera = new Camera(this.canvas);
+        this.cameraZoomOutToggle = false;
 
         this.player = new Player();
         this.ghost = new GhostCompanion(this.player);
@@ -93,7 +94,19 @@ export class Game {
         this.tradeRouteManager = new TradeRouteManager();
 
         this.conquestSessionKills = {};
+        try {
+            this.conquestSessionKills = JSON.parse(localStorage.getItem('space_explorer_conquest_kills') || '{}');
+        } catch (e) {
+            this.conquestSessionKills = {};
+        }
+
         this.conquestSquadKills = {};
+        try {
+            this.conquestSquadKills = JSON.parse(localStorage.getItem('space_explorer_conquest_squad_kills') || '{}');
+        } catch (e) {
+            this.conquestSquadKills = {};
+        }
+
         for (const reg of REGIONS) {
             if (reg.name !== 'Neutral Space' && !reg.isVoid) {
                 const parasiteCount = this.sectorManager.objects.filter(obj => {
@@ -115,7 +128,13 @@ export class Game {
                     reg.conquest.stations = parasiteCount;
                     reg.conquest.squads = squadCount;
                 }
-                this.conquestSessionKills[reg.name] = { fighters: 0, battleships: 0, dreadnoughts: 0 };
+
+                if (!this.conquestSessionKills[reg.name]) {
+                    this.conquestSessionKills[reg.name] = { fighters: 0, battleships: 0, dreadnoughts: 0 };
+                }
+                if (this.conquestSquadKills[reg.name] === undefined) {
+                    this.conquestSquadKills[reg.name] = 0;
+                }
             }
         }
 
@@ -689,7 +708,7 @@ export class Game {
         };
 
         if (clickedThisFrame) {
-            const cost = this.selectedStructureType === 'space_dock' ? 300 : (this.selectedStructureType === 'shipyard' ? 200 : (this.selectedStructureType === 'science_station' ? 150 : 100));
+            const cost = this.selectedStructureType === 'space_dock' ? 3000 : (this.selectedStructureType === 'shipyard' ? 2000 : (this.selectedStructureType === 'science_station' ? 1000 : 500));
             if (isValid) {
                 if (this.player.gems >= cost) {
                     this.player.gems -= cost;
@@ -1244,18 +1263,27 @@ export class Game {
                 targetZoom = baseZoom - (extraTime * 0.35);
             }
         }
+
+        // Manual zoom out toggle reduces zoom by 50%
+        if (this.cameraZoomOutToggle) {
+            targetZoom *= 0.5;
+        }
+
         this.camera.zoom += (targetZoom - this.camera.zoom) * 0.015;
 
         this.camera.follow(this.player);
 
         this.regionManager.update(this.player, this);
 
-        // --- CONQUEST EXIT RESET TIMER CHECK ---
+        // --- CONQUEST EXIT RESET TIMER CHECK (Temporarily Disabled) ---
+        /*
         const now = Date.now();
         for (const [regionName, exitTime] of this.regionManager._lastExitTimes.entries()) {
             if (regionName !== this.regionManager.currentRegion.name) {
                 if (now - exitTime > 15000) {
                     this.despawnSquadsForRegion(regionName);
+                    
+                    // 1. Reset fighter/battleship/dreadnought kills
                     const kills = this.conquestSessionKills[regionName];
                     if (kills && (kills.fighters > 0 || kills.battleships > 0 || kills.dreadnoughts > 0 || (this.conquestSquadKills[regionName] || 0) > 0)) {
                         kills.fighters = 0;
@@ -1263,10 +1291,39 @@ export class Game {
                         kills.dreadnoughts = 0;
                         this.conquestSquadKills[regionName] = 0;
                     }
+
+                    // 2. Reset unliberated stations (parasites) in this region
+                    if (!this.conqueredRegions.has(regionName)) {
+                        const region = REGIONS.find(r => r.name === regionName);
+                        if (region) {
+                            const regionObjects = this.sectorManager.objects.filter(obj => {
+                                const cx = obj.x / 1000;
+                                const cy = -obj.y / 1000;
+                                return region.test(cx, cy);
+                            });
+                            const enemyStations = regionObjects.filter(obj => obj.initialParasite);
+                            let changed = false;
+                            for (const station of enemyStations) {
+                                if (this.sectorManager.clearedIds.has(station.id)) {
+                                    this.sectorManager.clearedIds.delete(station.id);
+                                    changed = true;
+                                }
+                            }
+                            if (changed) {
+                                localStorage.setItem('space_explorer_cleared_objects', JSON.stringify([...this.sectorManager.clearedIds]));
+                            }
+                        }
+                    }
+
+                    // Save the resets
+                    localStorage.setItem('space_explorer_conquest_kills', JSON.stringify(this.conquestSessionKills));
+                    localStorage.setItem('space_explorer_conquest_squad_kills', JSON.stringify(this.conquestSquadKills));
+                    
                     this.regionManager._lastExitTimes.delete(regionName);
                 }
             }
         }
+        */
 
         // --- THE VOID HANDLING ---
         if (this.regionManager.currentRegion.isVoid) {
@@ -1305,9 +1362,14 @@ export class Game {
 
         // Before region is conquered, scale up hostile spawn limits
         if (currentRegion.conquest && !this.conqueredRegions.has(currentRegion.name)) {
-            if (caps.fighters > 0) caps.fighters = Math.floor(caps.fighters * 4.0);
-            if (caps.battleships > 0) caps.battleships = Math.floor(caps.battleships * 4.0);
-            if (caps.dreadnoughts > 0) caps.dreadnoughts = Math.floor(caps.dreadnoughts * 4.0);
+            let scaleFactor = 4.0;
+            const frontierRegions = ['The Sunlit Plains', 'The Badlands', 'Home Region', 'The Verdant Reach'];
+            if (frontierRegions.includes(currentRegion.name)) {
+                scaleFactor = 5.0; // Increase spawn cap multiplier for unliberated frontier regions
+            }
+            if (caps.fighters > 0) caps.fighters = Math.floor(caps.fighters * scaleFactor);
+            if (caps.battleships > 0) caps.battleships = Math.floor(caps.battleships * scaleFactor);
+            if (caps.dreadnoughts > 0) caps.dreadnoughts = Math.floor(caps.dreadnoughts * scaleFactor);
         }
 
         // Ambient Particles management
@@ -2607,6 +2669,8 @@ export class Game {
                 else if (type === 'battleship') kills.battleships++;
                 else if (type === 'dreadnought') kills.dreadnoughts++;
             }
+            localStorage.setItem('space_explorer_conquest_kills', JSON.stringify(this.conquestSessionKills));
+            localStorage.setItem('space_explorer_conquest_squad_kills', JSON.stringify(this.conquestSquadKills));
             this.checkRegionConquest(currentRegionName);
         }
     }
@@ -3335,6 +3399,24 @@ export class Game {
         this._loopActive = false; // clear so _queueLoop can set it again
         if (!this.isPaused) {
             this._queueLoop();
+        }
+    }
+
+    toggleCameraZoom() {
+        this.cameraZoomOutToggle = !this.cameraZoomOutToggle;
+        const zoomBtn = document.getElementById('zoom-toggle-btn');
+        if (zoomBtn) {
+            if (this.cameraZoomOutToggle) {
+                zoomBtn.style.background = 'rgba(0, 240, 255, 0.2)';
+                zoomBtn.style.borderColor = '#00f0ff';
+                const label = zoomBtn.querySelector('.zoom-label');
+                if (label) label.textContent = 'ZOOM IN';
+            } else {
+                zoomBtn.style.background = 'rgba(0, 240, 255, 0.05)';
+                zoomBtn.style.borderColor = 'rgba(0, 240, 255, 0.3)';
+                const label = zoomBtn.querySelector('.zoom-label');
+                if (label) label.textContent = 'ZOOM OUT';
+            }
         }
     }
 }

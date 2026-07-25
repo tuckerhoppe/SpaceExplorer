@@ -60,6 +60,10 @@ export class HUD {
                 e.preventDefault();
                 this.game.toggleBuildMenu();
             }
+            if ((e.key === 'z' || e.key === 'Z') && !this.game.gameOver) {
+                e.preventDefault();
+                this.game.toggleCameraZoom();
+            }
             if (e.key === '`') {
                 this.toggleDevHud();
             }
@@ -86,6 +90,15 @@ export class HUD {
         };
 
         window.addEventListener('keydown', window.__hudKeydownHandler);
+
+        const zoomToggleBtn = document.getElementById('zoom-toggle-btn');
+        if (zoomToggleBtn) {
+            zoomToggleBtn.onclick = () => {
+                if (!this.game.gameOver) {
+                    this.game.toggleCameraZoom();
+                }
+            };
+        }
 
         const tabUpgrades = document.getElementById('tab-upgrades');
         const tabShips = document.getElementById('tab-ships');
@@ -2799,7 +2812,7 @@ export class HUD {
         // 2. Render Left Side: Commission Escorts
         buyList.innerHTML = '';
         SHIPS.forEach((s, index) => {
-            const hireCost = index === 0 ? 1000 : (s.cost * 4);
+            const hireCost = index === 0 ? 500 : (s.cost * 4);
             const sciOk = sciLevel >= (s.sciLevel || 0);
             const canAfford = player.gems >= hireCost;
             const fleetFull = player.fleetIndices.length >= maxCapacity;

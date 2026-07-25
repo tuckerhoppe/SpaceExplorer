@@ -11,7 +11,7 @@ export const REGIONS = [
         "center": {
             "worldX": 0,
             "worldY": 0
-    },
+        },
         "difficulty": 1,
         "isVoid": true,
         "bgColor": "#000105",
@@ -27,7 +27,7 @@ export const REGIONS = [
             "battleships": 0,
             "neutrals": 0,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Badlands",
@@ -41,11 +41,11 @@ export const REGIONS = [
             "maxX": 2,
             "minY": -10,
             "maxY": -2.5
-    },
+        },
         "center": {
             "worldX": -4000,
             "worldY": 6250
-    },
+        },
         "difficulty": 2,
         "bgColor": "#150a00",
         "particleType": "dust",
@@ -56,11 +56,11 @@ export const REGIONS = [
             "mines": 8,
             "derelicts": 80,
             "asteroids": 120,
-            "fighters": 8,
+            "fighters": 6,
             "battleships": 0,
             "neutrals": 6,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "Blob Space",
@@ -74,11 +74,11 @@ export const REGIONS = [
             "maxX": 43.5,
             "minY": -38,
             "maxY": -23
-    },
+        },
         "center": {
             "worldX": 35500,
             "worldY": 30500
-    },
+        },
         "difficulty": 5,
         "bgColor": "#001505",
         "particleType": "spore",
@@ -93,7 +93,7 @@ export const REGIONS = [
             "battleships": 5,
             "neutrals": 0,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "Star Empire",
@@ -107,11 +107,11 @@ export const REGIONS = [
             "maxX": -34,
             "minY": 29,
             "maxY": 36
-    },
+        },
         "center": {
             "worldX": -37500,
             "worldY": -32500
-    },
+        },
         "difficulty": 12,
         "bgColor": "rgba(28, 0, 0, 1)",
         "particleType": "ember",
@@ -126,7 +126,7 @@ export const REGIONS = [
             "battleships": 5,
             "neutrals": 2,
             "dreadnoughts": 3
-    }
+        }
     },
     {
         "name": "Uncharted Space",
@@ -140,11 +140,11 @@ export const REGIONS = [
             "maxX": 40.5,
             "minY": 24,
             "maxY": 37
-    },
+        },
         "center": {
             "worldX": 32500,
             "worldY": -30500
-    },
+        },
         "difficulty": 7,
         "bgColor": "#1a001a",
         "particleType": "rift",
@@ -159,7 +159,7 @@ export const REGIONS = [
             "battleships": 0,
             "neutrals": 2,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "Home Region",
@@ -173,11 +173,11 @@ export const REGIONS = [
             "maxX": -2,
             "minY": -2.5,
             "maxY": 5.5
-    },
+        },
         "center": {
             "worldX": -6000,
             "worldY": -1500
-    },
+        },
         "difficulty": 1,
         "bgColor": "#050a15",
         "particleType": "dust",
@@ -188,11 +188,11 @@ export const REGIONS = [
             "mines": 2,
             "derelicts": 4,
             "asteroids": 60,
-            "fighters": 40,
-            "battleships": 12,
+            "fighters": 25,
+            "battleships": 8,
             "neutrals": 0,
-            "dreadnoughts": 4
-    }
+            "dreadnoughts": 2
+        }
     },
     {
         "name": "Robo Space",
@@ -206,11 +206,11 @@ export const REGIONS = [
             "maxX": -33.5,
             "minY": -36,
             "maxY": -21
-    },
+        },
         "center": {
             "worldX": -40500,
             "worldY": 28500
-    },
+        },
         "difficulty": 9,
         "bgColor": "#000810",
         "particleType": "ember",
@@ -225,7 +225,7 @@ export const REGIONS = [
             "battleships": 8,
             "neutrals": 0,
             "dreadnoughts": 2
-    }
+        }
     },
     {
         "name": "The Great Barrier",
@@ -239,11 +239,11 @@ export const REGIONS = [
             "maxX": -27.5,
             "minY": -26,
             "maxY": -16
-    },
+        },
         "center": {
             "worldX": -30500,
             "worldY": 21000
-    },
+        },
         "difficulty": 7,
         "bgColor": "#0a0500",
         "particleType": "dust",
@@ -258,7 +258,7 @@ export const REGIONS = [
             "battleships": 2,
             "neutrals": 0,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Ionized Shallows",
@@ -272,11 +272,11 @@ export const REGIONS = [
             "maxX": -33.5,
             "minY": -21,
             "maxY": -16
-    },
+        },
         "center": {
             "worldX": -37000,
             "worldY": 18500
-    },
+        },
         "difficulty": 4,
         "bgColor": "#050015",
         "particleType": "ember",
@@ -291,7 +291,7 @@ export const REGIONS = [
             "battleships": 2,
             "neutrals": 5,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Rust Belt",
@@ -305,11 +305,11 @@ export const REGIONS = [
             "maxX": 27.5,
             "minY": -24.5,
             "maxY": -17
-    },
+        },
         "center": {
             "worldX": 24500,
             "worldY": 20750
-    },
+        },
         "difficulty": 6,
         "bgColor": "#100800",
         "particleType": "dust",
@@ -324,7 +324,7 @@ export const REGIONS = [
             "battleships": 4,
             "neutrals": 2,
             "dreadnoughts": 1
-    }
+        }
     },
     {
         "name": "The Verdant Reach",
@@ -338,11 +338,11 @@ export const REGIONS = [
             "maxX": 13,
             "minY": -7,
             "maxY": 2
-    },
+        },
         "center": {
             "worldX": 7500,
             "worldY": 2500
-    },
+        },
         "difficulty": 2,
         "bgColor": "#000a05",
         "particleType": "spore",
@@ -353,11 +353,11 @@ export const REGIONS = [
             "mines": 2,
             "derelicts": 4,
             "asteroids": 30,
-            "fighters": 5,
+            "fighters": 10,
             "battleships": 0,
             "neutrals": 10,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "Trade Federation",
@@ -371,11 +371,11 @@ export const REGIONS = [
             "maxX": 30.5,
             "minY": 18,
             "maxY": 24
-    },
+        },
         "center": {
             "worldX": 26500,
             "worldY": -21000
-    },
+        },
         "difficulty": 6,
         "bgColor": "#00081a",
         "particleType": "dust",
@@ -390,7 +390,7 @@ export const REGIONS = [
             "battleships": 2,
             "neutrals": 15,
             "dreadnoughts": 1
-    }
+        }
     },
     {
         "name": "Spectral Graveyard",
@@ -404,11 +404,11 @@ export const REGIONS = [
             "maxX": 16.5,
             "minY": 27,
             "maxY": 32
-    },
+        },
         "center": {
             "worldX": 13500,
             "worldY": -29500
-    },
+        },
         "difficulty": 5,
         "bgColor": "#101010",
         "particleType": "spectral",
@@ -423,7 +423,7 @@ export const REGIONS = [
             "battleships": 1,
             "neutrals": 0,
             "dreadnoughts": 2
-    }
+        }
     },
     {
         "name": "Imperial Shipyards",
@@ -437,11 +437,11 @@ export const REGIONS = [
             "maxX": -30,
             "minY": 29,
             "maxY": 36
-    },
+        },
         "center": {
             "worldX": -32000,
             "worldY": -32500
-    },
+        },
         "difficulty": 12,
         "bgColor": "#100000",
         "particleType": "ember",
@@ -456,7 +456,7 @@ export const REGIONS = [
             "battleships": 0,
             "neutrals": 0,
             "dreadnoughts": 20
-    }
+        }
     },
     {
         "name": "The Frozen Expanse",
@@ -470,11 +470,11 @@ export const REGIONS = [
             "maxX": -16,
             "minY": 20,
             "maxY": 26
-    },
+        },
         "center": {
             "worldX": -19500,
             "worldY": -23000
-    },
+        },
         "difficulty": 7,
         "bgColor": "#000a15",
         "particleType": "dust",
@@ -489,7 +489,7 @@ export const REGIONS = [
             "battleships": 2,
             "neutrals": 2,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Crimson Veil",
@@ -503,11 +503,11 @@ export const REGIONS = [
             "maxX": -33,
             "minY": 20,
             "maxY": 25
-    },
+        },
         "center": {
             "worldX": -37000,
             "worldY": -22500
-    },
+        },
         "difficulty": 10,
         "bgColor": "#150000",
         "particleType": "ember",
@@ -522,7 +522,7 @@ export const REGIONS = [
             "battleships": 4,
             "neutrals": 0,
             "dreadnoughts": 1
-    }
+        }
     },
     {
         "name": "The Obsidian Marches",
@@ -536,11 +536,11 @@ export const REGIONS = [
             "maxX": -23,
             "minY": 20,
             "maxY": 29
-    },
+        },
         "center": {
             "worldX": -26000,
             "worldY": -24500
-    },
+        },
         "difficulty": 8,
         "bgColor": "#050505",
         "particleType": "rift",
@@ -555,7 +555,7 @@ export const REGIONS = [
             "battleships": 5,
             "neutrals": 2,
             "dreadnoughts": 1
-    }
+        }
     },
     {
         "name": "Imperial Proving Grounds",
@@ -569,11 +569,11 @@ export const REGIONS = [
             "maxX": -23,
             "minY": 29,
             "maxY": 36
-    },
+        },
         "center": {
             "worldX": -26500,
             "worldY": -32500
-    },
+        },
         "difficulty": 10,
         "bgColor": "#1a0a00",
         "particleType": "ember",
@@ -588,7 +588,7 @@ export const REGIONS = [
             "battleships": 6,
             "neutrals": 0,
             "dreadnoughts": 2
-    }
+        }
     },
     {
         "name": "The Northern Gate",
@@ -602,11 +602,11 @@ export const REGIONS = [
             "maxX": -16,
             "minY": 26,
             "maxY": 36
-    },
+        },
         "center": {
             "worldX": -19500,
             "worldY": -31000
-    },
+        },
         "difficulty": 7,
         "bgColor": "#000a1a",
         "particleType": "dust",
@@ -621,7 +621,7 @@ export const REGIONS = [
             "battleships": 2,
             "neutrals": 10,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Obsidian Approach",
@@ -635,11 +635,11 @@ export const REGIONS = [
             "maxX": -29,
             "minY": 25,
             "maxY": 29
-    },
+        },
         "center": {
             "worldX": -32000,
             "worldY": -27000
-    },
+        },
         "difficulty": 9,
         "bgColor": "#050505",
         "particleType": "rift",
@@ -654,7 +654,7 @@ export const REGIONS = [
             "battleships": 4,
             "neutrals": 2,
             "dreadnoughts": 1
-    }
+        }
     },
     {
         "name": "The Shadow Reach",
@@ -668,11 +668,11 @@ export const REGIONS = [
             "maxX": -35,
             "minY": 25,
             "maxY": 29
-    },
+        },
         "center": {
             "worldX": -38000,
             "worldY": -27000
-    },
+        },
         "difficulty": 11,
         "bgColor": "#0a0015",
         "particleType": "rift",
@@ -687,7 +687,7 @@ export const REGIONS = [
             "battleships": 5,
             "neutrals": 0,
             "dreadnoughts": 2
-    }
+        }
     },
     {
         "name": "The Slate Spires",
@@ -701,11 +701,11 @@ export const REGIONS = [
             "maxX": -26,
             "minY": 15,
             "maxY": 20
-    },
+        },
         "center": {
             "worldX": -29000,
             "worldY": -17500
-    },
+        },
         "difficulty": 6,
         "bgColor": "#0a0a0a",
         "particleType": "dust",
@@ -720,7 +720,7 @@ export const REGIONS = [
             "battleships": 1,
             "neutrals": 4,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Glacial Outwash",
@@ -734,11 +734,11 @@ export const REGIONS = [
             "maxX": -32,
             "minY": 15,
             "maxY": 20
-    },
+        },
         "center": {
             "worldX": -36500,
             "worldY": -17500
-    },
+        },
         "difficulty": 7,
         "bgColor": "#00080f",
         "particleType": "dust",
@@ -753,7 +753,7 @@ export const REGIONS = [
             "battleships": 2,
             "neutrals": 5,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Dusty Corridor",
@@ -767,11 +767,11 @@ export const REGIONS = [
             "maxX": -19,
             "minY": 15,
             "maxY": 20
-    },
+        },
         "center": {
             "worldX": -22500,
             "worldY": -17500
-    },
+        },
         "difficulty": 5,
         "bgColor": "#0f0a05",
         "particleType": "dust",
@@ -786,7 +786,7 @@ export const REGIONS = [
             "battleships": 1,
             "neutrals": 6,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Tranquil Gap",
@@ -800,11 +800,11 @@ export const REGIONS = [
             "maxX": -13,
             "minY": 15,
             "maxY": 20
-    },
+        },
         "center": {
             "worldX": -16000,
             "worldY": -17500
-    },
+        },
         "difficulty": 2,
         "bgColor": "#050a05",
         "particleType": "none",
@@ -819,7 +819,7 @@ export const REGIONS = [
             "battleships": 0,
             "neutrals": 12,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Aurora Belt",
@@ -833,11 +833,11 @@ export const REGIONS = [
             "maxX": 24.5,
             "minY": 24,
             "maxY": 32
-    },
+        },
         "center": {
             "worldX": 20500,
             "worldY": -28000
-    },
+        },
         "difficulty": 6,
         "bgColor": "#100010",
         "particleType": "none",
@@ -852,7 +852,7 @@ export const REGIONS = [
             "battleships": 1,
             "neutrals": 5,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "Merchant's Way",
@@ -866,11 +866,11 @@ export const REGIONS = [
             "maxX": 22.4,
             "minY": 19,
             "maxY": 23.9
-    },
+        },
         "center": {
             "worldX": 19450,
             "worldY": -21450
-    },
+        },
         "difficulty": 5,
         "bgColor": "#0a0a00",
         "particleType": "dust",
@@ -885,7 +885,7 @@ export const REGIONS = [
             "battleships": 1,
             "neutrals": 10,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Quiet Reach",
@@ -899,11 +899,11 @@ export const REGIONS = [
             "maxX": 16.5,
             "minY": 21,
             "maxY": 27
-    },
+        },
         "center": {
             "worldX": 13500,
             "worldY": -24000
-    },
+        },
         "difficulty": 4,
         "bgColor": "#00000a",
         "particleType": "none",
@@ -918,7 +918,7 @@ export const REGIONS = [
             "battleships": 0,
             "neutrals": 8,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Gilded Path",
@@ -932,11 +932,11 @@ export const REGIONS = [
             "maxX": 16.5,
             "minY": 16,
             "maxY": 21
-    },
+        },
         "center": {
             "worldX": 13500,
             "worldY": -18500
-    },
+        },
         "difficulty": 3,
         "bgColor": "#0a0a0a",
         "particleType": "none",
@@ -951,7 +951,7 @@ export const REGIONS = [
             "battleships": 0,
             "neutrals": 15,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Sentinel's Post",
@@ -965,11 +965,11 @@ export const REGIONS = [
             "maxX": 0,
             "minY": 30,
             "maxY": 33
-    },
+        },
         "center": {
             "worldX": -2000,
             "worldY": -31500
-    },
+        },
         "difficulty": 3,
         "bgColor": "#1a0000",
         "particleType": "ember",
@@ -984,7 +984,7 @@ export const REGIONS = [
             "battleships": 3,
             "neutrals": 0,
             "dreadnoughts": 1
-    }
+        }
     },
     {
         "name": "The Sunlit Plains",
@@ -998,11 +998,11 @@ export const REGIONS = [
             "maxX": 10,
             "minY": 2,
             "maxY": 7
-    },
+        },
         "center": {
             "worldX": 4000,
             "worldY": -4500
-    },
+        },
         "difficulty": 2,
         "bgColor": "#0f0f00",
         "particleType": "none",
@@ -1013,11 +1013,11 @@ export const REGIONS = [
             "mines": 1,
             "derelicts": 3,
             "asteroids": 40,
-            "fighters": 2,
+            "fighters": 18,
             "battleships": 0,
             "neutrals": 12,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Jovian Graveyard",
@@ -1031,11 +1031,11 @@ export const REGIONS = [
             "maxX": 29,
             "minY": 6.5,
             "maxY": 12.5
-    },
+        },
         "center": {
             "worldX": 26000,
             "worldY": -9500
-    },
+        },
         "difficulty": 4,
         "bgColor": "#0a0a0a",
         "particleType": "dust",
@@ -1050,7 +1050,7 @@ export const REGIONS = [
             "battleships": 1,
             "neutrals": 4,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Sunken Reach",
@@ -1064,11 +1064,11 @@ export const REGIONS = [
             "maxX": 33.5,
             "minY": -23,
             "maxY": -17
-    },
+        },
         "center": {
             "worldX": 30500,
             "worldY": 20000
-    },
+        },
         "difficulty": 5,
         "bgColor": "#00050f",
         "particleType": "dust",
@@ -1083,7 +1083,7 @@ export const REGIONS = [
             "battleships": 2,
             "neutrals": 3,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Trade Outskirts",
@@ -1097,11 +1097,11 @@ export const REGIONS = [
             "maxX": 22.5,
             "minY": 13,
             "maxY": 19
-    },
+        },
         "center": {
             "worldX": 19500,
             "worldY": -16000
-    },
+        },
         "difficulty": 4,
         "bgColor": "#0a0500",
         "particleType": "none",
@@ -1116,7 +1116,7 @@ export const REGIONS = [
             "battleships": 1,
             "neutrals": 15,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "Federation Approach",
@@ -1130,11 +1130,11 @@ export const REGIONS = [
             "maxX": 30.5,
             "minY": 13,
             "maxY": 18
-    },
+        },
         "center": {
             "worldX": 26500,
             "worldY": -15500
-    },
+        },
         "difficulty": 5,
         "bgColor": "#00081a",
         "particleType": "dust",
@@ -1149,7 +1149,7 @@ export const REGIONS = [
             "battleships": 3,
             "neutrals": 8,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "The Corsair Coast",
@@ -1163,11 +1163,11 @@ export const REGIONS = [
             "maxX": 40.5,
             "minY": 20,
             "maxY": 24
-    },
+        },
         "center": {
             "worldX": 35500,
             "worldY": -22000
-    },
+        },
         "difficulty": 6,
         "bgColor": "#1a0d00",
         "particleType": "ember",
@@ -1182,7 +1182,7 @@ export const REGIONS = [
             "battleships": 5,
             "neutrals": 0,
             "dreadnoughts": 2
-    }
+        }
     },
     {
         "name": "Orbit Test Sector",
@@ -1196,11 +1196,11 @@ export const REGIONS = [
             "maxX": 35.5,
             "minY": -11,
             "maxY": -2
-    },
+        },
         "center": {
             "worldX": 31000,
             "worldY": 6500
-    },
+        },
         "difficulty": 4,
         "bgColor": "#080400",
         "particleType": "ember",
@@ -1215,7 +1215,7 @@ export const REGIONS = [
             "battleships": 0,
             "neutrals": 4,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "Ranger Headquarters",
@@ -1229,11 +1229,11 @@ export const REGIONS = [
             "maxX": 2,
             "minY": -2.5,
             "maxY": 2
-    },
+        },
         "center": {
             "worldX": 0,
             "worldY": 250
-    },
+        },
         "difficulty": 1,
         "bgColor": "#000805",
         "particleType": "none",
@@ -1248,7 +1248,7 @@ export const REGIONS = [
             "battleships": 0,
             "neutrals": 4,
             "dreadnoughts": 0
-    }
+        }
     },
     {
         "name": "Iron Foundry",
@@ -1262,11 +1262,11 @@ export const REGIONS = [
             "maxX": -29,
             "minY": 20,
             "maxY": 25
-    },
+        },
         "center": {
             "worldX": -31000,
             "worldY": -22500
-    },
+        },
         "difficulty": 7,
         "bgColor": "#000805",
         "particleType": "none",
@@ -1281,7 +1281,7 @@ export const REGIONS = [
             "battleships": 0,
             "neutrals": 4,
             "dreadnoughts": 0
-    }
+        }
     }
 ];
 
@@ -1293,21 +1293,21 @@ export const DEFAULT_REGION = {
     description: "Open frontier space. No allegiances, no guarantees.",
     difficulty: 1,
     center: {
-    "worldX": 0,
-    "worldY": 0
-},
+        "worldX": 0,
+        "worldY": 0
+    },
     bgColor: "#03040b",
     particleType: "none",
     caps: {
-    "gravityWells": 1,
-    "comets": 2,
-    "cargoTrains": 1,
-    "mines": 2,
-    "derelicts": 4,
-    "asteroids": 60,
-    "fighters": 8,
-    "battleships": 3,
-    "neutrals": 6,
-    "dreadnoughts": 0
-}
+        "gravityWells": 1,
+        "comets": 2,
+        "cargoTrains": 1,
+        "mines": 2,
+        "derelicts": 4,
+        "asteroids": 60,
+        "fighters": 8,
+        "battleships": 3,
+        "neutrals": 6,
+        "dreadnoughts": 0
+    }
 };
