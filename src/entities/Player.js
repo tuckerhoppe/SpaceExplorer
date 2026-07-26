@@ -63,9 +63,9 @@ export class Player {
     _loadProgress() {
         try {
             const data = JSON.parse(localStorage.getItem('space_explorer_progress') || '{}');
-            this.gems = data.gems || 0;                       // vault / spending pool
+            this.gems = data.gems !== undefined ? data.gems : 600;                       // vault / spending pool
             this.cargoGems = data.cargoGems || 0;            // on-hand, undeposited
-            this.gemVault = data.gemVault || data.gems || 0; // alias kept in sync with gems
+            this.gemVault = data.gemVault !== undefined ? data.gemVault : this.gems; // alias kept in sync with gems
             this.totalGemsCollected = data.totalGemsCollected || 0;
             this.sciencePoints = data.sciencePoints || 0;
             this.shipIndex = data.shipIndex || 0;
@@ -79,17 +79,23 @@ export class Player {
             }
             this.dashCharges = data.dashCharges !== undefined ? data.dashCharges : 3;
             this.dashRechargeTimer = data.dashRechargeTimer || 0;
+            this.fleetIndices = data.fleetIndices || [];
+            this.fleetEmbarked = data.fleetEmbarked !== undefined ? data.fleetEmbarked : false;
+            this.fleetFormation = data.fleetFormation || 'v_formation';
         } catch (e) {
             console.error("Failed to load player progress", e);
-            this.gems = 0;
+            this.gems = 600;
             this.cargoGems = 0;
-            this.gemVault = 0;
+            this.gemVault = 600;
             this.cargoCapacity = 100;
             this.totalGemsCollected = 0;
             this.sciencePoints = 0;
             this.shipIndex = 0;
             this.lastStationX = null;
             this.lastStationY = null;
+            this.fleetIndices = [];
+            this.fleetEmbarked = false;
+            this.fleetFormation = 'v_formation';
         }
     }
 
@@ -107,7 +113,10 @@ export class Player {
                 dashRechargeTimer: this.dashRechargeTimer,
                 shipIndex: this.shipIndex,
                 lastStationX: this.lastStationX,
-                lastStationY: this.lastStationY
+                lastStationY: this.lastStationY,
+                fleetIndices: this.fleetIndices,
+                fleetEmbarked: this.fleetEmbarked,
+                fleetFormation: this.fleetFormation
             };
             localStorage.setItem('space_explorer_progress', JSON.stringify(data));
         } catch (e) {
@@ -237,6 +246,10 @@ export class Player {
 
     get accel() {
         let baseAccel = this.engineMode === 'boost' ? this.boostAccel : this.thrusterAccel;
+        const ship = SHIPS[this.shipIndex];
+        if (ship && ship.accelMultiplier !== undefined) {
+            baseAccel *= ship.accelMultiplier;
+        }
         if (this.tradeRouteSpeedBoostValue > 1.0) {
             baseAccel *= this.tradeRouteSpeedBoostValue;
         }
@@ -262,6 +275,7 @@ export class Player {
     }
 
     update(game) {
+        this.health = Math.min(this.maxHealth, this.health);
         if (this.health <= 0) return;
 
         // Check if player is inside any large hazard nebula
@@ -290,7 +304,9 @@ export class Player {
         }
 
         // Boost: slower turning — you commit to a direction before the surge
-        const turnRate = this.engineMode === 'boost' ? 0.03 : 0.08;
+        const ship = SHIPS[this.shipIndex];
+        const shipTurnMultiplier = (ship && ship.turnRateMultiplier !== undefined) ? ship.turnRateMultiplier : 1.0;
+        const turnRate = (this.engineMode === 'boost' ? 0.03 : 0.08) * shipTurnMultiplier;
         if (Input.keys['a']) this.angle -= turnRate;
         if (Input.keys['d']) this.angle += turnRate;
 

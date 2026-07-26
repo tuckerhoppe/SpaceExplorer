@@ -45,15 +45,19 @@
                     <div id="build-menu-panel" class="hidden" style="margin-top: 8px; border-top: 1px solid rgba(255, 153, 0, 0.2); padding-top: 8px; display: flex; flex-direction: column; gap: 6px;">
                         <button id="build-option-mining_station" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 153, 0, 0.15); border: 1px solid rgba(255, 153, 0, 0.4); border-radius: 4px; padding: 8px 10px; color: #fff; cursor: pointer; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; transition: background 0.2s;">
                             <span>⛏️ Mining Station</span>
-                            <span style="color: #00ffd0; font-weight: bold;">100 💎</span>
+                            <span style="color: #ff9900; font-weight: bold;">500 💎</span>
                         </button>
                         <button id="build-option-science_station" style="display: flex; align-items: center; justify-content: space-between; background: rgba(0, 229, 255, 0.15); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 4px; padding: 8px 10px; color: #fff; cursor: pointer; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; transition: background 0.2s;">
                             <span>🔬 Science Station</span>
-                            <span style="color: #00e5ff; font-weight: bold;">150 💎</span>
+                            <span style="color: #00e5ff; font-weight: bold;">1,000 💎</span>
                         </button>
                         <button id="build-option-shipyard" style="display: flex; align-items: center; justify-content: space-between; background: rgba(0, 255, 136, 0.15); border: 1px solid rgba(0, 255, 136, 0.4); border-radius: 4px; padding: 8px 10px; color: #fff; cursor: pointer; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; transition: background 0.2s;">
                             <span>🚢 Shipyard</span>
-                            <span style="color: #00ff88; font-weight: bold;">200 💎</span>
+                            <span style="color: #00ff88; font-weight: bold;">2,000 💎</span>
+                        </button>
+                        <button id="build-option-space_dock" style="display: flex; align-items: center; justify-content: space-between; background: rgba(0, 85, 255, 0.15); border: 1px solid rgba(0, 85, 255, 0.4); border-radius: 4px; padding: 8px 10px; color: #fff; cursor: pointer; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; transition: background 0.2s;">
+                            <span>🌌 Space Dock</span>
+                            <span style="color: #0055ff; font-weight: bold;">3,000 💎</span>
                         </button>
                         <button id="build-option-deconstruct" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 60, 60, 0.15); border: 1px solid rgba(255, 60, 60, 0.4); border-radius: 4px; padding: 8px 10px; color: #fff; cursor: pointer; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; transition: background 0.2s;">
                             <span>⚠️ Deconstruct</span>
@@ -73,6 +77,12 @@
                     <div class="dash-bar-track">
                         <div id="dash-bar-fill" class="dash-bar-fill"></div>
                     </div>
+                </div>
+                
+                <!-- Camera Zoom Toggle Button -->
+                <div class="hud-item zoom-container" id="zoom-toggle-btn" style="cursor: pointer; pointer-events: auto; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(0, 240, 255, 0.3); background: rgba(0, 240, 255, 0.05); padding: 8px 12px; border-radius: 6px; margin-top: 6px; gap: 8px; font-family: 'Orbitron', sans-serif; transition: all 0.2s;">
+                    <span class="hud-text zoom-label" style="font-weight: bold; font-size: 0.8rem; letter-spacing: 1px; color: #00f0ff; text-shadow: 0 0 5px rgba(0,240,255,0.5);">ZOOM OUT</span>
+                    <span class="zoom-hotkey" style="font-size: 0.7rem; opacity: 0.6; color: #fff; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">[ Z ]</span>
                 </div>
             </div>
             <div id="hud-bottom-left"
@@ -267,7 +277,7 @@
                                 <span style="color: #ff3c3c;">Enable Dev Mode</span>
                             </label>
                             <div style="font-size: 0.85em; color: #aaa; margin-top: 5px; margin-left: 30px;">
-                                Grants 5000 gems and 1000 science points on game start.
+                                Grants 100000 gems and 1000 science points on game start.
                             </div>
 
                             <label
@@ -283,6 +293,85 @@
                     </div>
                     <button id="resume-btn" class="btn primary-btn" style="margin-top: 20px;">Return to Space
                         [ESC]</button>
+                </div>
+            </div>
+
+            <!-- Ship Upgrade Menu Modal (Shipyard specific) -->
+            <div id="shipyard-upgrade-modal" class="hidden modal">
+                <div class="modal-panel" style="max-width: 900px; width: 90%;">
+                    <h2>Shipyard Terminal</h2>
+                    <div id="shipyard-vault-display"
+                        style="position: absolute; top: 20px; right: 20px; color: var(--gem-color); font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 1rem; display: flex; align-items: center; gap: 8px; background: rgba(0, 255, 136, 0.1); padding: 5px 12px; border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 20px;">
+                        <span id="shipyard-gem-count">0</span> 💎
+                    </div>
+                    
+                    <div class="modal-tabs" style="margin-bottom: 10px;">
+                        <button id="shipyard-tab-vessels" class="modal-tab active">Vessels</button>
+                        <button id="shipyard-tab-fleet" class="modal-tab">Fleet</button>
+                    </div>
+                    
+                    <!-- Vessels Tab Content -->
+                    <div id="shipyard-content-vessels" class="tab-content active" style="display: flex; gap: 24px; min-height: 450px; width: 100%;">
+                        <!-- Left: Available Ships List -->
+                        <div style="flex: 1.1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 55vh; padding-right: 8px; text-align: left;">
+                            <h3 style="font-family: 'Orbitron', sans-serif; color: #00ff88; margin-top: 0;">Available Vessels</h3>
+                            <div id="shipyard-ship-list" style="display: flex; flex-direction: column; gap: 10px;">
+                                <!-- Rendered dynamically by HUD.js -->
+                            </div>
+                        </div>
+                        
+                        <!-- Right: Preview of Current Ship / Selected Ship -->
+                        <div style="flex: 1.2; background: rgba(0, 0, 0, 0.4); border: 2px dashed rgba(0, 255, 136, 0.2); border-radius: 6px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+                            <h3 id="shipyard-preview-name" style="margin-top: 0; color: #00ff88; font-family: 'Orbitron', sans-serif; font-size: 1.25rem;">Vessel Preview</h3>
+                            
+                            <!-- Large canvas or drawing of the ship -->
+                            <div style="width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; margin: 15px 0;">
+                                <canvas id="shipyard-preview-canvas" width="220" height="220" style="background: rgba(0,20,10,0.2); border-radius: 50%; box-shadow: inset 0 0 20px rgba(0,255,136,0.15); border: 1px solid rgba(0,255,136,0.1);"></canvas>
+                            </div>
+                            
+                            <div id="shipyard-preview-stats" style="width: 100%; font-family: 'Orbitron', sans-serif; font-size: 0.85rem; color: #eee; display: flex; flex-direction: column; gap: 6px; text-align: left;">
+                                <!-- Stats table rendered dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fleet Tab Content -->
+                    <div id="shipyard-content-fleet" class="tab-content hidden" style="display: flex; gap: 24px; min-height: 450px; width: 100%;">
+                        <!-- Left: Buy Fleet Escorts List -->
+                        <div style="flex: 1.1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 55vh; padding-right: 8px; text-align: left;">
+                            <h3 style="font-family: 'Orbitron', sans-serif; color: #00ff88; margin-top: 0;">Commission Escorts</h3>
+                            <div id="shipyard-fleet-buy-list" style="display: flex; flex-direction: column; gap: 10px;">
+                                <!-- Rendered dynamically by HUD.js -->
+                            </div>
+                        </div>
+                        
+                        <!-- Right: Active Fleet Summary & Info -->
+                        <div style="flex: 1.2; background: rgba(0, 0, 0, 0.4); border: 2px dashed rgba(0, 255, 136, 0.2); border-radius: 6px; padding: 20px; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; text-align: left; max-height: 55vh;">
+                            <h3 id="shipyard-fleet-status-title" style="margin-top: 0; color: #00ff88; font-family: 'Orbitron', sans-serif; font-size: 1.25rem; text-align: center;">Active Fleet (0/5)</h3>
+                            
+                            <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                                <span style="font-size: 0.8rem; color: #aaa; font-family: 'Orbitron', sans-serif;">FORMATION:</span>
+                                <select id="shipyard-fleet-formation-select" style="background: #050b1e; border: 1px solid #00ff88; color: #fff; padding: 4px 8px; border-radius: 4px; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; cursor: pointer; outline: none;">
+                                    <option value="v_formation">V-Formation</option>
+                                    <option value="surround">Surround (Shield)</option>
+                                    <option value="diamond">Diamond (Centered)</option>
+                                </select>
+                            </div>
+                            
+                            <div id="shipyard-fleet-active-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding-right: 5px;">
+                                <!-- List of current active fleet ships with retire option -->
+                            </div>
+
+                            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; color: #aaa; line-height: 1.4;">
+                                <span style="color: #ffaa00; font-weight: bold;">FLEET GUIDELINES:</span><br>
+                                • Escort vessels follow your ship in a tactical formation.<br>
+                                • They automatically engage and fire upon hostile targets.<br>
+                                • Hired vessels have independent hull health and can be destroyed.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="shipyard-upgrade-close-btn" class="btn primary-btn" style="margin-top: 20px; border-color: #ffaa00; color: #ffaa00; background: rgba(255,170,0,0.1); width: 100%;">Close Shipyard Terminal</button>
                 </div>
             </div>
 
@@ -383,6 +472,25 @@
                 <div class="crew-header">Crew Members</div>
                 <div id="station-crew-list">
                     <!-- Crew items added by HUD.js -->
+                </div>
+            </div>
+
+            <!-- Shipyard Panel: shown when docked at a shipyard -->
+            <div id="shipyard-panel" class="hud-item hidden">
+                <div class="nav-log-header">🚢 Shipyard Terminal</div>
+                <div class="station-info" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div id="shipyard-panel-name">Orbital Shipyard</div>
+                    <button id="shipyard-upgrade-btn" class="btn station-btn" style="background: rgba(0, 255, 136, 0.2); border-color: #00ff88; color: #fff; width: 100%;">Ship Upgrades</button>
+                    <button id="shipyard-fleet-btn" class="btn station-btn" style="background: rgba(0, 85, 255, 0.2); border-color: #0055ff; color: #fff; width: 100%; margin-top: 4px;">Fleet Building</button>
+                </div>
+            </div>
+
+            <!-- Space Dock Panel: shown when docked at a space dock -->
+            <div id="spacedock-panel" class="hud-item hidden">
+                <div class="nav-log-header">🌌 Space Dock Terminal</div>
+                <div class="station-info" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div id="spacedock-panel-name" style="font-family: 'Orbitron', sans-serif; font-size: 0.9rem; color: #0055ff; text-shadow: 0 0 10px rgba(0,85,255,0.5);">Orbital Space Dock</div>
+                    <button id="spacedock-action-btn" class="btn station-btn" style="background: rgba(0, 85, 255, 0.2); border-color: #0055ff; color: #fff; width: 100%;">Dock Fleet</button>
                 </div>
             </div>
 

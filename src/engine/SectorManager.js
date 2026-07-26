@@ -234,6 +234,20 @@ export class SectorManager {
                         };
                         break;
                     }
+                } else if (s.type === 'space_dock') {
+                    const radius = s.dockRadius || 120;
+                    if (Utils.dist(player.x, player.y, s.x, s.y) < radius) {
+                        this.dockedAt = {
+                            id: s.id,
+                            name: 'Orbital Space Dock',
+                            type: 'space_dock',
+                            dockEffect: 'heal',
+                            x: s.x,
+                            y: s.y,
+                            dockRadius: radius
+                        };
+                        break;
+                    }
                 }
             }
         }

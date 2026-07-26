@@ -56,7 +56,7 @@ export const REGIONS = [
             "mines": 8,
             "derelicts": 80,
             "asteroids": 120,
-            "fighters": 8,
+            "fighters": 6,
             "battleships": 0,
             "neutrals": 6,
             "dreadnoughts": 0
@@ -188,10 +188,10 @@ export const REGIONS = [
             "mines": 2,
             "derelicts": 4,
             "asteroids": 60,
-            "fighters": 40,
-            "battleships": 12,
+            "fighters": 25,
+            "battleships": 8,
             "neutrals": 0,
-            "dreadnoughts": 4
+            "dreadnoughts": 2
     }
     },
     {
@@ -353,7 +353,7 @@ export const REGIONS = [
             "mines": 2,
             "derelicts": 4,
             "asteroids": 30,
-            "fighters": 5,
+            "fighters": 10,
             "battleships": 0,
             "neutrals": 10,
             "dreadnoughts": 0
@@ -1013,7 +1013,7 @@ export const REGIONS = [
             "mines": 1,
             "derelicts": 3,
             "asteroids": 40,
-            "fighters": 2,
+            "fighters": 18,
             "battleships": 0,
             "neutrals": 12,
             "dreadnoughts": 0
@@ -1281,6 +1281,138 @@ export const REGIONS = [
             "battleships": 0,
             "neutrals": 4,
             "dreadnoughts": 0
+    }
+    },
+    {
+        "name": "entrance",
+        "icon": "🪐",
+        "color": "#00ffaa",
+        "test": (cx, cy) => cx >= -30 && cx <= -25 && cy >= -2 && cy <= 2,
+        "description": "An uncharted new boundary.",
+        "gemReward": 0,
+        "bounds": {
+            "minX": -30,
+            "maxX": -25,
+            "minY": -2,
+            "maxY": 2
+    },
+        "center": {
+            "worldX": -27500,
+            "worldY": 0
+    },
+        "difficulty": 3,
+        "bgColor": "#000805",
+        "particleType": "ember",
+        "caps": {
+            "gravityWells": 1,
+            "comets": 1,
+            "cargoTrains": 0,
+            "mines": 2,
+            "derelicts": 4,
+            "asteroids": 30,
+            "fighters": 14,
+            "battleships": 2,
+            "neutrals": 4,
+            "dreadnoughts": 2
+    }
+    },
+    {
+        "name": "crossroads",
+        "icon": "🪐",
+        "color": "#00ffaa",
+        "test": (cx, cy) => cx >= -37 && cx <= -30 && cy >= -3 && cy <= 3,
+        "description": "An uncharted new boundary.",
+        "gemReward": 0,
+        "bounds": {
+            "minX": -37,
+            "maxX": -30,
+            "minY": -3,
+            "maxY": 3
+    },
+        "center": {
+            "worldX": -33500,
+            "worldY": 0
+    },
+        "difficulty": 6,
+        "bgColor": "#000805",
+        "particleType": "ember",
+        "caps": {
+            "gravityWells": 1,
+            "comets": 1,
+            "cargoTrains": 0,
+            "mines": 2,
+            "derelicts": 4,
+            "asteroids": 30,
+            "fighters": 4,
+            "battleships": 0,
+            "neutrals": 4,
+            "dreadnoughts": 0
+    }
+    },
+    {
+        "name": "North Side",
+        "icon": "🪐",
+        "color": "#00ffaa",
+        "test": (cx, cy) => cx >= -37.1 && cx <= -30 && cy >= 3 && cy <= 9,
+        "description": "An uncharted new boundary.",
+        "gemReward": 0,
+        "bounds": {
+            "minX": -37.1,
+            "maxX": -30,
+            "minY": 3,
+            "maxY": 9
+    },
+        "center": {
+            "worldX": -33550,
+            "worldY": -6000
+    },
+        "difficulty": 7,
+        "bgColor": "#000805",
+        "particleType": "ember",
+        "caps": {
+            "gravityWells": 1,
+            "comets": 1,
+            "cargoTrains": 0,
+            "mines": 2,
+            "derelicts": 4,
+            "asteroids": 30,
+            "fighters": 12,
+            "battleships": 0,
+            "neutrals": 4,
+            "dreadnoughts": 0
+    }
+    },
+    {
+        "name": "The END",
+        "icon": "🪐",
+        "color": "#00ffaa",
+        "test": (cx, cy) => cx >= -43.2 && cx <= -37 && cy >= -3 && cy <= 3,
+        "description": "An uncharted new boundary.",
+        "gemReward": 0,
+        "bounds": {
+            "minX": -43.2,
+            "maxX": -37,
+            "minY": -3,
+            "maxY": 3
+    },
+        "center": {
+            "worldX": -40100,
+            "worldY": 0
+    },
+        "difficulty": 8,
+        "bgColor": "#0d0c0c",
+        "particleType": "ember",
+        "caps": {
+            "gravityWells": 1,
+            "comets": 1,
+            "cargoTrains": 0,
+            "mines": 2,
+            "derelicts": 4,
+            "asteroids": 30,
+            "fighters": 14,
+            "battleships": 5,
+            "neutrals": 0,
+            "dreadnoughts": 6
     }
     }
 ];

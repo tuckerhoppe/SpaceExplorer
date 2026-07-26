@@ -122,13 +122,15 @@ export class RegionManager {
                 game.questManager.notify('reach', { region: newRegion.name });
             }
 
-            // Home Region Ambush Trigger
+            // Home Region Ambush Trigger (Temporarily Disabled)
+            /*
             if (newRegion.name === 'Home Region' && game?.hud && game?.questManager && !this._hasHailedHome) {
                 if (!game.questManager.isQuestCompletedOrActive('region_home_defense')) {
                     this._hasHailedHome = true;
                     game.hud.triggerHail('COMMODORE REED', 'home_region_ambush');
                 }
             }
+            */
         }
     }
 

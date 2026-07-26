@@ -1,5 +1,6 @@
 import { Utils } from '../utils.js';
 import { Particle } from './Particle.js';
+import { SHIPS } from '../config.js';
 
 export class Structure {
     constructor(type, parent, relativeAngle, relativeDist, locationType, edgeIndex = null, ringName = null) {
@@ -23,6 +24,9 @@ export class Structure {
         this.spinAngle = Math.random() * Math.PI * 2;
         this.pulse = 0;
         this.id = 'struct_' + Math.random().toString(36).substr(2, 9);
+        if (this.type === 'space_dock') {
+            this.dockRadius = 320;
+        }
     }
 
     updatePos() {
@@ -57,6 +61,7 @@ export class Structure {
     }
 
     update(game) {
+        this.game = game;
         this.updatePos();
         this.spinAngle += 0.004;
         this.pulse += 0.05;
@@ -79,6 +84,32 @@ export class Structure {
                             Math.cos(pAngle) * pSpeed,
                             Math.sin(pAngle) * pSpeed,
                             '#00ff88',
+                            Utils.randInt(15, 30)
+                        ));
+                    }
+                }
+            }
+            return;
+        }
+
+        if (this.type === 'space_dock') {
+            const dist = Utils.dist(this.x, this.y, game.player.x, game.player.y);
+            this.playerDocked = dist < 120;
+            if (this.playerDocked && game.player.health > 0) {
+                if (game.player.health < game.player.maxHealth) {
+                    game.player.health = Math.min(game.player.maxHealth, game.player.health + 0.2);
+                    if (game.hud) game.hud.update(game.player);
+                    
+                    // Spawn blue/cyan nanite particles
+                    if (Math.random() < 0.2 && game.particles) {
+                        const pAngle = Math.random() * Math.PI * 2;
+                        const pSpeed = Utils.rand(0.5, 1.5);
+                        game.particles.push(Particle.get(
+                            game.player.x + Math.cos(pAngle) * 15,
+                            game.player.y + Math.sin(pAngle) * 15,
+                            Math.cos(pAngle) * pSpeed,
+                            Math.sin(pAngle) * pSpeed,
+                            '#00aaff',
                             Utils.randInt(15, 30)
                         ));
                     }
@@ -218,6 +249,95 @@ export class Structure {
                 ctx.restore();
                 ctx.save();
                 ctx.translate(this.x, this.y);
+            }
+
+        } else if (this.type === 'space_dock') {
+            const dockAngle = Math.atan2(this.y - this.parent.y, this.x - this.parent.x);
+            ctx.rotate(dockAngle + this.spinAngle * 0.1); // Slow majestic rotation
+            ctx.scale(4.0, 4.0); // Make the space dock design 4 times bigger!
+
+            // 1. Central core
+            ctx.fillStyle = '#141c24';
+            ctx.strokeStyle = '#0055ff';
+            ctx.lineWidth = 1.0;
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // 2. Outer Docking Ring
+            ctx.strokeStyle = 'rgba(0, 85, 255, 0.4)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.arc(0, 0, 65, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 3. Four Docking arms extending from core to ring
+            ctx.strokeStyle = '#3366cc';
+            ctx.lineWidth = 0.8;
+            for (let i = 0; i < 4; i++) {
+                const angle = (i * Math.PI) / 2;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(angle) * 30, Math.sin(angle) * 30);
+                ctx.lineTo(Math.cos(angle) * 65, Math.sin(angle) * 65);
+                ctx.stroke();
+            }
+
+            // 4. Glowing lights along the ring
+            ctx.fillStyle = '#00ffd0';
+            for (let i = 0; i < 8; i++) {
+                const angle = (i * Math.PI) / 4 + this.pulse * 0.05;
+                ctx.beginPath();
+                ctx.arc(Math.cos(angle) * 65, Math.sin(angle) * 65, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 5. Central glowing core aura
+            const pulseRadius = 15 + Math.sin(this.pulse * 2.0) * 3;
+            ctx.fillStyle = 'rgba(0, 85, 255, 0.2)';
+            ctx.beginPath();
+            ctx.arc(0, 0, pulseRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 6. Draw parked fleet ships when docked
+            if (this.game && !this.game.player.fleetEmbarked) {
+                const player = this.game.player;
+                const spaceDocks = this.game.structures.filter(s => s.type === 'space_dock');
+                const myIndex = spaceDocks.indexOf(this);
+                
+                if (myIndex !== -1 && player.fleetIndices) {
+                    const startIdx = myIndex * 5;
+                    const endIdx = Math.min(startIdx + 5, player.fleetIndices.length);
+                    
+                    let slot = 0;
+                    for (let i = startIdx; i < endIdx; i++) {
+                        const shipIdx = player.fleetIndices[i];
+                        const ship = SHIPS[shipIdx];
+                        if (ship) {
+                            // Docking slots are positioned on a ring between core and outer boundary (radius ~46px)
+                            const slotAngle = (slot * Math.PI * 2) / 5 + this.spinAngle * 0.05;
+                            const sx = Math.cos(slotAngle) * 46;
+                            const sy = Math.sin(slotAngle) * 46;
+                            
+                            ctx.save();
+                            ctx.translate(sx, sy);
+                            ctx.rotate(slotAngle + Math.PI / 2);
+                            
+                            // Draw the parked ship
+                            ctx.fillStyle = '#091535';
+                            ctx.strokeStyle = '#0055ff'; // Theme color of the escorts (dark blue)
+                            ctx.lineWidth = 0.5;
+                            ctx.scale(0.35, 0.35); // scaled down for slot size
+                            
+                            if (typeof ship.drawShape === 'function') {
+                                ship.drawShape(ctx, 15);
+                            }
+                            ctx.restore();
+                            
+                            slot++;
+                        }
+                    }
+                }
             }
 
         } else if (this.type === 'science_station') {
