@@ -1835,6 +1835,17 @@ export class HUD {
                 ${sciLine}
                 <button class="popup-close-btn">Accept Bonus</button>
             `;
+        } else if (obj.type === 'region_conquest') {
+            const sciLine = obj.sciReward ? `<div class="discovery-reward sci-reward">+${obj.sciReward} 🔬 SP Bonus</div>` : '';
+            popup.innerHTML = `
+                <div class="discovery-icon" style="color: #00ffcc;">🔓</div>
+                <div class="discovery-type" style="color: #00ffcc; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,204,0.5);">Region Liberated!</div>
+                <div class="discovery-name" style="color: #ffffff;">${obj.name}</div>
+                <div class="discovery-desc">${obj.description}</div>
+                <div class="discovery-reward" style="color: #00ffd0; font-size: 1.4rem; font-weight: bold; margin-bottom: 8px;">+${obj.gemReward} 💎 Gem Reward</div>
+                ${sciLine}
+                <button class="popup-close-btn" style="background: linear-gradient(135deg, #00ffcc, #0099ff); color: #000; font-weight: bold; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px;">Claim Rewards</button>
+            `;
         } else {
             popup.innerHTML = `
                 <div class="discovery-icon">${TYPE_ICONS[obj.type] || '✦'}</div>

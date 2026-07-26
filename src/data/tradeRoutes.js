@@ -30,5 +30,13 @@ export const TRADE_ROUTES_CONFIG = [
         "color": "#00ffaa",
         "width": 250,
         "speedMultiplier": 2.5
+    },
+    {
+        "id": "rprokknmf_home_region_1",
+        "planetAId": "station_rprokknmf",
+        "planetBId": "station_home_region_1",
+        "color": "#00ffaa",
+        "width": 250,
+        "speedMultiplier": 2.5
     }
 ];

@@ -1514,6 +1514,7 @@ export class Game {
 
         for (let a = this.asteroids.length - 1; a >= 0; a--) {
             let ast = this.asteroids[a];
+            if (!ast) continue;
             ast.update();
 
             // Check collision with large asteroids (shatter small asteroid)
@@ -1573,6 +1574,7 @@ export class Game {
         // Update and prune derelict hulls
         for (let d = this.derelicts.length - 1; d >= 0; d--) {
             let hull = this.derelicts[d];
+            if (!hull) continue;
             hull.update();
 
             if (Utils.dist(this.player.x, this.player.y, hull.x, hull.y) > 4000) {
@@ -1683,6 +1685,7 @@ export class Game {
         // Update and prune cargo trains
         for (let t = this.cargoTrains.length - 1; t >= 0; t--) {
             let train = this.cargoTrains[t];
+            if (!train) continue;
             train.update();
 
             if (Utils.dist(this.player.x, this.player.y, train.x, train.y) > 4500) {
@@ -1732,6 +1735,7 @@ export class Game {
         // Update and prune comets
         for (let c = this.comets.length - 1; c >= 0; c--) {
             let comet = this.comets[c];
+            if (!comet) continue;
             comet.update(this);
 
             if (Utils.dist(this.player.x, this.player.y, comet.x, comet.y) > 5500) {
@@ -1755,9 +1759,15 @@ export class Game {
             }
 
             // Bounce off other obstacles (asteroids, derelicts, cargo trains)
-            this.asteroids.forEach(ast => comet.bounceOff(ast.x, ast.y, ast.radius));
-            this.derelicts.forEach(hull => comet.bounceOff(hull.x, hull.y, hull.radius));
-            this.cargoTrains.forEach(train => comet.bounceOff(train.x, train.y, train.radius));
+            this.asteroids.forEach(ast => {
+                if (ast) comet.bounceOff(ast.x, ast.y, ast.radius);
+            });
+            this.derelicts.forEach(hull => {
+                if (hull) comet.bounceOff(hull.x, hull.y, hull.radius);
+            });
+            this.cargoTrains.forEach(train => {
+                if (train) comet.bounceOff(train.x, train.y, train.radius);
+            });
 
             // Projectile collision -> damages comet
             for (let p = this.projectiles.length - 1; p >= 0; p--) {
@@ -1942,9 +1952,13 @@ export class Game {
             for (let p = this.enemyProjectiles.length - 1; p >= 0; p--) {
                 const proj = this.enemyProjectiles[p];
                 if (Utils.dist(proj.x, proj.y, this.player.x, this.player.y) < this.player.radius + 4) {
-                    this.player.health -= proj.damage;
+                    if (proj.isTorpedo) {
+                        this._explodeEnemyTorpedo(proj.x, proj.y);
+                    } else {
+                        this.player.health -= proj.damage;
+                        this.spawnExplosion(proj.x, proj.y, 5, '#ff9500');
+                    }
                     this.enemyProjectiles.splice(p, 1);
-                    this.spawnExplosion(proj.x, proj.y, 5, '#ff9500');
 
                     if (this.player.health <= 0 && !this.gameOver) {
                         this.triggerGameOver();
@@ -1961,9 +1975,13 @@ export class Game {
                 for (let p = this.enemyProjectiles.length - 1; p >= 0; p--) {
                     const proj = this.enemyProjectiles[p];
                     if (Utils.dist(proj.x, proj.y, ship.x, ship.y) < ship.radius + 4) {
-                        ship.health -= proj.damage;
+                        if (proj.isTorpedo) {
+                            this._explodeEnemyTorpedo(proj.x, proj.y);
+                        } else {
+                            ship.health -= proj.damage;
+                            this.spawnExplosion(proj.x, proj.y, 5, '#ff9500');
+                        }
                         this.enemyProjectiles.splice(p, 1);
-                        this.spawnExplosion(proj.x, proj.y, 5, '#ff9500');
 
                         if (ship.health <= 0) {
                             this.spawnExplosion(ship.x, ship.y, 16, '#ffaa00');
@@ -2552,6 +2570,52 @@ export class Game {
                 comet.health -= Math.floor(blastDamage * pct);
                 if (comet.health <= 0) {
                     this._onCometDestroyed(comet, c);
+                }
+            }
+        }
+    }
+
+    _explodeEnemyTorpedo(x, y) {
+        // Visual particles
+        this.spawnExplosion(x, y, 60, '#00eaff');
+        this.spawnExplosion(x, y, 40, '#ffffff');
+
+        // Glowing nested shockwave rings
+        this.spawnShockwave(x, y, 180, '#00eaff', 10.0);
+        this.spawnShockwave(x, y, 110, '#ffffff', 5.0);
+
+        const blastRadius = 180;
+        const blastDamage = 60; // Powerful splash damage
+
+        // Proximity damage to player
+        const distToPlayer = Utils.dist(this.player.x, this.player.y, x, y);
+        if (distToPlayer < blastRadius) {
+            const pct = 1 - (distToPlayer / blastRadius);
+            this.player.health -= Math.floor(blastDamage * pct);
+            this.hud?.update(this.player);
+            if (this.player.health <= 0 && !this.gameOver) {
+                this.triggerGameOver();
+            }
+        }
+
+        // Proximity damage to fleet ships
+        if (this.fleetShips && this.fleetShips.length > 0) {
+            for (let sIdx = this.fleetShips.length - 1; sIdx >= 0; sIdx--) {
+                const ship = this.fleetShips[sIdx];
+                if (ship.health <= 0) continue;
+                const distToShip = Utils.dist(ship.x, ship.y, x, y);
+                if (distToShip < blastRadius) {
+                    const pct = 1 - (distToShip / blastRadius);
+                    ship.health -= Math.floor(blastDamage * pct);
+                    if (ship.health <= 0) {
+                        this.spawnExplosion(ship.x, ship.y, 16, '#ffaa00');
+                        this.fleetShips.splice(sIdx, 1);
+                        this.player.fleetIndices.splice(sIdx, 1);
+                        this.player.save();
+                        if (this.hud && typeof this.hud.refreshShipyardFleetMenu === 'function') {
+                            this.hud.refreshShipyardFleetMenu();
+                        }
+                    }
                 }
             }
         }
@@ -3295,20 +3359,22 @@ export class Game {
         this.conqueredRegions.add(regionName);
         localStorage.setItem('space_explorer_conquered_regions', JSON.stringify([...this.conqueredRegions]));
 
+        const calculatedGemReward = Math.max(2000, 2000 + ((region.difficulty || 1) - 1) * 500);
+
         if (this.hud) {
             this.hud.showFloatingReward(`REGION CONQUERED: ${regionName.toUpperCase()}`, '#00ffcc');
             this.hud.showDiscoveryPopup({
                 name: regionName,
                 type: 'region_conquest',
                 description: `You have successfully liberated ${regionName} from hostile forces! It is now permanently secure.`,
-                gemReward: region.gemReward || 100,
+                gemReward: calculatedGemReward,
                 sciReward: 50
             });
         }
 
-        this.player.gems += region.gemReward || 100;
-        this.player.gemVault += region.gemReward || 100;
-        this.player.totalGemsCollected += region.gemReward || 100;
+        this.player.gems += calculatedGemReward;
+        this.player.gemVault += calculatedGemReward;
+        this.player.totalGemsCollected += calculatedGemReward;
         this.player.addScience(50);
 
         this.checkClusterCompletion();

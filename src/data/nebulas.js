@@ -78,5 +78,21 @@ export const NEBULA_DEFINITIONS = [
         "color": "#8a2be2",
         "blobCount": 10,
         "baseRadius": 1000
+    },
+    {
+        "name": "New Nebula Field",
+        "worldX": -30430,
+        "worldY": -4810,
+        "color": "#ffd2c7",
+        "blobCount": 10,
+        "baseRadius": 1000
+    },
+    {
+        "name": "New Nebula Field",
+        "worldX": -42910,
+        "worldY": -1777,
+        "color": "#8a2be2",
+        "blobCount": 10,
+        "baseRadius": 1000
     }
 ];

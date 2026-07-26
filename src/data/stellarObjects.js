@@ -2281,10 +2281,10 @@ export const STELLAR_OBJECTS = [
         "id": "planet_the_slate_spires_2",
         "name": "Slate Ridge",
         "type": "planet",
-        "coordX": -15.46,
-        "coordY": 2.64,
-        "worldX": -15461,
-        "worldY": -2643,
+        "coordX": -28.13,
+        "coordY": -1.03,
+        "worldX": -28130,
+        "worldY": 1030,
         "radius": 476,
         "dockRadius": 150,
         "gemReward": 100,
@@ -2293,7 +2293,11 @@ export const STELLAR_OBJECTS = [
         "color": "#778899",
         "hasRings": false,
         "accentColor": "#ffffff",
-        "description": "A grey, rocky planet rich in silicate crystals and quarry deposits."
+        "description": "A grey, rocky planet rich in silicate crystals and quarry deposits.",
+        "parasite": {
+            "type": "oppressor",
+            "guards": 4
+        }
     },
     {
         "id": "station_the_slate_spires_1",
@@ -2331,10 +2335,10 @@ export const STELLAR_OBJECTS = [
         "id": "planet_the_glacial_outwash_1",
         "name": "Thermal Rise",
         "type": "planet",
-        "coordX": -17.55,
-        "coordY": 1.38,
-        "worldX": -17547,
-        "worldY": -1384,
+        "coordX": -27.07,
+        "coordY": 1.01,
+        "worldX": -27075,
+        "worldY": -1007,
         "radius": 481,
         "dockRadius": 150,
         "gemReward": 100,
@@ -2343,7 +2347,11 @@ export const STELLAR_OBJECTS = [
         "color": "#afeeee",
         "hasRings": true,
         "accentColor": "#ff4400",
-        "description": "A planet where volcanic vents melt the glacial sheets, creating giant steam plumes."
+        "description": "A planet where volcanic vents melt the glacial sheets, creating giant steam plumes.",
+        "parasite": {
+            "type": "oppressor",
+            "guards": 4
+        }
     },
     {
         "id": "planet_the_glacial_outwash_2",
@@ -2417,10 +2425,10 @@ export const STELLAR_OBJECTS = [
         "id": "planet_the_dusty_corridor_2",
         "name": "Mirage Peak",
         "type": "planet",
-        "coordX": -18.42,
-        "coordY": 3.54,
-        "worldX": -18416,
-        "worldY": -3535,
+        "coordX": -1.07,
+        "coordY": 1.06,
+        "worldX": -1075,
+        "worldY": -1061,
         "radius": 403,
         "dockRadius": 150,
         "gemReward": 100,
@@ -2429,7 +2437,11 @@ export const STELLAR_OBJECTS = [
         "color": "#ffe4c4",
         "hasRings": true,
         "accentColor": "#ff8c00",
-        "description": "A sandy world appearing to change colors due to light-bending atmospheric dust."
+        "description": "A sandy world appearing to change colors due to light-bending atmospheric dust.",
+        "parasite": {
+            "type": "stronghold",
+            "guards": 4
+        }
     },
     {
         "id": "station_the_dusty_corridor_1",
@@ -3082,6 +3094,202 @@ export const STELLAR_OBJECTS = [
         "description": "The Birth place of the Space Ranger corps.",
         "parasite": {
             "type": "oppressor",
+            "guards": 4
+        }
+    },
+    {
+        "id": "station_rprokknmf",
+        "name": "New Stellar Object",
+        "type": "station",
+        "coordX": -25.95,
+        "coordY": -0.64,
+        "worldX": -25950,
+        "worldY": 638,
+        "radius": 300,
+        "dockRadius": 150,
+        "gemReward": 0,
+        "dockEffect": "none",
+        "maxScience": 0,
+        "color": "#ffffff",
+        "description": "A newly mapped celestial object."
+    },
+    {
+        "id": "station_4dtbojdbr",
+        "name": "New Stellar Object",
+        "type": "station",
+        "coordX": -31.23,
+        "coordY": 2.17,
+        "worldX": -31230,
+        "worldY": -2170,
+        "radius": 300,
+        "dockRadius": 150,
+        "gemReward": 0,
+        "dockEffect": "none",
+        "maxScience": 0,
+        "color": "#ffffff",
+        "description": "A newly mapped celestial object.",
+        "parasite": {
+            "type": "oppressor",
+            "guards": 4
+        }
+    },
+    {
+        "id": "station_l5ytzts6w",
+        "name": "New Stellar Object Copy",
+        "type": "planet",
+        "coordX": -35.14,
+        "coordY": 1.2,
+        "worldX": -35140,
+        "worldY": -1200,
+        "radius": 300,
+        "dockRadius": 150,
+        "gemReward": 0,
+        "dockEffect": "none",
+        "maxScience": 0,
+        "color": "#ffffff",
+        "description": "A newly mapped celestial object.",
+        "parasite": {
+            "type": "oppressor",
+            "guards": 4
+        }
+    },
+    {
+        "id": "station_gq1cleaq7",
+        "name": "New Stellar Object Copy Copy",
+        "type": "nebula",
+        "coordX": -32.5,
+        "coordY": -1.24,
+        "worldX": -32501,
+        "worldY": 1243,
+        "radius": 300,
+        "dockRadius": 150,
+        "gemReward": 0,
+        "dockEffect": "none",
+        "maxScience": 0,
+        "color": "#f9a4a4",
+        "description": "A newly mapped celestial object.",
+        "parasite": {
+            "type": "oppressor",
+            "guards": 4
+        }
+    },
+    {
+        "id": "station_v4qq5nqz9",
+        "name": "New Stellar Object",
+        "type": "station",
+        "coordX": -36.17,
+        "coordY": 4.91,
+        "worldX": -36170,
+        "worldY": -4910,
+        "radius": 300,
+        "dockRadius": 150,
+        "gemReward": 0,
+        "dockEffect": "none",
+        "maxScience": 0,
+        "color": "#ffffff",
+        "description": "A newly mapped celestial object.",
+        "parasite": {
+            "type": "stronghold",
+            "guards": 4
+        }
+    },
+    {
+        "id": "station_o78tzpkft",
+        "name": "New Stellar Object",
+        "type": "star",
+        "coordX": -35.94,
+        "coordY": 8.09,
+        "worldX": -35940,
+        "worldY": -8090,
+        "radius": 300,
+        "dockRadius": 150,
+        "gemReward": 0,
+        "dockEffect": "none",
+        "maxScience": 0,
+        "color": "#ffffff",
+        "description": "A newly mapped celestial object.",
+        "parasite": {
+            "type": "oppressor",
+            "guards": 4
+        }
+    },
+    {
+        "id": "station_yywmsmugi",
+        "name": "New Stellar Object",
+        "type": "nebula",
+        "coordX": -31.44,
+        "coordY": 7.82,
+        "worldX": -31440,
+        "worldY": -7820,
+        "radius": 300,
+        "dockRadius": 150,
+        "gemReward": 0,
+        "dockEffect": "none",
+        "maxScience": 0,
+        "color": "#ffffff",
+        "description": "A newly mapped celestial object.",
+        "parasite": {
+            "type": "oppressor",
+            "guards": 8
+        }
+    },
+    {
+        "id": "station_4wzc7it65",
+        "name": "New Stellar Object",
+        "type": "station",
+        "coordX": -40.32,
+        "coordY": -2.59,
+        "worldX": -40320,
+        "worldY": 2590,
+        "radius": 300,
+        "dockRadius": 150,
+        "gemReward": 0,
+        "dockEffect": "none",
+        "maxScience": 0,
+        "color": "#ffffff",
+        "description": "A newly mapped celestial object.",
+        "parasite": {
+            "type": "stronghold",
+            "guards": 4
+        }
+    },
+    {
+        "id": "station_472spw0vw",
+        "name": "New Stellar Object",
+        "type": "planet",
+        "coordX": -39.12,
+        "coordY": 1.06,
+        "worldX": -39120,
+        "worldY": -1060,
+        "radius": 300,
+        "dockRadius": 150,
+        "gemReward": 0,
+        "dockEffect": "heal",
+        "maxScience": 0,
+        "color": "#ffffff",
+        "description": "A newly mapped celestial object.",
+        "parasite": {
+            "type": "oppressor",
+            "guards": 4
+        }
+    },
+    {
+        "id": "station_it5ah5thm",
+        "name": "New Stellar Object",
+        "type": "nebula",
+        "coordX": -37.46,
+        "coordY": -0.99,
+        "worldX": -37460,
+        "worldY": 990,
+        "radius": 300,
+        "dockRadius": 150,
+        "gemReward": 0,
+        "dockEffect": "heal",
+        "maxScience": 0,
+        "color": "#ffffff",
+        "description": "A newly mapped celestial object.",
+        "parasite": {
+            "type": "stronghold",
             "guards": 4
         }
     }

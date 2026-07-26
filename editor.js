@@ -151,6 +151,7 @@ function init() {
 
     // Delete button
     document.getElementById('btn-inspect-delete').onclick = deleteSelectedEntity;
+    document.getElementById('btn-inspect-duplicate').onclick = duplicateSelectedEntity;
 
     // Visibility checkboxes
     ['regions', 'planets', 'stations', 'stars', 'asteroids', 'nebulas', 'routes'].forEach(type => {
@@ -765,6 +766,7 @@ function selectEntity(entity, type, keepMulti = false) {
                         <option value="none" ${!entity.parasite ? 'selected' : ''}>None</option>
                         <option value="blob" ${entity.parasite && entity.parasite.type === 'blob' ? 'selected' : ''}>Blob</option>
                         <option value="oppressor" ${entity.parasite && entity.parasite.type === 'oppressor' ? 'selected' : ''}>Oppressor</option>
+                        <option value="stronghold" ${entity.parasite && entity.parasite.type === 'stronghold' ? 'selected' : ''}>Stronghold</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -1761,6 +1763,61 @@ function deleteSelectedEntity() {
     }
 
     selectEntity(null);
+}
+
+function duplicateSelectedEntity() {
+    if (!selectedEntity) return;
+
+    saveState();
+    const ref = selectedEntity.ref;
+    const type = selectedEntity.type;
+    const copy = JSON.parse(JSON.stringify(ref));
+
+    if (type === 'stellar') {
+        copy.id = 'station_' + Math.random().toString(36).substr(2, 9);
+        copy.name = (copy.name || 'New Stellar Object') + ' Copy';
+        copy.worldX += 200;
+        copy.worldY += 200;
+        copy.coordX = parseFloat((copy.worldX / 1000).toFixed(1));
+        copy.coordY = parseFloat((-copy.worldY / 1000).toFixed(1));
+        stellarObjects.push(copy);
+    } else if (type === 'region') {
+        copy.name = (copy.name || 'New Sector') + ' Copy';
+        if (copy.bounds) {
+            copy.bounds.minX += 1;
+            copy.bounds.maxX += 1;
+            copy.bounds.minY += 1;
+            copy.bounds.maxY += 1;
+        }
+        if (copy.center) {
+            copy.center.worldX += 1000;
+            copy.center.worldY += 1000;
+        }
+        regions.push(copy);
+    } else if (type === 'asteroids') {
+        copy.x += 100;
+        copy.y += 100;
+        asteroids.push(copy);
+    } else if (type === 'nebulas') {
+        copy.x += 100;
+        copy.y += 100;
+        nebulas.push(copy);
+    } else if (type === 'route') {
+        copy.startX += 100;
+        copy.startY += 100;
+        copy.endX += 100;
+        copy.endY += 100;
+        tradeRoutes.push(copy);
+    } else if (type === 'cluster') {
+        copy.id = copy.id + '_copy_' + Math.random().toString(36).substr(2, 5);
+        copy.name = (copy.name || 'New Cluster') + ' Copy';
+        clusters.push(copy);
+    }
+
+    setUnsavedChanges(true);
+    renderList();
+    selectEntity(copy, type);
+    requestAnimationFrame(draw);
 }
 
 // Save back to local files via Editor Node Server
